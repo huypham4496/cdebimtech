@@ -19,7 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Đăng ký | CDE</title>
-    <link rel="stylesheet" href="../assets/css/register.css">
+    <link rel="stylesheet" href="../assets/css/register.css?v=<?php echo filemtime(__DIR__.'/../assets/css/register.css'); ?>">
 </head>
 <body class="register-page">
     <div class="register-wrapper">
