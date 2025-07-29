@@ -3,25 +3,13 @@
 // UTF-8 no BOM
 session_start();
 require_once __DIR__ . '/../includes/functions.php';
-
-// Đăng xuất
-if (isset($_GET['logout'])) {
-    session_destroy();
-    header('Location: login.php');
-    exit;
-}
-
+if (isset($_GET['logout'])) { session_destroy(); header('Location: login.php'); exit; }
 $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $user = loginUser($_POST['email'], $_POST['password']);
     if ($user) {
-        $_SESSION['user'] = [
-            'id'    => $user['id'],
-            'name'  => $user['first_name'],
-            'avatar'=> $user['avatar']
-        ];
-        header('Location: ../index.php');
-        exit;
+        $_SESSION['user'] = [ 'id'=>$user['id'], 'name'=>$user['first_name'], 'avatar'=>$user['avatar'] ];
+        header('Location: ../index.php'); exit;
     }
     $error = 'Email hoặc mật khẩu không đúng.';
 }
@@ -37,15 +25,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body class="login-page">
     <div class="login-wrapper">
         <div class="login-card">
-            <div class="brand">
-                <img src="../assets/images/logo-login.png" alt="CDE Logo">
-            </div>
-            <?php if ($error): ?>
-                <div class="error-msg"><?= htmlspecialchars($error) ?></div>
-            <?php endif; ?>
-            <?php if (isset($_GET['registered'])): ?>
-                <div class="success-msg">Đăng ký thành công! Vui lòng đăng nhập.</div>
-            <?php endif; ?>
+            <div class="brand"><img src="../assets/images/logo-login.png" alt="CDE Logo"></div>
+            <?php if ($error): ?><div class="error-msg"><?=htmlspecialchars($error)?></div><?php endif; ?>
+            <?php if (isset($_GET['registered'])): ?><div class="success-msg">Đăng ký thành công! Vui lòng đăng nhập.</div><?php endif; ?>
             <form method="post" class="login-form">
                 <input name="email" type="email" placeholder="Email" required>
                 <input name="password" type="password" placeholder="Password" required>
