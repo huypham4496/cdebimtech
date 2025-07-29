@@ -1,101 +1,142 @@
 :root {
   --primary-color: #fca415;
+  --bg-overlay: rgba(0,0,0,0.6);
 }
 
-/* Layout chính */
+/* Container chia đôi */
 .login-container {
   display: flex;
   height: 100vh;
+  margin: 0;
 }
 
-/* Bên trái */
+/* Bên trái: hình nền + overlay */
 .login-left {
+  flex: 2;
   position: relative;
-  flex: 1;
 }
 .login-left img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  width: 100%; height: 100%; object-fit: cover;
 }
 .login-left .overlay {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: var(--bg-overlay);
   color: #fff;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  align-items: center;
-  text-align: center;
-  padding: 2rem;
+  align-items: flex-start;
+  padding: 0 5rem;
 }
 .login-left .overlay h1.text-primary {
   color: var(--primary-color);
-  font-size: 2.5rem;
+  font-size: 3rem;
   margin-bottom: 1rem;
 }
+.login-left .overlay p {
+  font-size: 1.1rem;
+  max-width: 600px;
+}
 
-/* Bên phải */
+/* Bên phải: panel login */
 .login-right {
   flex: 1;
-  max-width: 500px;
-  padding: 2rem;
-  box-sizing: border-box;
   display: flex;
-  flex-direction: column;
-  align-items: center;
   justify-content: center;
+  align-items: center;
+  background: #f5f5f5;
+}
+.login-right .card {
+  background: #fff;
+  border-radius: 0.5rem;
+  box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.1);
+  padding: 2rem;
+  width: 100%;
+  max-width: 400px;
+  box-sizing: border-box;
+  text-align: center;
 }
 .login-right .logo {
-  max-width: 150px;
-  margin-bottom: 2rem;
+  max-width: 120px;
+  margin-bottom: 1rem;
 }
+.login-right h2 {
+  margin-bottom: 1.5rem;
+  color: #333;
+  font-size: 1.5rem;
+}
+
+/* Form */
 .login-form {
-  width: 100%;
+  text-align: left;
 }
 .login-form label {
   display: block;
-  margin-bottom: .5rem;
+  margin-bottom: 0.25rem;
+  font-weight: 600;
+}
+.login-form label.required:before {
+  content: "* ";
+  color: #e74c3c;
 }
 .login-form input {
   width: 100%;
-  padding: .5rem;
+  padding: 0.5rem;
   margin-bottom: 1rem;
   border: 1px solid #ccc;
-  border-radius: .25rem;
+  border-radius: 0.25rem;
+  box-sizing: border-box;
 }
+.password-wrapper {
+  position: relative;
+}
+.password-wrapper .toggle-password {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+}
+
+.checkbox-group {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+.checkbox-group input[type="checkbox"] {
+  margin-right: 0.5rem;
+}
+
 .login-form button {
   width: 100%;
-  padding: .75rem;
+  padding: 0.75rem;
   background: var(--primary-color);
   color: #fff;
   border: none;
-  border-radius: .25rem;
+  border-radius: 0.25rem;
+  font-size: 1rem;
   cursor: pointer;
   margin-bottom: 1rem;
 }
 .login-form button:hover {
   background: #e5a400;
 }
-.forgot {
+
+.login-form .forgot {
   display: block;
-  margin-top: .5rem;
   text-align: right;
-  width: 100%;
-  color: #666;
+  margin-bottom: 1rem;
+  color: #3498db;
   text-decoration: none;
 }
-.forgot:hover {
+.login-form .forgot:hover {
   text-decoration: underline;
 }
 
 /* Link đăng ký */
 .register {
-  margin-top: 1rem;
+  margin-bottom: 1.5rem;
 }
 .register a {
   color: var(--primary-color);
@@ -105,17 +146,15 @@
   text-decoration: underline;
 }
 
-/* Footer */
-.footer-left {
-  margin-top: auto;
-  font-size: .85rem;
-  color: #fff;
+/* Footer link */
+.footer-link-wrapper {
+  font-size: 0.85rem;
 }
-.footer-left .footer-link {
+.footer-link-wrapper .footer-link {
   color: #fff;
   text-decoration: none;
 }
-.footer-left .footer-link:hover {
+.footer-link-wrapper .footer-link:hover {
   color: var(--primary-color);
 }
 
@@ -123,9 +162,8 @@
 .error-msg {
   background: #ffe5e5;
   color: #d8000c;
-  padding: .5rem;
-  border-radius: .25rem;
+  padding: 0.5rem;
+  border-radius: 0.25rem;
   margin-bottom: 1rem;
-  width: 100%;
   text-align: center;
 }
