@@ -61,6 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </div>
     </div>
     <div class="login-right">
+      <img class="logo" src="../assets/images/logo-login.png" alt="CDE Bimtech Logo">
       <h2>DB Configuration</h2>
       <?php if ($error): ?>
         <div class="error-msg"><?= htmlspecialchars($error) ?></div>
