@@ -1,73 +1,14 @@
 /* assets/css/login.css */
-body.login-page, html { height: 100%; margin: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
-
-.login-page {
-  background: url('../assets/images/login-bg.jpg') no-repeat center center fixed;
-  background-size: cover;
-}
-
-.login-wrapper {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  padding: 1rem;
-  backdrop-filter: blur(4px);
-}
-
-.login-card {
-  background: rgba(255, 255, 255, 0.95);
-  padding: 2rem;
-  border-radius: 12px;
-  width: 360px;
-  max-width: 100%;
-  box-shadow: 0 6px 16px rgba(0,0,0,0.1);
-  text-align: center;
-}
-
-.login-card .brand img {
-  max-width: 140px;
-  margin-bottom: 1.5rem;
-}
-
-.error-msg, .success-msg {
-  padding: 0.75rem 1rem;
-  border-radius: 6px;
-  margin-bottom: 1rem;
-  font-size: 0.9rem;
-}
+body.login-page, html { height: 100%; margin: 0; font-family: 'Segoe UI', sans-serif; }
+.login-page { background: url('../assets/images/login-bg.jpg') center/cover no-repeat fixed; }
+.login-wrapper { display: flex; align-items: center; justify-content: center; min-height: 100vh; backdrop-filter: blur(4px); }
+.login-card { background: rgba(255,255,255,0.95); padding: 2rem; border-radius: 12px; width: 360px; box-shadow: 0 6px 16px rgba(0,0,0,0.1); text-align: center; }
+.login-card .brand img { max-width: 140px; margin-bottom: 1.5rem; }
+.error-msg, .success-msg { padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 1rem; font-size: 0.9rem; }
 .error-msg { background: #fdecea; color: #d93025; }
 .success-msg { background: #e6f4ea; color: #188038; }
-
-.login-form input {
-  width: 100%;
-  padding: 0.75rem;
-  margin-bottom: 1rem;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  font-size: 1rem;
-}
-
-.login-form button {
-  width: 100%;
-  padding: 0.75rem;
-  border: none;
-  border-radius: 8px;
-  background: #fca415;
-  color: #fff;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: background 0.3s;
-}
-.login-form button:hover {
-  background: #e0a010;
-}
-
-.login-card a {
-  color: #fca415;
-  text-decoration: none;
-  font-size: 0.9rem;
-}
-.login-card a:hover {
-  text-decoration: underline;
-}
+.login-form input { width: 100%; padding: 0.75rem; margin-bottom: 1rem; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; }
+.login-form button { width: 100%; padding: 0.75rem; border: none; border-radius: 8px; background: #fca415; color: #fff; font-size: 1rem; cursor: pointer; transition: background 0.3s; }
+.login-form button:hover { background: #e0a010; }
+.login-card a { color: #fca415; text-decoration: none; font-size: 0.9rem; }
+.login-card a:hover { text-decoration: underline; }
