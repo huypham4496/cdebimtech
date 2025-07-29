@@ -11,13 +11,6 @@ if (file_exists(__DIR__ . '/config.php')) {
             DB_PASS
         );
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-
-    // Ensure users table exists; if not, run schema
-    $check = $pdo->query("SHOW TABLES LIKE 'users'");
-    if ($check->rowCount() === 0) {
-        $schema = file_get_contents(__DIR__ . '/../schema.sql');
-        $pdo->exec($schema);
-    }
         $stmt = $pdo->query("SHOW TABLES");
         if ($stmt->rowCount() > 0) {
             exit('Application is already installed.');
