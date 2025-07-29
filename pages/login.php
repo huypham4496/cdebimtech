@@ -4,7 +4,8 @@
 session_start();
 require_once __DIR__ . '/../includes/functions.php';
 
-// Đăng xuất\ nif (isset($_GET['logout'])) {
+// Đăng xuất
+if (isset($_GET['logout'])) {
     session_destroy();
     header('Location: login.php');
     exit;
