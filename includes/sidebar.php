@@ -3,7 +3,6 @@
 
 /** Render sidebar navigation */
 function renderSidebar() {
-    $user = \$_SESSION['user'];
     return <<<HTML
 <aside class="sidebar">
   <div class="brand">
