@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -37,6 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
   <div class="login-container">
 
+    <!-- Bên trái: background + overlay -->
     <div class="login-left">
       <img src="../assets/images/login-bg.jpg" alt="Background">
       <div class="overlay">
@@ -48,40 +49,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </div>
     </div>
 
+    <!-- Bên phải: form login -->
     <div class="login-right">
-      <div class="card">
-        <img class="logo" src="../assets/images/logo-login.png" alt="CDE Bimtech Logo">
-        <h2>Login to CDE Bimtech</h2>
-        <?php if ($error): ?>
-          <div class="error-msg"><?=htmlspecialchars($error)?></div>
-        <?php endif; ?>
-        <form method="post" class="login-form">
-          <label class="required" for="email">Username</label>
-          <input id="email" name="email" type="email" placeholder="Enter your email" required>
+      <img class="logo" src="../assets/images/logo-login.png" alt="CDE Bimtech Logo">
+      <h2>Login to CDE Bimtech</h2>
+      <?php if ($error): ?>
+        <div class="error-msg"><?= htmlspecialchars($error) ?></div>
+      <?php endif; ?>
 
-          <label class="required" for="password">Password</label>
-          <div class="password-wrapper">
-            <input id="password" name="password" type="password" placeholder="Enter your password" required>
-            <span class="toggle-password">👁️</span>
-          </div>
+      <form method="post" class="login-form">
+        <label class="required" for="email">Username</label>
+        <input id="email" name="email" type="email" placeholder="Enter your email" required>
 
-          <div class="checkbox-group">
-            <input type="checkbox" id="overwrite" name="overwrite">
-            <label for="overwrite">Overwrite session</label>
-          </div>
-
-          <button type="submit">Login</button>
-          <a href="#" class="forgot">Forgot password?</a>
-        </form>
-
-        <p class="register">Chưa có tài khoản? <a href="register.php" class="text-primary">Đăng ký tài khoản</a></p>
-
-        <div class="footer-link-wrapper">
-          &copy; 2025 a product of <a href="https://bimtech.edu.vn" class="footer-link">Bimtech</a>
+        <label class="required" for="password">Password</label>
+        <div class="password-wrapper">
+          <input id="password" name="password" type="password" placeholder="Enter your password" required>
+          <span class="toggle-password">👁️</span>
         </div>
-      </div>
+
+        <button type="submit">Login</button>
+        <a href="#" class="forgot">Forgot password?</a>
+      </form>
+
+      <p class="register">Don't have an account? <a href="register.php" class="text-primary">Sign up</a></p>
     </div>
 
+  </div>
+
+  <!-- Footer bottom-left -->
+  <div class="footer-link-wrapper">
+    &copy; 2025 a product of <a href="https://bimtech.edu.vn" class="footer-link">Bimtech</a>
   </div>
 </body>
 </html>
