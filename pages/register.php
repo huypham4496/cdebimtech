@@ -8,8 +8,14 @@ $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Hàm registerUser cần được định nghĩa trong functions.php
     $result = registerUser(
+        trim($_POST['username']),
         trim($_POST['first_name']),
         trim($_POST['last_name']),
+        trim($_POST['dob']),
+        trim($_POST['address']),
+        trim($_POST['company']),
+        trim($_POST['phone']),
+        trim($_POST['invite_code']),
         trim($_POST['email']),
         $_POST['password'],
         $_POST['confirm_password']
@@ -53,11 +59,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <?php endif; ?>
 
       <form method="post" class="login-form">
+        <label class="required" for="username">Username</label>
+        <input id="username" name="username" type="text" placeholder="Enter your username" required>
+
         <label class="required" for="first_name">First Name</label>
         <input id="first_name" name="first_name" type="text" placeholder="Enter your first name" required>
 
         <label class="required" for="last_name">Last Name</label>
         <input id="last_name" name="last_name" type="text" placeholder="Enter your last name" required>
+
+        <label for="dob">Date of Birth</label>
+        <input id="dob" name="dob" type="date" placeholder="Select your date of birth">
+
+        <label for="address">Address</label>
+        <input id="address" name="address" type="text" placeholder="Enter your address">
+
+        <label for="company">Company</label>
+        <input id="company" name="company" type="text" placeholder="Enter your company">
+
+        <label for="phone">Phone</label>
+        <input id="phone" name="phone" type="tel" placeholder="Enter your phone number">
+
+        <label for="invite_code">Invite Code</label>
+        <input id="invite_code" name="invite_code" type="text" placeholder="Enter invite code">
 
         <label class="required" for="email">Email</label>
         <input id="email" name="email" type="email" placeholder="Enter your email" required>
