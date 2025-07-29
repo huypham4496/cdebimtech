@@ -60,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <img src="../assets/images/login-bg.jpg" alt="Background">
       <div class="overlay">
         <h1 class="text-primary">CDE Bimtech</h1>
-        <p>Empower your workflow with real-time 3D visualization...</p>
+        <p>Empower your workflow with real-time 3D visualization, full data ownership, and powerful BIM data analysis. Secure, immersive, and built for limitless collaboration.</p>
       </div>
     </div>
     <div class="login-right">
