@@ -3,30 +3,60 @@
 // UTF-8 no BOM
 session_start();
 
-// Nếu chưa đăng nhập, chuyển hướng về trang login
 if (!isset($_SESSION['user'])) {
     header('Location: pages/login.php');
     exit;
 }
 
-// Tiếp tục hiển thị dashboard
 require_once __DIR__ . '/includes/header.php';
+require_once __DIR__ . '/includes/sidebar.php';
 ?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard - CDE</title>
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    <?php echo renderSidebar(); ?>
+    <div class="main-content">
+      <?php echo renderHeader('Overview'); ?>
+      <div class="content-body">
 
-<main class="dashboard-container">
-  <aside class="sidebar">
-    <?php include __DIR__ . '/includes/sidebar.php'; ?>
-  </aside>
+        <div class="alert-banner">
+          Your plan is <strong>Admin plan</strong> and unlimited usage time
+        </div>
 
-  <section class="main-content">
-    <h1>Overview</h1>
-    <div class="widgets">
-      <div class="widget">Total Projects: <!-- <?php echo getProjectCount(); ?> -->0</div>
-      <div class="widget">Total Users: <!-- <?php echo getUserCount(); ?> -->0</div>
-      <!-- Thêm các widget khác tương tự -->
+        <div class="card-row">
+          <div class="card">
+            <h3><?php echo getProjectCount(); ?></h3>
+            <p>Total Projects</p>
+          </div>
+          <div class="card">
+            <h3><?php echo getUserCount(); ?></h3>
+            <p>Total Users</p>
+          </div>
+          <div class="card">
+            <h3><?php echo getActiveUserCount(); ?></h3>
+            <p>User In</p>
+          </div>
+          <div class="card">
+            <h3><?php echo getInactiveUserCount(); ?></h3>
+            <p>User Out</p>
+          </div>
+        </div>
+
+        <div class="chart-container">
+          <canvas id="memoryChart"></canvas>
+        </div>
+
+      </div>
     </div>
-  </section>
-</main>
+  </div>
 
-<?php
-require_once __DIR__ . '/includes/footer.php';
+  <script src="assets/js/dashboard.js"></script>
+</body>
+</html>
