@@ -33,6 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Login | CDE Bimtech</title>
   <link rel="stylesheet" href="../assets/css/login.css?v=<?php echo filemtime(__DIR__.'/../assets/css/login.css'); ?>">
+  
 </head>
 <body>
   <div class="login-container">
@@ -64,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <label class="required" for="password">Password</label>
         <div class="password-wrapper">
           <input id="password" name="password" type="password" placeholder="Enter your password" required>
-          <span class="toggle-password">👁️</span>
+          
         </div>
 
         <button type="submit">Login</button>
@@ -80,5 +81,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <div class="footer-link-wrapper">
     &copy; 2025 a product of <a href="https://bimtech.edu.vn" class="footer-link">Bimtech</a>
   </div>
+
 </body>
 </html>
