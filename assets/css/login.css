@@ -1,6 +1,6 @@
 /* assets/css/login.css */
 body.login-page, html { height: 100%; margin: 0; font-family: 'Segoe UI', sans-serif; }
-.login-page { background: url('../assets/images/login-bg.jpg') center/cover no-repeat fixed; }
+.login-page { background: url('/assets/images/login-bg.jpg') center/cover no-repeat fixed; }
 .login-wrapper { display: flex; align-items: center; justify-content: center; min-height: 100vh; backdrop-filter: blur(4px); }
 .login-card { background: rgba(255,255,255,0.95); padding: 2rem; border-radius: 12px; width: 360px; box-shadow: 0 6px 16px rgba(0,0,0,0.1); text-align: center; }
 .login-card .brand img { max-width: 140px; margin-bottom: 1.5rem; }
