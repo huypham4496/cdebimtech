@@ -52,10 +52,5 @@
     </div>
   </div>
     </div>
-    <div class="sidebar-actions">
-      <a href="#"><i class="fas fa-bell"></i> Notification</a>
-      <a href="#"><i class="fas fa-cog"></i> Settings</a>
-      <a href="home.php?logout=1" class="sign-out"><i class="fas fa-sign-out-alt"></i> Sign out</a>
-    </div>
   </div>
 </div>
