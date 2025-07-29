@@ -21,6 +21,7 @@ if (empty($_SESSION['user'])) {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Home | CDE Bimtech</title>
   <link rel="stylesheet" href="../assets/css/dashboard.css">
+  <link rel="stylesheet" href="../assets/css/sidebar.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="../assets/js/dashboard.js" defer></script>
 </head>
@@ -74,7 +75,7 @@ if (empty($_SESSION['user'])) {
       </div>
     </div>
 
-    <!-- Memory usage chart -->
+    <!-- Chart container with Canvas -->
     <div class="chart-container multi">
       <div class="chart-header">Sử dụng bộ nhớ</div>
       <div class="chart-content">
