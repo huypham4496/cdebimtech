@@ -11,7 +11,6 @@ if (!file_exists(__DIR__ . '/../config.php')) {
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/functions.php';
 
-// Connect to database
 try {
     $pdo = new PDO(
         'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME,
@@ -44,7 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'INSERT INTO users (username, first_name, last_name, email, password_hash, role) VALUES (?, ?, ?, ?, ?, "admin")'
     );
     if ($stmt->execute([$username, $firstName, $lastName, $email, $passwordHash])) {
-        header('Location: ../login.php');
+        header('Location: ../pages/login.php');
         exit;
     } else {
         $error = 'Failed to create admin user.';
@@ -57,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Create Admin | CDE Bimtech</title>
-  <link rel="stylesheet" href="../assets/css/create_admin.css?v=<?php echo filemtime(__DIR__ . '/../assets/css/create_admin.css'); ?>">
+  <link rel="stylesheet" href="../assets/css/create_admin.css?v=<?php echo filemtime(__DIR__.'/../assets/css/create_admin.css'); ?>">
 </head>
 <body>
   <div class="login-container">
