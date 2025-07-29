@@ -3,49 +3,82 @@
 // UTF-8 no BOM
 session_start();
 require_once __DIR__ . '/../includes/functions.php';
+
 $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $res = registerUser($_POST, $_FILES);
-    if ($res === true) {
-        header('Location: login.php?registered=1');
+    // Hàm registerUser cần được định nghĩa trong functions.php
+    $result = registerUser(
+        trim($_POST['first_name']),
+        trim($_POST['last_name']),
+        trim($_POST['email']),
+        $_POST['password'],
+        $_POST['confirm_password']
+    );
+    if ($result['success']) {
+        header('Location: login.php');
         exit;
     }
-    $error = $res;
+    $error = $result['message'];
 }
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Đăng ký | CDE</title>
-    <link rel="stylesheet" href="../assets/css/register.css?v=<?php echo filemtime(__DIR__.'/../assets/css/register.css'); ?>">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register | CDE Bimtech</title>
+  <link rel="stylesheet" href="../assets/css/login.css?v=<?php echo filemtime(__DIR__.'/../assets/css/login.css'); ?>">
 </head>
-<body class="register-page">
-    <div class="register-wrapper">
-        <div class="register-card">
-            <h2>Đăng ký thành viên CDE</h2>
-            <?php if ($error): ?><div class="error-msg"><?=htmlspecialchars($error)?></div><?php endif; ?>
-            <form method="post" enctype="multipart/form-data" class="register-form">
-                <div class="input-row">
-                    <input name="first_name" placeholder="First name" required>
-                    <input name="last_name" placeholder="Last name" required>
-                </div>
-                <input name="phone" placeholder="Phone number" required>
-                <input name="email" type="email" placeholder="Email" required>
-                <input name="cccd_number" placeholder="Số CCCD">
-                <input name="invite_code" placeholder="Mã invite (nếu có)">
-                <label for="cccd_image">Upload ảnh CCCD (nếu không có mã invite):</label>
-                <input id="cccd_image" name="cccd_image" type="file" accept="image/*">
-                <input name="company" placeholder="Company" required>
-                <input name="dob" type="date" required>
-                <input name="address" placeholder="Address" required>
-                <input name="password" type="password" placeholder="Password" required>
-                <input name="confirm_password" type="password" placeholder="Confirm Password" required>
-                <button type="submit">Đăng ký</button>
-                <p class="redirect">Bạn đã có tài khoản? <a href="login.php">Đăng nhập</a></p>
-            </form>
-        </div>
+<body>
+  <div class="login-container">
+
+    <!-- Bên trái giữ nguyên overlay -->
+    <div class="login-left">
+      <img src="../assets/images/login-bg.jpg" alt="Background">
+      <div class="overlay">
+        <h1 class="text-primary">CDE Bimtech</h1>
+        <p>
+          Empower your workflow with real-time 3D visualization, full data ownership,
+          and powerful BIM data analysis. Secure, immersive, and built for limitless collaboration.
+        </p>
+      </div>
     </div>
+
+    <!-- Bên phải: form đăng ký -->
+    <div class="login-right">
+      <img class="logo" src="../assets/images/logo-login.png" alt="CDE Bimtech Logo">
+      <h2>Register for CDE Bimtech</h2>
+      <?php if (!empty($error)): ?>
+        <div class="error-msg"><?= htmlspecialchars($error) ?></div>
+      <?php endif; ?>
+
+      <form method="post" class="login-form">
+        <label class="required" for="first_name">First Name</label>
+        <input id="first_name" name="first_name" type="text" placeholder="Enter your first name" required>
+
+        <label class="required" for="last_name">Last Name</label>
+        <input id="last_name" name="last_name" type="text" placeholder="Enter your last name" required>
+
+        <label class="required" for="email">Email</label>
+        <input id="email" name="email" type="email" placeholder="Enter your email" required>
+
+        <label class="required" for="password">Password</label>
+        <input id="password" name="password" type="password" placeholder="Enter a password" required>
+
+        <label class="required" for="confirm_password">Confirm Password</label>
+        <input id="confirm_password" name="confirm_password" type="password" placeholder="Confirm your password" required>
+
+        <button type="submit">Register</button>
+      </form>
+
+      <p class="register">Already have an account? <a href="login.php" class="text-primary">Login here</a></p>
+    </div>
+
+  </div>
+
+  <!-- Footer bottom-left giữ nguyên -->
+  <div class="footer-link-wrapper">
+    &copy; 2025 a product of <a href="https://bimtech.edu.vn" class="footer-link">Bimtech</a>
+  </div>
 </body>
 </html>
