@@ -1,66 +1,53 @@
 <?php
-// pages/register.php
-// UTF-8 no BOM
+// index.php
 session_start();
-require_once __DIR__ . '/../includes/functions.php';
 
-$error = '';
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $result = registerUser(
-        trim($_POST['username']),
-        trim($_POST['first_name']),
-        trim($_POST['last_name']),
-        trim($_POST['dob']),
-        trim($_POST['address']),
-        trim($_POST['company']),
-        trim($_POST['phone']),
-        trim($_POST['invite_code']),
-        trim($_POST['email']),
-        $_POST['password'],
-        $_POST['confirm_password']
-    );
-    if ($result['success']) {
-        header('Location: login.php');
-        exit;
-    }
-    $error = $result['message'];
+// Check if config.php exists
+if (!file_exists(__DIR__ . '/config.php')) {
+    // Configuration missing, redirect to installer
+    header('Location: install.php');
+    exit;
 }
+
+require_once __DIR__ . '/config.php';
+
+try {
+    $dsn = 'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME;
+    $pdo = new PDO($dsn, DB_USER, DB_PASS);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    // Check if any tables exist
+    $stmt = $pdo->query("SHOW TABLES");
+    if ($stmt->rowCount() === 0) {
+        // No tables, run schema creation
+        $schema = file_get_contents(__DIR__ . '/schema.sql');
+        $pdo->exec($schema);
+    }
+} catch (PDOException $e) {
+    // Database error
+    http_response_code(500);
+    echo '<h1>500 Internal Server Error</h1>';
+    echo '<p>Database connection failed. Please check your configuration.</p>';
+    exit;
+}
+
+// Normal application logic follows
 ?>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Register | CDE Bimtech</title>
-  <link rel="stylesheet" href="../assets/css/login.css?v=<?php echo filemtime(__DIR__.'/../assets/css/login.css'); ?>">
+  <title>CDE Bimtech Dashboard</title>
+  <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
-  <div class="login-container">
-    <div class="login-left">
-      <img src="../assets/images/login-bg.jpg" alt="Background">
-      <div class="overlay">
-        <h1 class="text-primary">CDE Bimtech</h1>
-        <p>
-          Empower your workflow with real-time 3D visualization, full data ownership,
-          and powerful BIM data analysis. Secure, immersive, and built for limitless collaboration.
-        </p>
-      </div>
-    </div>
-    <div class="login-right">
-      <img class="logo" src="../assets/images/logo-login.png" alt="CDE Bimtech Logo">
-      <h2>Register for CDE Bimtech</h2>
-      <?php if (!empty($error)): ?>
-        <div class="error-msg"><?= htmlspecialchars($error) ?></div>
-      <?php endif; ?>
-      <form method="post" class="login-form">
-        <!-- username, names, dob, address, company, phone, invite, email, passwords -->
-        <!-- ... as previously defined ... -->
-      </form>
-      <p class="register">Already have an account? <a href="login.php" class="text-primary">Login here</a></p>
-    </div>
-  </div>
-  <div class="footer-link-wrapper">
-    &copy; 2025 a product of <a href="https://bimtech.edu.vn" class="footer-link">Bimtech</a>
-  </div>
+  <?php include __DIR__ . '/pages/includes/header.php'; ?>
+
+  <main>
+    <h1>Welcome to CDE Bimtech</h1>
+    <!-- Dashboard content here -->
+  </main>
+
+  <?php include __DIR__ . '/pages/includes/footer.php'; ?>
 </body>
 </html>
