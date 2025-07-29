@@ -1,6 +1,52 @@
 <?php
 // pages/install.php
 // UTF-8 no BOM
+// Prevent reinstall if already configured and tables exist
+if (file_exists(__DIR__ . '/../config.php')) {
+    require_once __DIR__ . '/../config.php';
+    // connect to database
+    try {
+        $pdo = new PDO('mysql:host='.DB_HOST.';dbname='.DB_NAME, DB_USER, DB_PASS);
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        // check if any tables exist
+        $stmt = $pdo->query("SHOW TABLES");
+        if ($stmt->rowCount() > 0) {
+            exit('Application is already installed.');
+        }
+    } catch (PDOException $e) {
+        // continue to installer if cannot connect
+    }
+}
+$error = '';
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $db_host = trim($_POST['db_host']);
+    $db_name = trim($_POST['db_name']);
+    $db_user = trim($_POST['db_user']);
+    $db_pass = trim($_POST['db_pass']);
+    // Build config content
+    $cfg = "<?php
+";
+    $cfg .= "define('DB_HOST','".addslashes($db_host)."');
+";
+    $cfg .= "define('DB_NAME','".addslashes($db_name)."');
+";
+    $cfg .= "define('DB_USER','".addslashes($db_user)."');
+";
+    $cfg .= "define('DB_PASS','".addslashes($db_pass)."');
+";
+    $cfg .= "
+// charset and options
+";
+    if (@file_put_contents(__DIR__.'/../config.php', $cfg) !== false) {
+        header('Location: create_admin.php'); exit;
+    } else {
+        $error = 'Cannot write to config.php. Check permissions.';
+    }
+}
+```php
+<?php
+// pages/install.php
+// UTF-8 no BOM
 if (file_exists(__DIR__ . '/../config.php')) {
     header('Location: ../index.php'); exit;
 }
