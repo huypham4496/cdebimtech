@@ -4,8 +4,7 @@
 session_start();
 require_once __DIR__ . '/../includes/functions.php';
 
-// Đăng xuất
-if (isset($_GET['logout'])) {
+// Đăng xuất\ nif (isset($_GET['logout'])) {
     session_destroy();
     header('Location: login.php');
     exit;
@@ -40,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="login-left">
       <img src="../assets/images/login-bg.jpg" alt="Background">
       <div class="overlay">
-        <h1>CDE Bimtech</h1>
+        <h1 class="text-primary">CDE Bimtech</h1>
         <p>
           Empower your workflow with real-time 3D visualization, full data ownership,
           and powerful BIM data analysis. Secure, immersive, and built for limitless collaboration.
@@ -64,7 +63,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <a href="#" class="forgot">Forgot password?</a>
       </form>
 
-      <div class="footer-left">&copy; 2025 a product of Bimtech</div>
+      <p class="register">Chưa có tài khoản? <a href="register.php" class="text-primary">Đăng ký tài khoản</a></p>
+
+      <div class="footer-left">&copy; 2025 a product of <a href="https://bimtech.edu.vn" class="footer-link">Bimtech</a></div>
     </div>
 
   </div>
