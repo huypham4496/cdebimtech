@@ -2,9 +2,9 @@
 // pages/login.php
 session_start();
 
-// If logged in, redirect to dashboard
+// Nếu đã login, chuyển về dashboard
 if (!empty($_SESSION['user'])) {
-    header('Location: ../index.php');
+    header('Location: ../pages/home.php');
     exit;
 }
 
@@ -16,6 +16,7 @@ if (isset($_GET['logout'])) {
 }
 
 require_once __DIR__ . '/../config.php';
+
 $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $login    = trim($_POST['login']);
@@ -70,10 +71,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <form action="" method="post" class="login-form">
         <label for="login">Username or Email</label>
         <input id="login" name="login" type="text" required>
-
         <label for="password">Password</label>
         <input id="password" name="password" type="password" required>
-
         <button type="submit">Login</button>
       </form>
       <p>Don't have an account? <a href="register.php" class="text-primary">Sign up</a></p>
