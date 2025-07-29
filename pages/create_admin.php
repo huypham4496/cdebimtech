@@ -2,43 +2,56 @@
 // pages/create_admin.php
 session_start();
 
-// Nếu chưa có config, quay về installer
+// Redirect if not configured
 if (!file_exists(__DIR__ . '/../config.php')) {
     header('Location: ../install.php');
     exit;
 }
+
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/functions.php';
 
+// Connect to database
 try {
-    \$pdo = new PDO('mysql:host=' . DB_HOST . ';dbname=' . DB_NAME, DB_USER, DB_PASS);
-    \$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    // Tạo bảng users nếu chưa có
-    \$chk = \$pdo->query("SHOW TABLES LIKE 'users'");
-    if (\$chk->rowCount() === 0) {
-        \$schema = file_get_contents(__DIR__ . '/../schema.sql');
-        \$pdo->exec(\$schema);
+    $dsn = "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4";
+    $options = [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+    ];
+    $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
+    // Create users table if not exists
+    $tables = $pdo->query("SHOW TABLES LIKE 'users'");
+    if ($tables->rowCount() === 0) {
+        $schema = file_get_contents(__DIR__ . '/../schema.sql');
+        $pdo->exec($schema);
     }
-} catch (PDOException \$e) {
-    die('DB failed: ' . \$e->getMessage());
+} catch (PDOException $e) {
+    die('Database error: ' . $e->getMessage());
 }
 
-\$error = '';
-if (\$_SERVER['REQUEST_METHOD'] === 'POST') {
-    \$username = trim(\$_POST['username']);
-    \$first = trim(\$_POST['first_name']);
-    \$last  = trim(\$_POST['last_name']);
-    \$email = trim(\$_POST['email']);
-    \$pwd   = password_hash(\$_POST['password'], PASSWORD_DEFAULT);
+$error = '';
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $username     = trim($_POST['username']);
+    $first_name   = trim($_POST['first_name']);
+    $last_name    = trim($_POST['last_name']);
+    $email        = trim($_POST['email']);
+    $password     = $_POST['password'];
+    $password_hash = password_hash($password, PASSWORD_DEFAULT);
 
-    \$stmt = \$pdo->prepare(
-        'INSERT INTO users (username, first_name, last_name, email, password_hash, role) VALUES (?, ?, ?, ?, ?, "admin")'
-    );
-    if (\$stmt->execute([\$username, \$first, \$last, \$email, \$pwd])) {
+    $sql = "INSERT INTO users (username, first_name, last_name, email, password_hash, role)"
+         . " VALUES (:username, :first_name, :last_name, :email, :password_hash, 'admin')";
+    $stmt = $pdo->prepare($sql);
+    if ($stmt->execute([
+        ':username'     => $username,
+        ':first_name'   => $first_name,
+        ':last_name'    => $last_name,
+        ':email'        => $email,
+        ':password_hash'=> $password_hash,
+    ])) {
         header('Location: login.php');
         exit;
     }
-    \$error = 'Failed to create admin';
+    $error = 'Failed to create admin.';
 }
 ?>
 <!DOCTYPE html>
@@ -54,13 +67,15 @@ if (\$_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="login-left">
       <img src="../assets/images/login-bg.jpg" alt="Background">
       <div class="overlay">
-        <h1 class="text-primary">Setup Admin</h1>
-        <p>Create first administrator account.</p>
+        <h1 class="text-primary">CDE Bimtech Setup</h1>
+        <p>Create the first administrator account to manage the application.</p>
       </div>
     </div>
     <div class="login-right">
       <img class="logo" src="../assets/images/logo-login.png" alt="Logo">
-      <?php if (\$error): ?><div class="error-msg"><?=htmlspecialchars(\$error)?></div><?php endif; ?>
+      <?php if ($error): ?>
+        <div class="error-msg"><?= htmlspecialchars($error) ?></div>
+      <?php endif; ?>
       <form method="post" class="login-form">
         <label for="username">Username</label>
         <input id="username" name="username" type="text" required>
