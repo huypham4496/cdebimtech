@@ -41,13 +41,13 @@ html, body {
 }
 .login-left .overlay h1.text-primary {
   color: var(--primary-color);
-  font-size: 2rem;
+  font-size: 1.75rem;
   font-weight: 700;
   margin-bottom: 0.75rem;
 }
 .login-left .overlay p {
   font-size: 1rem;
-  font-weight: 400;
+  font-weight: 300;
   max-width: 500px;
   line-height: 1.5;
 }
@@ -55,6 +55,7 @@ html, body {
 /* Bên phải: form login */
 .login-right {
   flex: 1;
+  max-width: 450px;
   background: #f9f9f9;
   display: flex;
   flex-direction: column;
@@ -63,7 +64,7 @@ html, body {
   padding: 2rem;
 }
 .login-right .logo {
-  max-width: 150px;
+  max-width: 180px;
   margin-bottom: 1rem;
 }
 .login-right h2 {
@@ -100,7 +101,9 @@ html, body {
   outline: none;
   border-bottom-color: var(--primary-color);
 } 
-.password-wrapper { position: relative; }
+.password-wrapper {
+  position: relative;
+}
 .password-wrapper .toggle-password {
   position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%);
   cursor: pointer; font-size: 1rem;
@@ -145,6 +148,7 @@ html, body {
   bottom: 1rem;
   left: 1rem;
   font-size: 0.8rem;
+  color: var(--primary-color);
 }
 .footer-link-wrapper .footer-link {
   color: #fff;
@@ -153,12 +157,10 @@ html, body {
 }
 .footer-link-wrapper .footer-link:hover { color: var(--primary-color); }
 
-.error-msg {
-  background: #ffe5e5;
-  color: #d8000c;
-  padding: 0.5rem;
-  border-radius: 0.25rem;
-  margin-bottom: 1rem;
-  text-align: center;
-  font-size: 0.9rem;
+$1
+
+/* Hide native password reveal icon in Edge/IE */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
 }
