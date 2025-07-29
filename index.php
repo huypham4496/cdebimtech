@@ -25,8 +25,6 @@ try {
         DB_PASS
     );
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-
-    // Tạo bảng nếu chưa tồn tại
     $tables = $pdo->query("SHOW TABLES LIKE 'users'");
     if ($tables->rowCount() === 0) {
         $schema = file_get_contents(__DIR__ . '/schema.sql');
@@ -44,19 +42,19 @@ try {
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Dashboard | CDE Bimtech</title>
-  <link rel="stylesheet" href="assets/css/style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | CDE Bimtech</title>
+    <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
-  <header>
-    <h1>Welcome, <?= htmlspecialchars($_SESSION['user']['first_name']) ?></h1>
-    <p>This is your dashboard.</p>
-    <p><a href="pages/login.php?logout=1">Logout</a></p>
-  </header>
-  <main>
-    <!-- Dashboard content here -->
-  </main>
+    <header>
+        <h1>Welcome, <?= htmlspecialchars($_SESSION['user']['first_name']) ?></h1>
+        <p>This is your dashboard.</p>
+        <p><a href="pages/login.php?logout=1">Logout</a></p>
+    </header>
+    <main>
+        <!-- Dashboard content here -->
+    </main>
 </body>
 </html>
