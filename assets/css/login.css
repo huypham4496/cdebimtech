@@ -1,10 +1,19 @@
 /* assets/css/login.css */
-* { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; font-family: 'Segoe UI', Tahoma, sans-serif; }
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  font-family: 'Segoe UI', Tahoma, sans-serif;
+}
 
 .login-container {
   display: flex;
   height: 100vh;
+  position: relative;
 }
 
 .login-left {
@@ -27,98 +36,86 @@ html, body { height: 100%; font-family: 'Segoe UI', Tahoma, sans-serif; }
   max-width: 400px;
 }
 .login-left .overlay h1 {
-  font-size: 2rem;
+  font-size: 2.5rem;
   margin-bottom: 1rem;
 }
 .login-left .overlay p {
   font-size: 1rem;
-  margin-bottom: 2rem;
-  line-height: 1.4;
-}
-
-.login-left .overlay footer a {
-  color: #00e676;
-  text-decoration: none;
+  line-height: 1.5;
 }
 
 .login-right {
   flex: 1;
+  max-width: 360px;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: #f9f9f9;
+  background: #fff;
   padding: 2rem;
 }
 
-.login-card {
-  width: 100%;
-  max-width: 360px;
-  background: #fff;
-  padding: 2rem;
-  border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-  text-align: center;
-}
-.login-card .logo {
-  max-width: 120px;
-  margin-bottom: 1rem;
-}
-.login-card h2 {
+.login-right .logo {
+  max-width: 140px;
   margin-bottom: 1.5rem;
-  color: #333;
 }
 
 .error-msg {
   background: #fdecea;
   color: #d93025;
-  padding: 0.75rem 1rem;
+  padding: 0.75rem;
   border-radius: 4px;
   margin-bottom: 1rem;
-  font-size: 0.9rem;
+  width: 100%;
+  text-align: center;
 }
 
-.login-form .form-group {
-  margin-bottom: 1rem;
-  text-align: left;
+.login-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
 }
 .login-form label {
-  display: block;
   margin-bottom: 0.25rem;
   color: #555;
   font-size: 0.9rem;
 }
 .login-form input {
-  width: 100%;
   padding: 0.75rem;
+  margin-bottom: 1rem;
   border: 1px solid #ccc;
   border-radius: 4px;
   font-size: 1rem;
+  width: 100%;
 }
-
-.login-form .form-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 1.5rem;
-}
-.login-form .form-footer button {
-  padding: 0.75rem 1.5rem;
+.login-form button {
+  padding: 0.75rem;
   border: none;
   border-radius: 4px;
-  background: #00c853;
+  background: #fca415;
   color: #fff;
   font-size: 1rem;
   cursor: pointer;
   transition: background 0.3s;
 }
-.login-form .form-footer button:hover {
-  background: #00b34a;
+.login-form button:hover {
+  background: #e0a010;
 }
-.login-form .form-footer .forgot {
+.login-form .forgot {
+  margin-top: 0.5rem;
+  text-align: right;
   font-size: 0.9rem;
   color: #007bff;
   text-decoration: none;
 }
-.login-form .form-footer .forgot:hover {
+.login-form .forgot:hover {
   text-decoration: underline;
+}
+
+.footer-left {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  font-size: 0.8rem;
+  color: #888;
 }
