@@ -21,6 +21,8 @@ if (empty($_SESSION['user'])) {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Home | CDE Bimtech</title>
   <link rel="stylesheet" href="../assets/css/dashboard.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="../assets/js/dashboard.js" defer></script>
 </head>
 <body>
   <?php include __DIR__ . '/sidebar.php'; ?>
@@ -73,15 +75,19 @@ if (empty($_SESSION['user'])) {
     </div>
 
     <!-- Memory usage chart -->
-    <div class="chart-container">
+    <div class="chart-container multi">
       <div class="chart-header">Sử dụng bộ nhớ</div>
       <div class="chart-content">
-        <!-- Placeholder for donut chart -->
-        <div class="donut-chart">10% / 90%</div>
+        <canvas id="doughnutChart"></canvas>
+        <div class="chart-center-text-large">1.66M</div>
       </div>
-      <div class="chart-legend">
-        <div><span class="legend-dot used"></span> Dung lượng đã sử dụng</div>
-        <div><span class="legend-dot remaining"></span> Dung lượng còn lại</div>
+      <div class="chart-legend-list">
+        <div><span class="legend-color lithuania"></span> Lithuania <span class="legend-value">34.9%</span></div>
+        <div><span class="legend-color czechia"></span> Czechia <span class="legend-value">21.0%</span></div>
+        <div><span class="legend-color ireland"></span> Ireland <span class="legend-value">14.0%</span></div>
+        <div><span class="legend-color germany"></span> Germany <span class="legend-value">11.5%</span></div>
+        <div><span class="legend-color australia"></span> Australia <span class="legend-value">9.7%</span></div>
+        <div><span class="legend-color austria"></span> Austria <span class="legend-value">8.9%</span></div>
       </div>
     </div>
 
