@@ -1,0 +1,140 @@
+:root {
+  --sidebar-bg: #ffffff;
+  --sidebar-active-bg: #e6f7e6;
+  --sidebar-hover-bg: #f0f0f0;
+  --sidebar-text: #333333;
+  --sidebar-active-text: #059862;
+}
+
+/* Sidebar Styles */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 250px;
+  background: var(--sidebar-bg);
+  box-shadow: 2px 0 4px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+}
+
+.sidebar-logo {
+  width: 40px;
+  height: 40px;
+  margin-right: 0.75rem;
+}
+
+.sidebar-title h2 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+  color: var(--sidebar-text);
+}
+
+.sidebar-title p {
+  font-size: 0.8rem;
+  color: #666666;
+}
+
+.sidebar-nav ul {
+  list-style: none;
+  padding: 0;
+}
+
+.sidebar-nav li {
+  margin: 0.25rem 0;
+}
+
+.sidebar-nav a {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  color: var(--sidebar-text);
+  text-decoration: none;
+  transition: background 0.2s, color 0.2s;
+}
+
+.sidebar-nav a i {
+  width: 20px;
+  margin-right: 0.75rem;
+}
+
+.sidebar-nav li.active a {
+  background: var(--sidebar-active-bg);
+  color: var(--sidebar-active-text);
+  border-radius: 4px;
+}
+
+.sidebar-nav a:hover {
+  background: var(--sidebar-hover-bg);
+  color: var(--sidebar-active-text);
+  border-radius: 4px;
+}
+
+.sidebar-footer {
+  padding: 1rem;
+  border-top: 1px solid #e0e0e0;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--primary-color);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  margin-right: 0.5rem;
+}
+
+.user-details {
+  font-size: 0.9rem;
+  color: var(--sidebar-text);
+}
+
+.user-name {
+  font-weight: 500;
+}
+
+.user-email {
+  font-size: 0.8rem;
+  color: #666666;
+}
+
+.sidebar-actions a {
+  display: flex;
+  align-items: center;
+  font-size: 0.9rem;
+  color: var(--sidebar-text);
+  text-decoration: none;
+  padding: 0.5rem 0;
+  transition: color 0.2s;
+}
+
+.sidebar-actions a i {
+  margin-right: 0.5rem;
+}
+
+.sidebar-actions a:hover {
+  color: var(--sidebar-active-text);
+}
+
+.sign-out {
+  color: #e53935;
+}
