@@ -72,3 +72,40 @@ function loginUser($email, $password) {
     }
     return false;
 }
+
+/**
+ * Thống kê tổng số project
+ */
+function getProjectCount() {
+    global $pdo;
+    $stmt = $pdo->query("SELECT COUNT(*) FROM projects");
+    return (int) $stmt->fetchColumn();
+}
+
+/**
+ * Thống kê tổng số users
+ */
+function getUserCount() {
+    global $pdo;
+    $stmt = $pdo->query("SELECT COUNT(*) FROM users");
+    return (int) $stmt->fetchColumn();
+}
+
+/**
+ * Thống kê số users in (ví dụ: đã active)
+ */
+function getActiveUserCount() {
+    global $pdo;
+    // TODO: điều kiện xác định active users
+    $stmt = $pdo->query("SELECT COUNT(*) FROM users");
+    return (int) $stmt->fetchColumn();
+}
+
+/**
+ * Thống kê số users out (ví dụ: inactive)
+ */
+function getInactiveUserCount() {
+    global $pdo;
+    // TODO: điều kiện xác định inactive users
+    return 0;
+}
