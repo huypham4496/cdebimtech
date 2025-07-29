@@ -3,6 +3,7 @@
 
 /** Render sidebar navigation */
 function renderSidebar() {
+    $user = $_SESSION['user'];
     return <<<HTML
 <aside class="sidebar">
   <div class="brand">
@@ -22,8 +23,8 @@ function renderSidebar() {
     </ul>
   </nav>
   <div class="user-info">
-    <img src="<?php echo \$user['avatar']; ?>" alt="Avatar">
-    <span><?php echo htmlspecialchars(\$user['name']); ?></span>
+    <img src="{$user['avatar']}" alt="Avatar">
+    <span>".htmlspecialchars($user['name'])."</span>
     <a href="pages/login.php?logout=1">Sign out</a>
   </div>
 </aside>
