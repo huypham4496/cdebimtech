@@ -6,9 +6,9 @@ ini_set('display_errors', 0);
 error_reporting(0);
 
 $host = 'localhost';
-$db   = 'cde';
-$user = 'root';
-$pass = '';
+$db   = 'cde_db';
+$user = 'db_user';
+$pass = 'db_pass';
 $dsn  = "mysql:host=$host;dbname=$db;charset=utf8mb4";
 
 try {
