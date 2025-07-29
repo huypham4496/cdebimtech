@@ -43,6 +43,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <?php if ($error): ?>
                 <div class="error-msg"><?= htmlspecialchars($error) ?></div>
             <?php endif; ?>
+            <?php if (isset($_GET['registered'])): ?>
+                <div class="success-msg">Đăng ký thành công! Vui lòng đăng nhập.</div>
+            <?php endif; ?>
             <form method="post" class="login-form">
                 <input name="email" type="email" placeholder="Email" required>
                 <input name="password" type="password" placeholder="Password" required>
