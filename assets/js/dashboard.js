@@ -1,23 +1,38 @@
 // Dashboard JavaScript (assets/js/dashboard.js)
-// Placeholder for dynamic interactions and chart rendering
+// Generate multi-segment donut chart using Chart.js with center-text animation
 
 document.addEventListener('DOMContentLoaded', () => {
-  const chart = document.querySelector('.donut-chart');
-  if (!chart) return;
-  const used = parseFloat(chart.getAttribute('data-used')) || 0;
-  const center = document.createElement('div');
-  center.className = 'chart-center-text';
-  chart.appendChild(center);
+  const ctx = document.getElementById('doughnutChart').getContext('2d');
+  const data = {
+    labels: ['Lithuania','Czechia','Ireland','Germany','Australia','Austria'],
+    datasets: [{
+      data: [34.9,21.0,14.0,11.5,9.7,8.9],
+      backgroundColor: [
+        '#42a5f5','#1e88e5','#8e24aa','#7e57c2','#ec407a','#d81b60'
+      ],
+      hoverOffset: 4
+    }]
+  };
+  const options = {
+    responsive: true,
+    cutout: '70%',
+    animation: {
+      animateRotate: true,
+      duration: 1500,
+      easing: 'easeOutCubic'
+    },
+    plugins: { legend: { display: false } }
+  };
+  new Chart(ctx, { type: 'doughnut', data, options });
 
+  // Animate center text from 0 to 100%
+  const centerText = document.querySelector('.chart-center-text-large');
   let current = 0;
-  function animate() {
-    current += 1;
-    if (current > used) current = used;
-    chart.style.background = `conic-gradient(#2196f3 0% ${current}%, #00e676 ${current}% 100%)`;
-    center.textContent = `${current}%`;
-    if (current < used) {
-      requestAnimationFrame(animate);
-    }
+  const step = 100 / (options.animation.duration / 16);
+  function update() {
+    current = Math.min(current + step, 100);
+    centerText.textContent = current.toFixed(0) + '%';
+    if (current < 100) requestAnimationFrame(update);
   }
-  requestAnimationFrame(animate);
+  requestAnimationFrame(update);
 });
