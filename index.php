@@ -2,22 +2,28 @@
 // index.php
 session_start();
 
-// Nếu chưa đăng nhập, chuyển về login
+// Nếu chưa có config, chuyển về installer
+if (!file_exists(__DIR__ . '/config.php')) {
+    header('Location: install.php');
+    exit;
+}
+
+// Nếu chưa đăng nhập, chuyển tới login
 if (empty($_SESSION['user'])) {
     header('Location: pages/login.php');
     exit;
 }
 
-// Kiểm tra config
-if (!file_exists(__DIR__ . '/config.php')) {
-    header('Location: install.php');
-    exit;
-}
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/includes/functions.php';
 
-// Kết nối database và khởi tạo table nếu cần
+// Kết nối database và tạo bảng nếu cần
 try {
-    $pdo = new PDO('mysql:host=' . DB_HOST . ';dbname=' . DB_NAME, DB_USER, DB_PASS);
+    $pdo = new PDO(
+        'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME,
+        DB_USER,
+        DB_PASS
+    );
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $tables = $pdo->query("SHOW TABLES LIKE 'users'");
     if ($tables->rowCount() === 0) {
@@ -30,8 +36,6 @@ try {
     echo '<p>Database connection failed.</p>';
     exit;
 }
-
-// Nội dung chính
 ?>
 <!DOCTYPE html>
 <html lang="vi">
@@ -42,7 +46,7 @@ try {
   <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
-  <h1>Welcome, <?= htmlspecialchars(\$_SESSION['user']['name']) ?></h1>
+  <h1>Welcome, <?= htmlspecialchars($_SESSION['user']['name']) ?></h1>
   <p>This is your dashboard.</p>
   <p><a href="pages/login.php?logout=1">Logout</a></p>
 </body>
