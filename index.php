@@ -16,7 +16,7 @@ require_once __DIR__ . '/includes/sidebar.php';
 <head>
   <meta charset="UTF-8">
   <title>Dashboard - CDE</title>
-  <link rel="stylesheet" href="assets/css/dashboard.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css?v=<?php echo filemtime(__DIR__.'/assets/css/dashboard.css'); ?>">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -57,6 +57,6 @@ require_once __DIR__ . '/includes/sidebar.php';
     </div>
   </div>
 
-  <script src="assets/js/dashboard.js"></script>
+  <script src="assets/js/dashboard.js?v=<?php echo filemtime(__DIR__.'/assets/js/dashboard.js'); ?>"></script>
 </body>
 </html>
