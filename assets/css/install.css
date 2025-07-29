@@ -1,0 +1,17 @@
+/* Styles for install page, based on login.css */
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+:root { --primary-color:#fca415; }
+html,body{height:100%;font-family:'Roboto',sans-serif;margin:0;}
+.login-container{display:flex;height:100vh;}
+.login-left{flex:2;position:relative;} .login-left img{width:100%;height:100%;object-fit:cover;} .login-left .overlay{position:absolute;inset:0;background:rgba(0,0,0,0.6);color:#fff;display:flex;flex-direction:column;justify-content:center;padding:0 4rem;}
+.login-left .overlay h1{color:var(--primary-color);font-size:2rem;margin-bottom:1rem;}
+.login-left .overlay p{font-size:1rem;font-weight:300;}
+.login-right{flex:1;max-width:450px;background:#f9f9f9;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;}
+.login-right h2{font-size:1.25rem;color:#333;margin-bottom:1rem;}
+.login-form{width:100%;}
+.login-form label{display:block;margin-bottom:.25rem;font-size:.9rem;font-weight:500;}
+.login-form input{width:100%;padding:.75rem;margin-bottom:1rem;border:1px solid #ccc;border-radius:.25rem;}
+.login-form button{width:100%;padding:.75rem;background:var(--primary-color);color:#fff;border:none;border-radius:.25rem;cursor:pointer;}
+.login-form button:hover{background:#e5a400;}
+.error-msg{background:#ffe5e5;color:#d8000c;padding:.5rem;border-radius:.25rem;margin-bottom:1rem;text-align:center;}
+.footer-link-wrapper{position:absolute;bottom:1rem;left:1rem;font-size:.8rem;color:var(--primary-color);} .footer-link{color:var(--primary-color);text-decoration:none;} .footer-link:hover{text-decoration:underline;}
