@@ -49,24 +49,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 
     <div class="login-right">
-      <img class="logo" src="../assets/images/logo-login.png" alt="CDE Bimtech Logo">
-      <?php if ($error): ?>
-        <div class="error-msg"><?=htmlspecialchars($error)?></div>
-      <?php endif; ?>
-      <form method="post" class="login-form">
-        <label for="email">Username</label>
-        <input id="email" name="email" type="email" placeholder="Enter your email" required>
+      <div class="card">
+        <img class="logo" src="../assets/images/logo-login.png" alt="CDE Bimtech Logo">
+        <h2>Login to CDE Bimtech</h2>
+        <?php if ($error): ?>
+          <div class="error-msg"><?=htmlspecialchars($error)?></div>
+        <?php endif; ?>
+        <form method="post" class="login-form">
+          <label class="required" for="email">Username</label>
+          <input id="email" name="email" type="email" placeholder="Enter your email" required>
 
-        <label for="password">Password</label>
-        <input id="password" name="password" type="password" placeholder="Enter your password" required>
+          <label class="required" for="password">Password</label>
+          <div class="password-wrapper">
+            <input id="password" name="password" type="password" placeholder="Enter your password" required>
+            <span class="toggle-password">👁️</span>
+          </div>
 
-        <button type="submit">Login</button>
-        <a href="#" class="forgot">Forgot password?</a>
-      </form>
+          <div class="checkbox-group">
+            <input type="checkbox" id="overwrite" name="overwrite">
+            <label for="overwrite">Overwrite session</label>
+          </div>
 
-      <p class="register">Chưa có tài khoản? <a href="register.php" class="text-primary">Đăng ký tài khoản</a></p>
+          <button type="submit">Login</button>
+          <a href="#" class="forgot">Forgot password?</a>
+        </form>
 
-      <div class="footer-left">&copy; 2025 a product of <a href="https://bimtech.edu.vn" class="footer-link">Bimtech</a></div>
+        <p class="register">Chưa có tài khoản? <a href="register.php" class="text-primary">Đăng ký tài khoản</a></p>
+
+        <div class="footer-link-wrapper">
+          &copy; 2025 a product of <a href="https://bimtech.edu.vn" class="footer-link">Bimtech</a>
+        </div>
+      </div>
     </div>
 
   </div>
