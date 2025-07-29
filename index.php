@@ -2,52 +2,48 @@
 // index.php
 session_start();
 
-// Check if config.php exists
-if (!file_exists(__DIR__ . '/config.php')) {
-    // Configuration missing, redirect to installer
-    header('Location: install.php');
+// Nếu chưa đăng nhập, chuyển về login
+if (empty($_SESSION['user'])) {
+    header('Location: pages/login.php');
     exit;
 }
 
+// Kiểm tra config
+if (!file_exists(__DIR__ . '/config.php')) {
+    header('Location: install.php');
+    exit;
+}
 require_once __DIR__ . '/config.php';
 
+// Kết nối database và khởi tạo table nếu cần
 try {
-    $dsn = 'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME;
-    $pdo = new PDO($dsn, DB_USER, DB_PASS);
+    $pdo = new PDO('mysql:host=' . DB_HOST . ';dbname=' . DB_NAME, DB_USER, DB_PASS);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    // Check if any tables exist
-    $stmt = $pdo->query("SHOW TABLES");
-    if ($stmt->rowCount() === 0) {
-        // No tables, run schema creation
+    $tables = $pdo->query("SHOW TABLES LIKE 'users'");
+    if ($tables->rowCount() === 0) {
         $schema = file_get_contents(__DIR__ . '/schema.sql');
         $pdo->exec($schema);
     }
 } catch (PDOException $e) {
-    // Database error
     http_response_code(500);
     echo '<h1>500 Internal Server Error</h1>';
-    echo '<p>Database connection failed. Please check your configuration.</p>';
+    echo '<p>Database connection failed.</p>';
     exit;
 }
 
-// Normal application logic follows
+// Nội dung chính
 ?>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CDE Bimtech Dashboard</title>
+  <title>Dashboard | CDE Bimtech</title>
   <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
-  <?php include __DIR__ . '/pages/includes/header.php'; ?>
-
-  <main>
-    <h1>Welcome to CDE Bimtech</h1>
-    <!-- Dashboard content here -->
-  </main>
-
-  <?php include __DIR__ . '/pages/includes/footer.php'; ?>
+  <h1>Welcome, <?= htmlspecialchars(\$_SESSION['user']['name']) ?></h1>
+  <p>This is your dashboard.</p>
+  <p><a href="pages/login.php?logout=1">Logout</a></p>
 </body>
 </html>
