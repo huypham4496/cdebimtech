@@ -40,14 +40,14 @@
 }
 
 .sidebar-title h2 {
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   font-weight: 700;
   color: var(--sidebar-text);
-  margin: 0;
+  margin-bottom: 0.25rem;
 }
 
 .sidebar-title p {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: #666;
   margin: 0;
 }
