@@ -1,16 +1,15 @@
-/* admincp.css - styles for Admin Control Panel */
+/* admincp.css - updated input styles based on login.css */
+
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
 
 :root {
-  --admin-sidebar-bg: #ffffff;
-  --admin-sidebar-border: #e0e0e0;
-  --admin-sidebar-text: #333333;
-  --admin-sidebar-active-bg: #fca415;
-  --admin-sidebar-active-text: #ffffff;
-  --admin-main-bg: #f9f9f9;
-  --admin-card-bg: #ffffff;
-  --admin-card-shadow: rgba(0, 0, 0, 0.05);
   --admin-primary: #fca415;
-  --admin-primary-dark: #d18f0b;
+  --admin-primary-hover: #d18f0b;
+  --admin-bg: #f9f9f9;
+  --card-bg: #ffffff;
+  --card-shadow: rgba(0, 0, 0, 0.05);
+  --input-border: #ccc;
+  --input-focus: var(--admin-primary);
 }
 
 * {
@@ -18,11 +17,10 @@
   font-family: 'Roboto', sans-serif;
 }
 
-/* Main content area shifted for admin sidebar */
 .main {
   margin-left: 250px;
   padding: 1rem 2rem;
-  background: var(--admin-main-bg);
+  background: var(--admin-bg);
   min-height: 100vh;
 }
 
@@ -32,69 +30,59 @@
   margin-bottom: 1rem;
 }
 
-/* Create New User inline section */
-.create-user-section {
-  background: var(--admin-card-bg);
-  padding: 1rem;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px var(--admin-card-shadow);
-  margin-bottom: 1rem;
+/* Form sections: style like login.css */
+.create-user-form input,
+.create-user-form select,
+.edit-user-form input,
+.edit-user-form select {
+  flex: 1 1 calc(33% - 1rem);
+  margin-right: 1rem;
+  padding: 0.5rem 0;
+  border: none;
+  border-bottom: 2px solid var(--input-border);
+  background: transparent;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+}
+.create-user-form input:focus,
+.create-user-form select:focus,
+.edit-user-form input:focus,
+.edit-user-form select:focus {
+  border-bottom-color: var(--input-focus);
+  outline: none;
 }
 
-.create-user-form {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  align-items: flex-end;
-}
-.create-user-form .form-group {
-  flex: 1 1 calc(33% - 1rem);
-  display: flex;
-  flex-direction: column;
-}
-.create-user-form label {
-  font-weight: 500;
-  margin-bottom: 0.25rem;
-}
-.create-user-form input,
-.create-user-form select {
-  padding: 0.5rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-}
-.create-user-form button {
-  flex: 1 1 100%;
-  max-width: 200px;
-  padding: 0.5rem 1rem;
+.create-user-form button,
+.edit-user-form button {
+  padding: 0.75rem;
   background: var(--admin-primary);
   color: #fff;
   border: none;
   border-radius: 4px;
+  font-size: 1rem;
   cursor: pointer;
-  font-family: 'Roboto', sans-serif;
+  transition: background 0.2s;
 }
-.create-user-form button:hover {
-  background: var(--admin-primary-dark);
+.create-user-form button:hover,
+.edit-user-form button:hover {
+  background: var(--admin-primary-hover);
 }
 
-/* Admin table styles */
+/* Table */ */
 .admin-table {
   width: 100%;
   border-collapse: collapse;
-  background: var(--admin-card-bg);
-  box-shadow: 0 2px 4px var(--admin-card-shadow);
+  background: var(--card-bg);
+  box-shadow: 0 2px 4px var(--card-shadow);
   margin-bottom: 1rem;
 }
 .admin-table th,
 .admin-table td {
   padding: 0.75rem;
   border: 1px solid #e0e0e0;
-  text-align: left;
+  font-family: 'Roboto', sans-serif;
 }
 .admin-table th {
   background: #f0f0f0;
   font-weight: 600;
-}
-.admin-table tbody tr:nth-child(even) {
-  background: #fafafa;
 }
