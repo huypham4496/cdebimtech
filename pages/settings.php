@@ -137,7 +137,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <div class="section">
         <h2>Avatar</h2>
         <div class="avatar-group">
-          <img src="/uploads/avatar/<?= htmlspecialchars($user['avatar']) ?>" class="avatar-preview" alt="Avatar">
+          <img src="/uploads/avatar/<?= htmlspecialchars($user['avatar']) ?>" class="avatar-previews" alt="Avatar">
           <input type="file" name="avatar" accept="image/*">
         </div>
       </div>
