@@ -25,11 +25,56 @@
   background: var(--admin-main-bg);
   min-height: 100vh;
 }
+
 .main header h1 {
-  font-size: 1.25rem; /* smaller header */
-  color: var(--admin-primary); /* highlight color */
+  font-size: 1.25rem;
+  color: var(--admin-primary);
   margin-bottom: 1rem;
 }
+
+/* Create New User inline section */
+.create-user-section {
+  background: var(--admin-card-bg);
+  padding: 1rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px var(--admin-card-shadow);
+  margin-bottom: 1rem;
+}
+
+.create-user-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-end;
+}
+.create-user-form .form-group {
+  flex: 1 1 calc(33% - 1rem);
+  display: flex;
+  flex-direction: column;
+}
+.create-user-form label {
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+.create-user-form input,
+.create-user-form select {
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+.create-user-form button {
+  flex: 1 1 100%;
+  max-width: 200px;
+  padding: 0.5rem 1rem;
+  background: var(--admin-primary);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: 'Roboto', sans-serif;
+}
+.create-user-form button:hover {
+  background: var(--admin-primary-dark);
 }
 
 /* Admin table styles */
@@ -45,7 +90,6 @@
   padding: 0.75rem;
   border: 1px solid #e0e0e0;
   text-align: left;
-  font-family: 'Roboto', sans-serif;
 }
 .admin-table th {
   background: #f0f0f0;
@@ -53,54 +97,4 @@
 }
 .admin-table tbody tr:nth-child(even) {
   background: #fafafa;
-}
-
-/* Admin forms */
-.admin-form {
-  background: var(--admin-card-bg);
-  padding: 1rem;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px var(--admin-card-shadow);
-  max-width: 400px;
-  margin-bottom: 1rem;
-}
-.admin-form label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 500;
-}
-.admin-form input,
-.admin-form select {
-  width: 100%;
-  padding: 0.5rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  margin-bottom: 1rem;
-}
-.admin-form button {
-  padding: 0.5rem 1rem;
-  background: var(--admin-primary);
-  color: #ffffff;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-family: 'Roboto', sans-serif;
-}
-.admin-form button:hover {
-  background: var(--admin-primary-dark);
-}
-
-/* Buttons */
-.btn {
-  display: inline-block;
-  padding: 0.5rem 1rem;
-  background: var(--admin-primary);
-  color: #fff;
-  text-decoration: none;
-  border-radius: 4px;
-  transition: background 0.2s;
-  font-family: 'Roboto', sans-serif;
-}
-.btn:hover {
-  background: var(--admin-primary-dark);
 }
