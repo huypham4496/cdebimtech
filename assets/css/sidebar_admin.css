@@ -1,13 +1,26 @@
 /* sidebar_admin.css - styles for AdminCP sidebar */
 
+:root {
+  --sidebar-bg: #ffffff;
+  --sidebar-border: #e0e0e0;
+  --sidebar-text: #333333;
+  --sidebar-active-bg: #fca415;
+  --sidebar-active-text: #ffffff;
+}
+
+* {
+  box-sizing: border-box;
+  font-family: 'Roboto', sans-serif;
+}
+
 .sidebar-admin {
   position: fixed;
   top: 0;
   left: 0;
   bottom: 0;
-  width: 220px;
-  background: var(--admin-sidebar-bg);
-  border-right: 1px solid var(--admin-sidebar-border);
+  width: 250px;
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--sidebar-border);
   display: flex;
   flex-direction: column;
 }
@@ -15,25 +28,26 @@
 .sidebar-admin .sidebar-header {
   display: flex;
   align-items: center;
-  padding: 1rem;
-  border-bottom: 1px solid var(--admin-sidebar-border);
+  padding: 0.5rem 1rem;
 }
 
 .sidebar-logo {
-  width: 40px;
-  height: 40px;
+  width: 50px;
+  height: 50px;
   margin-right: 0.75rem;
 }
 
 .sidebar-title h2 {
-  font-size: 1.2rem;
+  font-size: 1.25rem;
   font-weight: 700;
-  color: var(--admin-sidebar-text);
+  color: var(--sidebar-text);
+  margin: 0;
 }
 
 .sidebar-title p {
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   color: #666;
+  margin: 0;
 }
 
 .sidebar-nav-admin ul {
@@ -46,25 +60,26 @@
   display: flex;
   align-items: center;
   padding: 0.75rem 1rem;
-  color: var(--admin-sidebar-text);
+  color: var(--sidebar-text);
   text-decoration: none;
   transition: background 0.2s, color 0.2s;
 }
 
 .sidebar-nav-admin li.active a,
 .sidebar-nav-admin li a:hover {
-  background: var(--admin-sidebar-active-bg);
-  color: var(--admin-sidebar-active-text);
+  background: var(--sidebar-active-bg);
+  color: var(--sidebar-active-text);
 }
 
 .sidebar-nav-admin a i {
   margin-right: 0.75rem;
+  width: 20px;
 }
 
 .sidebar-footer {
   margin-top: auto;
   padding: 1rem;
-  border-top: 1px solid var(--admin-sidebar-border);
+  border-top: 1px solid var(--sidebar-border);
   text-align: center;
 }
 
