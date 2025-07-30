@@ -30,7 +30,74 @@
   margin-bottom: 1rem;
 }
 
-/* Form sections: style like login.css */
+/* Form sections */
+.create-user-section, .edit-user-section {
+  background: var(--card-bg);
+  padding: 1rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px var(--card-shadow);
+  margin-bottom: 1rem;
+}
+.create-user-form, .edit-user-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+.create-user-form input,
+.create-user-form select,
+.edit-user-form input,
+.edit-user-form select {
+  flex: 1 1 calc(48% - 1rem);
+  padding: 0.5rem 0;
+  border: none;
+  border-bottom: 2px solid var(--input-border);
+  background: transparent;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+}
+.create-user-form input:focus,
+.create-user-form select:focus,
+.edit-user-form input:focus,
+.edit-user-form select:focus {
+  border-bottom-color: var(--input-focus);
+  outline: none;
+}
+.create-user-form button,
+.edit-user-form button {
+  flex: 1 1 100%;
+  padding: 0.75rem;
+  background: var(--admin-primary);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+  margin-top: 1rem;
+}
+.create-user-form button:hover,
+.edit-user-form button:hover {
+  background: var(--admin-primary-hover);
+}
+
+/* Table styles */
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--card-bg);
+  box-shadow: 0 2px 4px var(--card-shadow);
+  margin-bottom: 1rem;
+}
+.admin-table th,
+.admin-table td {
+  padding: 0.75rem;
+  border: 1px solid #e0e0e0;
+  font-family: 'Roboto', sans-serif;
+}
+.admin-table th {
+  background: #f0f0f0;
+  font-weight: 600;
+}
 .create-user-form input,
 .create-user-form select,
 .edit-user-form input,
