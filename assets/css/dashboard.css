@@ -46,14 +46,6 @@ body, html {
   text-decoration: none;
   transition: background 0.2s;
 }
-.sidebar nav li.active a{
-  background: var(--sidebar-active-text);
-  color: #fff;
-}
-.sidebar nav a:hover {
-  background: var(--sidebar-hover-bg);
-  color: var(--sidebar-active-text);
-}
 
 .user-info {
   padding: 1rem;
