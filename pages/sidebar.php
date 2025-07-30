@@ -45,7 +45,7 @@
       <a href="#"><i class="fas fa-bell"></i> Notification</a>
       <a href="#"><i class="fas fa-cog"></i> Settings</a>
       <?php if (isset($_SESSION['user']['role']) && $_SESSION['user']['role'] === 'admin'): ?>
-        <a href="admin.php"><i class="fas fa-user-shield"></i> AdminCP</a>
+        <a href="admin/index.php"><i class="fas fa-user-shield"></i> AdminCP</a>
       <?php endif; ?>
       <a href="home.php?logout=1" class="sign-out"><i class="fas fa-sign-out-alt"></i> Sign out</a>
       <div class="version">Version: 0.0.1</div>
