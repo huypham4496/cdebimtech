@@ -1,5 +1,5 @@
-<!-- pages/settings.php -->
 <?php
+// pages/settings.php
 session_start();
 if (empty($_SESSION['user'])) {
     header('Location: pages/login.php');
@@ -8,14 +8,16 @@ if (empty($_SESSION['user'])) {
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/functions.php';
 
-// Fetch current user
+// Fetch current user data
 try {
     $pdo = new PDO(
         'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=utf8mb4',
         DB_USER, DB_PASS,
         [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
     );
-    $stmt = $pdo->prepare('SELECT username, first_name, last_name, email, avatar, dob, address, company, phone FROM users WHERE id = ?');
+    $stmt = $pdo->prepare(
+        'SELECT username, first_name, last_name, email, avatar, dob, address, company, phone FROM users WHERE id = ?'
+    );
     $stmt->execute([$_SESSION['user']['id']]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
@@ -33,14 +35,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $address = trim($_POST['address']);
     $company = trim($_POST['company']);
     $phone = trim($_POST['phone']);
+
     // Avatar upload
     if (!empty($_FILES['avatar']['tmp_name'])) {
         $ext = pathinfo($_FILES['avatar']['name'], PATHINFO_EXTENSION);
         $avatarFile = 'avatar_' . $_SESSION['user']['id'] . '.' . $ext;
-        move_uploaded_file($_FILES['avatar']['tmp_name'], __DIR__ . '/../assets/uploads/' . $avatarFile);
+        move_uploaded_file(
+            $_FILES['avatar']['tmp_name'],
+            __DIR__ . '/../assets/uploads/' . $avatarFile
+        );
     } else {
         $avatarFile = $user['avatar'];
     }
+
     // Update DB
     $upd = $pdo->prepare(
         'UPDATE users SET username=?, first_name=?, last_name=?, email=?, avatar=?, dob=?, address=?, company=?, phone=? WHERE id=?'
@@ -50,19 +57,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $dob, $address, $company, $phone,
         $_SESSION['user']['id']
     ]);
-    // Update session and local user array
+
+    // Update session & local variable
     $_SESSION['user']['name'] = $first;
     $_SESSION['user']['avatar'] = $avatarFile;
     $user = array_merge($user, [
-        'username'=>$username,
-        'first_name'=>$first,
-        'last_name'=>$last,
-        'email'=>$email,
-        'avatar'=>$avatarFile,
-        'dob'=>$dob,
-        'address'=>$address,
-        'company'=>$company,
-        'phone'=>$phone
+        'username' => $username,
+        'first_name' => $first,
+        'last_name'  => $last,
+        'email'      => $email,
+        'avatar'     => $avatarFile,
+        'dob'        => $dob,
+        'address'    => $address,
+        'company'    => $company,
+        'phone'      => $phone
     ]);
     $success = 'Your settings have been saved.';
 }
@@ -81,15 +89,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <?php include __DIR__ . '/sidebar.php'; ?>
   <div class="main">
     <header><h1>Settings</h1></header>
-    <?php if ($success): ?><div class="success"><?= htmlspecialchars($success) ?></div><?php endif; ?>
+
+    <?php if ($success): ?>
+      <div class="success"><?= htmlspecialchars($success) ?></div>
+    <?php endif; ?>
+
     <form method="post" enctype="multipart/form-data" class="settings-form">
+      <!-- Account Details -->
       <div class="section">
         <h2>Account Details</h2>
         <div class="form-row">
-          <div class="form-group"><label>Username</label><input type="text" name="username" value="<?= htmlspecialchars($user['username']) ?>" required></div>
-          <div class="form-group"><label>Email</label><input type="email" name="email" value="<?= htmlspecialchars($user['email']) ?>" required></div>
+          <div class="form-group">
+            <label>Username</label>
+            <input type="text" name="username" value="<?= htmlspecialchars($user['username']) ?>" required>
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" name="email" value="<?= htmlspecialchars($user['email']) ?>" readonly class="readonly">
+          </div>
         </div>
       </div>
+
+      <!-- Personal Information -->
       <div class="section">
         <h2>Personal Information</h2>
         <div class="form-row">
@@ -106,14 +127,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="form-row">
           <div class="form-group full"><label>Company</label><input type="text" name="company" value="<?= htmlspecialchars($user['company']) ?>"></div>
         </div>
-      </div>
-      <div class="section edit-user-section">
+      </form>
+
+      <!-- Avatar Section -->
+      <div class="section">
         <h2>Avatar</h2>
-        <div class="form-group avatar-group">
-          <img src="../assets/uploads/<?= htmlspecialchars($user['avatar']) ?>" alt="Avatar" class="avatar-preview">
+        <div class="avatar-group">
+          <img src="../assets/uploads/<?= htmlspecialchars($user['avatar']) ?>" class="avatar-preview" alt="Avatar">
           <input type="file" name="avatar" accept="image/*">
         </div>
       </div>
+
       <button type="submit" class="btn-save">Save Changes</button>
     </form>
   </div>
