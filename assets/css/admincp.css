@@ -1,4 +1,4 @@
-/* admincp.css - updated input styles based on login.css */
+/* admincp.css - improved input layout and styling */
 
 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
 
@@ -15,6 +15,8 @@
 * {
   box-sizing: border-box;
   font-family: 'Roboto', sans-serif;
+  margin: 0;
+  padding: 0;
 }
 
 .main {
@@ -30,24 +32,34 @@
   margin-bottom: 1rem;
 }
 
-/* Form sections */
-.create-user-section, .edit-user-section {
+/* Form layout */
+.create-user-section,
+.edit-user-section {
   background: var(--card-bg);
   padding: 1rem;
   border-radius: 8px;
   box-shadow: 0 2px 4px var(--card-shadow);
   margin-bottom: 1rem;
 }
-.create-user-form, .edit-user-form {
+.create-user-form,
+.edit-user-form {
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;
 }
-.create-user-form input,
-.create-user-form select,
-.edit-user-form input,
-.edit-user-form select {
-  flex: 1 1 calc(48% - 1rem);
+
+/* Form group: 3 per row */
+.form-group {
+  flex: 1 1 calc(31% - 1rem);
+  display: flex;
+  flex-direction: column;
+}
+.form-group label {
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+.form-group input,
+.form-group select {
   padding: 0.5rem 0;
   border: none;
   border-bottom: 2px solid var(--input-border);
@@ -55,13 +67,13 @@
   font-size: 1rem;
   transition: border-color 0.2s;
 }
-.create-user-form input:focus,
-.create-user-form select:focus,
-.edit-user-form input:focus,
-.edit-user-form select:focus {
+.form-group input:focus,
+.form-group select:focus {
   border-bottom-color: var(--input-focus);
   outline: none;
 }
+
+/* Full width button */
 .create-user-form button,
 .edit-user-form button {
   flex: 1 1 100%;
@@ -73,7 +85,6 @@
   font-size: 1rem;
   cursor: pointer;
   transition: background 0.2s;
-  margin-top: 1rem;
 }
 .create-user-form button:hover,
 .edit-user-form button:hover {
@@ -92,62 +103,6 @@
 .admin-table td {
   padding: 0.75rem;
   border: 1px solid #e0e0e0;
-  font-family: 'Roboto', sans-serif;
-}
-.admin-table th {
-  background: #f0f0f0;
-  font-weight: 600;
-}
-.create-user-form input,
-.create-user-form select,
-.edit-user-form input,
-.edit-user-form select {
-  flex: 1 1 calc(33% - 1rem);
-  margin-right: 1rem;
-  padding: 0.5rem 0;
-  border: none;
-  border-bottom: 2px solid var(--input-border);
-  background: transparent;
-  font-size: 1rem;
-  transition: border-color 0.2s;
-}
-.create-user-form input:focus,
-.create-user-form select:focus,
-.edit-user-form input:focus,
-.edit-user-form select:focus {
-  border-bottom-color: var(--input-focus);
-  outline: none;
-}
-
-.create-user-form button,
-.edit-user-form button {
-  padding: 0.75rem;
-  background: var(--admin-primary);
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-.create-user-form button:hover,
-.edit-user-form button:hover {
-  background: var(--admin-primary-hover);
-}
-
-/* Table */ */
-.admin-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: var(--card-bg);
-  box-shadow: 0 2px 4px var(--card-shadow);
-  margin-bottom: 1rem;
-}
-.admin-table th,
-.admin-table td {
-  padding: 0.75rem;
-  border: 1px solid #e0e0e0;
-  font-family: 'Roboto', sans-serif;
 }
 .admin-table th {
   background: #f0f0f0;
