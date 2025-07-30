@@ -5,13 +5,14 @@
 <div class="sidebar-admin">
   <!-- Header -->
   <div class="sidebar-header">
-    <img src="../../assets/images/logo-login.png" alt="CDE Bimtech Logo" class="sidebar-logo">
-    <div class="sidebar-title">
-      <h2>AdminCP</h2>
-      <p>Control Panel</p>
-    </div>
+    <a href="../home.php" class="sidebar-logo-link">
+      <img src="../../assets/images/logo-login.png" alt="CDE Bimtech Logo" class="sidebar-logo">
+      <div class="sidebar-title">
+        <h2>AdminCP</h2>
+        <p>Control Panel</p>
+      </div>
+    </a>
   </div>
-
   <!-- Navigation -->
   <nav class="sidebar-nav-admin">
     <ul>
@@ -25,7 +26,7 @@
 
   <!-- Footer -->
   <div class="sidebar-footer">
-    <a href="../../pages/login.php?logout=1" class="sign-out"><i class="fas fa-sign-out-alt"></i> Sign out</a>
+    <a href="../home.php" class="sign-out"><i class="fas fa-home"></i> Back to Home</a>
     <div class="version">Version: 0.0.1</div>
   </div>
 </div>
