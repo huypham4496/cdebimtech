@@ -39,10 +39,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Avatar upload
     if (!empty($_FILES['avatar']['tmp_name'])) {
         $ext = pathinfo($_FILES['avatar']['name'], PATHINFO_EXTENSION);
+        $avatarDir = __DIR__ . '/../uploads/avatar/';
+        if (!is_dir($avatarDir)) {
+            mkdir($avatarDir, 0755, true);
+        }
         $avatarFile = 'avatar_' . $_SESSION['user']['id'] . '.' . $ext;
         move_uploaded_file(
             $_FILES['avatar']['tmp_name'],
-            __DIR__ . '/../assets/uploads/' . $avatarFile
+            $avatarDir . $avatarFile
         );
     } else {
         $avatarFile = $user['avatar'];
@@ -127,13 +131,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="form-row">
           <div class="form-group full"><label>Company</label><input type="text" name="company" value="<?= htmlspecialchars($user['company']) ?>"></div>
         </div>
-      </form>
+      </div>
 
       <!-- Avatar Section -->
       <div class="section">
         <h2>Avatar</h2>
         <div class="avatar-group">
-          <img src="../assets/uploads/<?= htmlspecialchars($user['avatar']) ?>" class="avatar-preview" alt="Avatar">
+          <img src="/uploads/avatar/<?= htmlspecialchars($user['avatar']) ?>" class="avatar-preview" alt="Avatar">
           <input type="file" name="avatar" accept="image/*">
         </div>
       </div>
