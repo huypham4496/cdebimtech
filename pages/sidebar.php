@@ -24,6 +24,7 @@
       <li><a href="history.php"><i class="fas fa-history"></i> Activity History</a></li>
       <li><a href="rules.php"><i class="fas fa-gavel"></i> Rule</a></li>
       <li><a href="org_members.php"><i class="fas fa-building"></i> Organization Members</a></li>
+      <li><a href="org_members.php"><i class="fas fa-receipt"></i> Subscriptions</a></li>
     </ul>
   </nav>
 
