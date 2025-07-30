@@ -1,11 +1,18 @@
 <?php
 // pages/admin/sidebar_admin.php
-// Session already started
+// Được include sau session_start() ở trang cha
 ?>
 <div class="sidebar-admin">
+  <!-- Logo header -->
   <div class="sidebar-header">
-    <h2>AdminCP</h2>
+    <img src="../../assets/images/logo-login.png" alt="CDE Bimtech Logo" class="sidebar-logo">
+    <div class="sidebar-title">
+      <h2>AdminCP</h2>
+      <p>Control Panel</p>
+    </div>
   </div>
+
+  <!-- Navigation tabs -->
   <nav class="sidebar-nav-admin">
     <ul>
       <li class="active"><a href="index.php"><i class="fas fa-users-cog"></i> User Management</a></li>
@@ -15,4 +22,10 @@
       <li><a href="payment_requests.php"><i class="fas fa-hand-holding-usd"></i> Payment Requests</a></li>
     </ul>
   </nav>
+
+  <!-- Footer actions -->
+  <div class="sidebar-footer">
+    <a href="../../pages/login.php?logout=1" class="sign-out"><i class="fas fa-sign-out-alt"></i> Sign out</a>
+    <div class="version">Version: 0.0.1</div>
+  </div>
 </div>
