@@ -43,7 +43,7 @@
     </div>
     <div class="sidebar-actions">
       <a href="#"><i class="fas fa-bell"></i> Notification</a>
-      <a href="#"><i class="fas fa-cog"></i> Settings</a>
+      <a href="settings.php"><i class="fas fa-cog"></i> Settings</a>
       <?php if (isset($_SESSION['user']['role']) && $_SESSION['user']['role'] === 'admin'): ?>
         <a href="admin/index.php"><i class="fas fa-user-shield"></i> AdminCP</a>
       <?php endif; ?>
