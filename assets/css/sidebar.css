@@ -5,7 +5,7 @@
 :root {
   --sidebar-width: 250px;
   --sidebar-bg: #ffffff;
-  --sidebar-active-bg: #e6f7e6;
+  --sidebar-active-bg: #e6f7e6; /* unused for admin nav, kept for consistency */
   --sidebar-hover-bg: #f0f0f0;
   --sidebar-text: #333333;
   --sidebar-active-text: #fca415;
@@ -87,8 +87,8 @@
 }
 
 .sidebar-nav li.active a {
-  background: var(--sidebar-active-bg);
-  color: var(--sidebar-active-text);
+  background: var(--sidebar-active-text);
+  color: #fff;
 }
 
 .sidebar-nav a:hover {
