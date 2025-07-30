@@ -54,22 +54,8 @@ try {
   <?php include __DIR__ . '/sidebar_admin.php'; ?>
   <div class="main">
     <header><h1>Edit User</h1></header>
-    <form method="post" class="admin-form">
-      <label>Username</label><input name="username" value="<?php echo htmlspecialchars($user['username']); ?>" required>
-      <label>First Name</label><input name="first_name" value="<?php echo htmlspecialchars($user['first_name']); ?>" required>
-      <label>Last Name</label><input name="last_name" value="<?php echo htmlspecialchars($user['last_name']); ?>" required>
-      <label>Email</label><input type="email" name="email" value="<?php echo htmlspecialchars($user['email']); ?>" required>
-      <label>Role</label><select name="role">
-        <option value="user"<?php echo $user['role']==='user'?' selected':'';?>>User</option>
-        <option value="admin"<?php echo $user['role']==='admin'?' selected':'';?>>Admin</option>
-      </select>
-      <label>Password (leave blank to keep)</label><input type="password" name="password">
-      <label>Date of Birth</label><input type="date" name="dob" value="<?php echo htmlspecialchars($user['dob']); ?>">
-      <label>Address</label><input name="address" value="<?php echo htmlspecialchars($user['address']); ?>">
-      <label>Company</label><input name="company" value="<?php echo htmlspecialchars($user['company']); ?>">
-      <label>Phone</label><input name="phone" value="<?php echo htmlspecialchars($user['phone']); ?>">
-      <label>Invite Code</label><input name="invite_code" value="<?php echo htmlspecialchars($user['invite_code']); ?>">
-      <button type="submit">Save Changes</button>
+    <form method="post" class="create-user-form">
+      <!-- fields inline pre-filled with $user -->
     </form>
   </div>
 </body>
