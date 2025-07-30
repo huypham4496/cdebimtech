@@ -1,9 +1,9 @@
 <?php
 // pages/admin/sidebar_admin.php
-// Được include sau session_start() ở trang cha
+// Session đã được start ở file cha
 ?>
 <div class="sidebar-admin">
-  <!-- Logo header -->
+  <!-- Header -->
   <div class="sidebar-header">
     <img src="../../assets/images/logo-login.png" alt="CDE Bimtech Logo" class="sidebar-logo">
     <div class="sidebar-title">
@@ -12,7 +12,7 @@
     </div>
   </div>
 
-  <!-- Navigation tabs -->
+  <!-- Navigation -->
   <nav class="sidebar-nav-admin">
     <ul>
       <li class="active"><a href="index.php"><i class="fas fa-users-cog"></i> User Management</a></li>
@@ -23,7 +23,7 @@
     </ul>
   </nav>
 
-  <!-- Footer actions -->
+  <!-- Footer -->
   <div class="sidebar-footer">
     <a href="../../pages/login.php?logout=1" class="sign-out"><i class="fas fa-sign-out-alt"></i> Sign out</a>
     <div class="version">Version: 0.0.1</div>
