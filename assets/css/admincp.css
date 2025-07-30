@@ -1,14 +1,43 @@
-/* admincp.css - riêng cho Admin Control Panel */
-.main {
-  margin-left: 220px;
-  padding: 1rem 2rem;
-  background: #f9f9f9;
+/* admincp.css - styles for Admin Control Panel */
+
+:root {
+  --admin-sidebar-bg: #ffffff;
+  --admin-sidebar-border: #e0e0e0;
+  --admin-sidebar-text: #333333;
+  --admin-sidebar-active-bg: #fca415;
+  --admin-sidebar-active-text: #ffffff;
+  --admin-main-bg: #f9f9f9;
+  --admin-card-bg: #ffffff;
+  --admin-card-shadow: rgba(0, 0, 0, 0.05);
+  --admin-primary: #fca415;
+  --admin-primary-dark: #d18f0b;
 }
+
+* {
+  box-sizing: border-box;
+  font-family: 'Roboto', sans-serif;
+}
+
+/* Main content area shifted for admin sidebar */
+.main {
+  margin-left: 250px;
+  padding: 1rem 2rem;
+  background: var(--admin-main-bg);
+  min-height: 100vh;
+}
+.main header h1 {
+  font-size: 1.25rem; /* smaller header */
+  color: var(--admin-primary); /* highlight color */
+  margin-bottom: 1rem;
+}
+}
+
+/* Admin table styles */
 .admin-table {
   width: 100%;
   border-collapse: collapse;
-  background: #ffffff;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  background: var(--admin-card-bg);
+  box-shadow: 0 2px 4px var(--admin-card-shadow);
   margin-bottom: 1rem;
 }
 .admin-table th,
@@ -16,16 +45,22 @@
   padding: 0.75rem;
   border: 1px solid #e0e0e0;
   text-align: left;
+  font-family: 'Roboto', sans-serif;
 }
 .admin-table th {
   background: #f0f0f0;
   font-weight: 600;
 }
+.admin-table tbody tr:nth-child(even) {
+  background: #fafafa;
+}
+
+/* Admin forms */
 .admin-form {
-  background: #ffffff;
+  background: var(--admin-card-bg);
   padding: 1rem;
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  box-shadow: 0 2px 4px var(--admin-card-shadow);
   max-width: 400px;
   margin-bottom: 1rem;
 }
@@ -44,12 +79,28 @@
 }
 .admin-form button {
   padding: 0.5rem 1rem;
-  background: #059862;
+  background: var(--admin-primary);
   color: #ffffff;
   border: none;
   border-radius: 4px;
   cursor: pointer;
+  font-family: 'Roboto', sans-serif;
 }
 .admin-form button:hover {
-  background: #047a52;
+  background: var(--admin-primary-dark);
+}
+
+/* Buttons */
+.btn {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  background: var(--admin-primary);
+  color: #fff;
+  text-decoration: none;
+  border-radius: 4px;
+  transition: background 0.2s;
+  font-family: 'Roboto', sans-serif;
+}
+.btn:hover {
+  background: var(--admin-primary-dark);
 }
