@@ -113,7 +113,7 @@ $disableNew = count($subscriptions) >= 4;
           </div>
           <div class="card-field full">
             <label>Description</label>
-            <textarea name="description" rows="3" placeholder="Description" <?= $disableNew ? 'disabled' : '' ?>></textarea>
+            <textarea name="description" rows="6" placeholder="Description" <?= $disableNew ? 'disabled' : '' ?>></textarea>
           </div>
           <button type="submit" class="btn-create" <?= $disableNew ? 'disabled' : '' ?>>Add Subscription</button>
         </form>
@@ -140,7 +140,7 @@ $disableNew = count($subscriptions) >= 4;
             </div>
             <div class="card-field full">
               <label>Description</label>
-              <textarea name="description" rows="3" required><?= htmlspecialchars($sub['description']) ?></textarea>
+              <textarea name="description" rows="6" required><?= htmlspecialchars($sub['description']) ?></textarea>
             </div>
             <div class="card-actions">
               <button type="submit" class="btn-update">Update</button>
