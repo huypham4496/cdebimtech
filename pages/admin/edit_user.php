@@ -1,5 +1,4 @@
 <?php
-// pages/admin/edit_user.php
 session_start();
 if (empty($_SESSION['user']) || $_SESSION['user']['role'] !== 'admin') {
     header('Location: login.php'); exit;
@@ -17,12 +16,12 @@ try {
         [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
     );
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        $pwd = $_POST['password'] ? password_hash($_POST['password'], PASSWORD_DEFAULT) : null;
-        $sql = 'UPDATE users SET username=?, first_name=?, last_name=?, email=?, role=?, dob=?, address=?, company=?, phone=?, invite_code=?';
+        $pwd = !empty($_POST['password']) ? password_hash($_POST['password'], PASSWORD_DEFAULT) : null;
+        $sql = 'UPDATE users SET username=?, first_name=?, last_name=?, email=?, role=?, dob=?, address=?, company=?, phone=?';
         $params = [
           $_POST['username'], $_POST['first_name'], $_POST['last_name'],
           $_POST['email'], $_POST['role'], $_POST['dob'], $_POST['address'],
-          $_POST['company'], $_POST['phone'], $_POST['invite_code']
+          $_POST['company'], $_POST['phone']
         ];
         if ($pwd) {
             $sql .= ', password_hash=?';
@@ -55,17 +54,16 @@ try {
   <div class="main">
     <header><h1>Edit User</h1></header>
     <form method="post" class="create-user-form">
-      <div class="form-group"><label>Username</label><input name="username" value="<?php echo htmlspecialchars($user['username']); ?>" required></div>
+      <div class="form-group"><label>Username</label><input name="username" value="<?= htmlspecialchars($user['username']); ?>" required></div>
       <div class="form-group"><label>Password (leave blank to keep)</label><input type="password" name="password"></div>
-      <div class="form-group"><label>First Name</label><input name="first_name" value="<?php echo htmlspecialchars($user['first_name']); ?>" required></div>
-      <div class="form-group"><label>Last Name</label><input name="last_name" value="<?php echo htmlspecialchars($user['last_name']); ?>" required></div>
-      <div class="form-group"><label>Email</label><input type="email" name="email" value="<?php echo htmlspecialchars($user['email']); ?>" required></div>
-      <div class="form-group"><label>Role</label><select name="role"><option value="user"<?php echo $user['role']==='user'?' selected':'';?>>User</option><option value="admin"<?php echo $user['role']==='admin'?' selected':'';?>>Admin</option></select></div>
-      <div class="form-group"><label>DOB</label><input type="date" name="dob" value="<?php echo htmlspecialchars($user['dob']); ?>"></div>
-      <div class="form-group"><label>Address</label><input name="address" value="<?php echo htmlspecialchars($user['address']); ?>"></div>
-      <div class="form-group"><label>Company</label><input name="company" value="<?php echo htmlspecialchars($user['company']); ?>"></div>
-      <div class="form-group"><label>Phone</label><input name="phone" value="<?php echo htmlspecialchars($user['phone']); ?>"></div>
-      <div class="form-group"><label>Invite Code</label><input name="invite_code" value="<?php echo htmlspecialchars($user['invite_code']); ?>"></div>
+      <div class="form-group"><label>First Name</label><input name="first_name" value="<?= htmlspecialchars($user['first_name']); ?>" required></div>
+      <div class="form-group"><label>Last Name</label><input name="last_name" value="<?= htmlspecialchars($user['last_name']); ?>" required></div>
+      <div class="form-group"><label>Email</label><input type="email" name="email" value="<?= htmlspecialchars($user['email']); ?>" required></div>
+      <div class="form-group"><label>Role</label><select name="role"><option value="user"<?= $user['role']==='user'?' selected':''; ?>>User</option><option value="admin"<?= $user['role']==='admin'?' selected':''; ?>>Admin</option></select></div>
+      <div class="form-group"><label>Date of Birth</label><input type="date" name="dob" value="<?= htmlspecialchars($user['dob']); ?>"></div>
+      <div class="form-group"><label>Address</label><input name="address" value="<?= htmlspecialchars($user['address']); ?>"></div>
+      <div class="form-group"><label>Company</label><input name="company" value="<?= htmlspecialchars($user['company']); ?>"></div>
+      <div class="form-group"><label>Phone</label><input name="phone" value="<?= htmlspecialchars($user['phone']); ?>"></div>
       <button type="submit">Save Changes</button>
     </form>
   </div>
