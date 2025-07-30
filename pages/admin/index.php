@@ -28,19 +28,24 @@ try {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>AdminCP | User Management</title>
-  <link rel="stylesheet" href="../../assets/css/dashboard.css?v=<?php echo filemtime(__DIR__.'/../../assets/css/dashboard.css'); ?>">
+  <link rel="stylesheet" href="../../assets/css/admincp.css?v=<?php echo filemtime(__DIR__.'/../../assets/css/admincp.css'); ?>">
   <link rel="stylesheet" href="../../assets/css/sidebar_admin.css?v=<?php echo filemtime(__DIR__.'/../../assets/css/sidebar_admin.css'); ?>">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 </head>
 <body>
   <?php include __DIR__ . '/sidebar_admin.php'; ?>
+
   <div class="main">
     <header>
       <h1>User Management</h1>
     </header>
     <section class="content">
       <table class="admin-table">
-        <thead><tr><th>ID</th><th>Username</th><th>Name</th><th>Email</th><th>Role</th><th>Actions</th></tr></thead>
+        <thead>
+          <tr>
+            <th>ID</th><th>Username</th><th>Name</th><th>Email</th><th>Role</th><th>Actions</th>
+          </tr>
+        </thead>
         <tbody>
         <?php foreach ($users as $u): ?>
           <tr>
