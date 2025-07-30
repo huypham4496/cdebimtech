@@ -1,0 +1,100 @@
+/* subscriptions_info.css - styling for Admin Subscriptions Info page */
+
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+
+:root {
+  --primary-color: #fca415;
+  --primary-hover: #d18f0b;
+  --bg-light: #f9f9f9;
+  --card-bg: #ffffff;
+  --card-shadow: rgba(0, 0, 0, 0.05);
+  --input-border: #ccc;
+  --input-focus: var(--primary-color);
+}
+
+body {
+  background: var(--bg-light);
+  color: #333;
+  font-family: 'Roboto', sans-serif;
+}
+
+.main-admin {
+  margin-left: 250px;
+  padding: 2rem;
+}
+
+header h1 {
+  font-size: 1.5rem;
+  color: var(--primary-color);
+  margin-bottom: 1.5rem;
+}
+
+.alert-banner {
+  padding: 0.75rem 1rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid #c3e6cb;
+  border-radius: 4px;
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.subscriptions-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.subscription-card {
+  background: var(--card-bg);
+  padding: 1rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px var(--card-shadow);
+  display: flex;
+  flex-direction: column;
+}
+
+.card-field {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1rem;
+}
+
+.card-field.full {
+  margin-bottom: 1.25rem;
+}
+
+.card-field label {
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.card-field input,
+.card-field textarea {
+  padding: 0.5rem;
+  border: 1px solid var(--input-border);
+  border-radius: 4px;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+}
+
+.card-field input:focus,
+.card-field textarea:focus {
+  border-color: var(--input-focus);
+  outline: none;
+}
+
+.btn-update {
+  align-self: flex-end;
+  padding: 0.5rem 1rem;
+  background: var(--primary-color);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.btn-update:hover {
+  background: var(--primary-hover);
+}
