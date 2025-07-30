@@ -1,4 +1,4 @@
-/* assets/css/settings.css - refined layout matching login style */
+/* settings.css - final styling for Settings page matching login aesthetics */
 
 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
 
@@ -20,12 +20,13 @@
 }
 
 body {
-  background: var(--bg-light);
+  background-color: var(--bg-light);
 }
 
 .main {
   margin-left: 250px;
   padding: 2rem;
+  min-height: 100vh;
 }
 
 header h1 {
@@ -49,8 +50,8 @@ header h1 {
 
 .section h2 {
   font-size: 1.25rem;
-  margin-bottom: 1rem;
   color: var(--primary-color);
+  margin-bottom: 1rem;
 }
 
 .form-row {
@@ -82,12 +83,18 @@ header h1 {
   border-radius: 4px;
   font-size: 1rem;
   transition: border-color 0.2s;
+  background-color: #fff;
 }
 
 .form-group input:focus,
 .form-group select:focus {
   border-color: var(--input-focus);
   outline: none;
+}
+
+.form-group input.readonly {
+  background: #f0f0f0;
+  cursor: not-allowed;
 }
 
 .avatar-group {
@@ -105,7 +112,6 @@ header h1 {
 }
 
 .btn-save {
-  display: inline-block;
   padding: 0.75rem 1.5rem;
   background: var(--primary-color);
   color: #fff;
