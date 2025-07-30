@@ -1,0 +1,55 @@
+/* admincp.css - riêng cho Admin Control Panel */
+.main {
+  margin-left: 220px;
+  padding: 1rem 2rem;
+  background: #f9f9f9;
+}
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  margin-bottom: 1rem;
+}
+.admin-table th,
+.admin-table td {
+  padding: 0.75rem;
+  border: 1px solid #e0e0e0;
+  text-align: left;
+}
+.admin-table th {
+  background: #f0f0f0;
+  font-weight: 600;
+}
+.admin-form {
+  background: #ffffff;
+  padding: 1rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  max-width: 400px;
+  margin-bottom: 1rem;
+}
+.admin-form label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+.admin-form input,
+.admin-form select {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+.admin-form button {
+  padding: 0.5rem 1rem;
+  background: #059862;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.admin-form button:hover {
+  background: #047a52;
+}
