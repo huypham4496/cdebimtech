@@ -1,36 +1,81 @@
+/* sidebar_admin.css - styles for AdminCP sidebar */
+
 .sidebar-admin {
   position: fixed;
   top: 0;
   left: 0;
   bottom: 0;
   width: 220px;
-  background: #f8f9fa;
-  border-right: 1px solid #dee2e6;
+  background: var(--admin-sidebar-bg);
+  border-right: 1px solid var(--admin-sidebar-border);
   display: flex;
   flex-direction: column;
 }
+
 .sidebar-admin .sidebar-header {
+  display: flex;
+  align-items: center;
   padding: 1rem;
-  border-bottom: 1px solid #dee2e6;
+  border-bottom: 1px solid var(--admin-sidebar-border);
 }
+
+.sidebar-logo {
+  width: 40px;
+  height: 40px;
+  margin-right: 0.75rem;
+}
+
+.sidebar-title h2 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--admin-sidebar-text);
+}
+
+.sidebar-title p {
+  font-size: 0.85rem;
+  color: #666;
+}
+
 .sidebar-nav-admin ul {
   list-style: none;
   padding: 0;
   margin: 0;
 }
+
 .sidebar-nav-admin li a {
   display: flex;
   align-items: center;
   padding: 0.75rem 1rem;
-  color: #343a40;
+  color: var(--admin-sidebar-text);
   text-decoration: none;
-  transition: background 0.2s;
+  transition: background 0.2s, color 0.2s;
 }
+
 .sidebar-nav-admin li.active a,
 .sidebar-nav-admin li a:hover {
-  background: #e9ecef;
-  color: #212529;
+  background: var(--admin-sidebar-active-bg);
+  color: var(--admin-sidebar-active-text);
 }
+
 .sidebar-nav-admin a i {
-  margin-right: 0.5rem;
+  margin-right: 0.75rem;
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding: 1rem;
+  border-top: 1px solid var(--admin-sidebar-border);
+  text-align: center;
+}
+
+.sign-out {
+  display: block;
+  color: #e53935;
+  text-decoration: none;
+  margin-bottom: 0.5rem;
+}
+
+.version {
+  font-size: 0.8rem;
+  color: #e53935;
 }
