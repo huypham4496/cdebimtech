@@ -3,7 +3,7 @@
   --sidebar-active-bg: #e6f7e6;
   --sidebar-hover-bg: #f0f0f0;
   --sidebar-text: #333333;
-  --sidebar-active-text: #059862;
+  --sidebar-active-text: #fca415;
 }
 
 /* Sidebar container */
@@ -132,8 +132,6 @@
 
 .sidebar-actions a i { margin-right: 0.5rem; }
 .sidebar-actions a:hover { color: var(--sidebar-active-text); }
-
-.sign-out { color: #e53935; }
 
 .version {
   text-align: center;
