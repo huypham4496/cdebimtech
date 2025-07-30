@@ -44,19 +44,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <?php include __DIR__ . '/sidebar_admin.php'; ?>
   <div class="main">
     <header><h1>Create New User</h1></header>
-    <form method="post" class="admin-form">
-      <label>Username</label><input name="username" required>
-      <label>First Name</label><input name="first_name" required>
-      <label>Last Name</label><input name="last_name" required>
-      <label>Email</label><input type="email" name="email" required>
-      <label>Password</label><input type="password" name="password" required>
-      <label>Role</label><select name="role"><option value="user">User</option><option value="admin">Admin</option></select>
-      <label>Date of Birth</label><input type="date" name="dob">
-      <label>Address</label><input name="address">
-      <label>Company</label><input name="company">
-      <label>Phone</label><input name="phone">
-      <label>Invite Code</label><input name="invite_code">
-      <button type="submit">Create User</button>
+    <form method="post" class="create-user-form">
+      <!-- fields inline as above in index -->
     </form>
   </div>
 </body>
