@@ -14,10 +14,10 @@ try {
         [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
     );
 } catch (PDOException $e) {
-    die('DB Connection Error');
+    die('Database connection error: ' . htmlspecialchars($e->getMessage()));
 }
 
-// Fetch subscription
+// Fetch subscription and payment data
 $id = isset($_GET['sub_id']) ? (int)$_GET['sub_id'] : 0;
 $stmt = $pdo->prepare('SELECT * FROM subscriptions WHERE id = ?');
 $stmt->execute([$id]);
@@ -25,10 +25,7 @@ $sub = $stmt->fetch(PDO::FETCH_ASSOC);
 if (!$sub) {
     die('Invalid subscription.');
 }
-
-// Fetch payment settings
-$pay = $pdo->query('SELECT * FROM payment_settings WHERE id = 1')
-          ->fetch(PDO::FETCH_ASSOC);
+$pay = $pdo->query('SELECT * FROM payment_settings WHERE id = 1')->fetch(PDO::FETCH_ASSOC);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -44,80 +41,98 @@ $pay = $pdo->query('SELECT * FROM payment_settings WHERE id = 1')
 <body>
     <?php include __DIR__ . '/sidebar.php'; ?>
     <div class="subscribe-wrapper">
-        <!-- Block 1: Subscription Info -->
-        <div class="block1">
+        <!-- Primary block: Package, Duration, Price, Banner, Instructions -->
+        <div class="primary-card">
             <h2><?= htmlspecialchars($sub['name']) ?></h2>
             <div class="duration-group">
-                <label for="dur">Thời hạn mua gói:</label>
+                <label for="dur">Duration:</label>
                 <select id="dur" onchange="updatePrice()">
                     <?php foreach ([1,2,5,10,0] as $y): ?>
-                        <option value="<?= $y ?>"><?=
- $y ? "{$y} năm" : 'Vĩnh viễn' ?></option>
+                        <option value="<?= $y ?>"><?= $y ? "{$y} years" : 'Lifetime' ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
             <div id="priceInfo" class="price-info"></div>
-            <div id="promoBanner" class="banner"></div>
+            <div id="promoBanner" class="promo"></div>
+            <div class="instructions">
+                After payment, please click the <strong>Confirm Payment</strong> button. This is crucial for our system to record payment. On success, activation occurs within 5 minutes to 24 hours. You may also screenshot payment and contact us for faster activation. Hotline: 0888.121.496
+            </div>
+            <button class="confirm-btn" onclick="confirmPayment()">Confirm Payment</button>
         </div>
-        <!-- Block 2: Order Summary -->
-        <div class="block2">
-            <h3>Chi tiết đơn hàng</h3>
+
+        <!-- Order card: Voucher + Summary -->
+        <div class="order-card">
+            <h3>Order Details</h3>
             <div class="voucher-group">
-                <input type="text" placeholder="Nhập mã voucher">
-                <button type="button">Apply</button>
+                <input id="voucher" type="text" placeholder="Enter voucher code">
+                <button type="button" onclick="applyVoucher()">Apply</button>
             </div>
             <ul class="summary">
-                <li><span>Giá gốc</span><span id="origPrice"></span></li>
-                <li><span>Voucher</span><span id="discount">0%</span></li>
-                <li class="total"><span>Còn lại</span><span id="finalPrice"></span></li>
+                <li><span>Original Price</span><span id="origPrice"></span></li>
+                <li><span>Discount</span><span id="discount">0%</span></li>
+                <li class="total"><span>Total</span><span id="finalPrice"></span></li>
             </ul>
         </div>
-        <!-- Block 3: QR Payment -->
-        <div class="block3">
-            <h3>Thanh toán</h3>
+
+        <!-- Payment card: QR & Account Info -->
+        <div class="payment-card">
+            <h3>Payment</h3>
             <div class="qr-frame">
                 <img id="qrImg" src="" alt="QR Code">
             </div>
             <div class="acct-info">
-                <p>Chủ tài khoản: <?= htmlspecialchars($pay['account_name']) ?></p>
-                <p>Số tài khoản: <?= htmlspecialchars($pay['account_number']) ?></p>
-                <p>Ngân hàng: <?= htmlspecialchars($pay['bank_name']) ?></p>
-                <p>Số tiền: <span id="finalPriceInfo"></span></p>
-                <p>Ghi chú: Mã đơn hàng <strong id="orderMemo"></strong></p>
+                <p>Account Name: <?= htmlspecialchars($pay['account_name']) ?></p>
+                <p>Account Number: <?= htmlspecialchars($pay['account_number']) ?></p>
+                <p>Bank: <?= htmlspecialchars($pay['bank_name']) ?></p>
+                <p>Amount: <span id="finalPriceInfo"></span></p>
+                <p>Memo: <strong id="orderMemo"></strong></p>
             </div>
         </div>
     </div>
-<script>
-    const basePrice = <?= (int)$sub['price'] ?>;
-    function fmt(amount) {
-        return amount.toLocaleString('vi-VN') + ' VND';
-    }
-    function updatePrice() {
-        const y = +document.getElementById('dur').value;
-        const multiplier = y === 0 ? 30 : y;
-        const amount = multiplier * basePrice;
-        document.getElementById('priceInfo').textContent = fmt(amount) + (y ? ' / năm' : '');
-        const banner = document.getElementById('promoBanner');
-        if (y === 0) {
-            banner.textContent = 'Được ưu đãi khi mua các dịch vụ sau này';
-            banner.classList.add('lifetime');
-        } else if (y >= 5) {
-            banner.textContent = 'Buy more, save more';
-            banner.classList.remove('lifetime');
-        } else {
-            banner.textContent = 'Great value!';
-            banner.classList.remove('lifetime');
+
+    <script>
+        const basePrice = <?= (int)$sub['price'] ?>;
+        const promoEl = document.getElementById('promoBanner');
+        const priceEl = document.getElementById('priceInfo');
+        const origEl = document.getElementById('origPrice');
+        const finalEl = document.getElementById('finalPrice');
+        const finalInfoEl = document.getElementById('finalPriceInfo');
+        const memoEl = document.getElementById('orderMemo');
+        const qrEl = document.getElementById('qrImg');
+
+        function fmt(amount) {
+            return amount.toLocaleString('vi-VN') + ' VND';
         }
-        document.getElementById('origPrice').textContent = fmt(amount);
-        document.getElementById('finalPrice').textContent = fmt(amount);
-        document.getElementById('finalPriceInfo').textContent = fmt(amount);
-        const memo = `${<?= $_SESSION['user']['id'] ?>}_${y || 'LT'}_${Date.now()}`;
-        document.getElementById('orderMemo').textContent = memo;
-        document.getElementById('qrImg').src =
-            `https://qr.ecaptcha.vn/api/generate/${'<?= strtolower($pay['bank_name'])?>'}/${'<?= $pay['account_number']?>'}/${memo}` +
-            `?amount=${amount}&memo=${memo}&is_mask=0`;
-    }
-    updatePrice();
-</script>
+
+        function updatePrice() {
+            const y = parseInt(document.getElementById('dur').value, 10);
+            const multiplier = y === 0 ? 30 : y;
+            const amount = multiplier * basePrice;
+            priceEl.textContent = fmt(amount) + (y ? ' / year' : '');
+            promoEl.textContent = y === 0
+                ? 'Enjoy exclusive benefits for future services'
+                : y >= 5
+                    ? 'Bulk purchase bonus'
+                    : 'Great value!';
+            origEl.textContent = fmt(amount);
+            finalEl.textContent = fmt(amount);
+            finalInfoEl.textContent = fmt(amount);
+            const memo = `${<?= $_SESSION['user']['id'] ?>}_${y || 'LT'}_${Date.now()}`;
+            memoEl.textContent = memo;
+            qrEl.src =
+                `https://qr.ecaptcha.vn/api/generate/${'<?= strtolower($pay['bank_name'])?>'}/${'<?= $pay['account_number']?>'}/${memo}` +
+                `?amount=${amount}&memo=${memo}&is_mask=0`;
+        }
+        updatePrice();
+
+        function confirmPayment() {
+            alert('Payment confirmed!');
+        }
+
+        function applyVoucher() {
+            // future feature: calculate discount
+            alert('Voucher feature coming soon!');
+        }
+    </script>
 </body>
 </html>
