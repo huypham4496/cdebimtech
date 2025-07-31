@@ -1,145 +1,161 @@
-/* assets/css/subscribe.css */
 
-/* Google Font */
+/* Three-block Subscribe Layout */
 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
-
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css');
 :root {
-  --primary-color: #fca415;
-  --primary-hover: #d18f0b;
-  --bg-light: #f9f9f9;
+  --primary: #fca415;
+  --primary-dark: #d18f0b;
+  --bg: #f5f7fa;
   --card-bg: #ffffff;
-  --card-shadow: rgba(0, 0, 0, 0.05);
-  --text-dark: #333333;
-  --text-muted: #666666;
-  --input-border: #ccc;
-  --input-focus: var(--primary-color);
+  --shadow: rgba(0,0,0,0.1);
+  --text: #333;
+  --muted: #666;
+  --border: #e0e0e0;
 }
-
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
   font-family: 'Roboto', sans-serif;
 }
-
 body {
-  background-color: var(--bg-light);
-  color: var(--text-dark);
-}
-
-.main {
-  margin-left: 250px;
+  background: var(--bg);
+  color: var(--text);
   padding: 2rem;
-  max-width: 900px;
-  margin-right: auto;
 }
-
-.subscribe-layout {
+.subscribe-wrapper {
+  max-width: 1200px;
+  margin: 0 auto;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2rem;
-}
-
-@media (max-width: 768px) {
-  .subscribe-layout {
-    grid-template-columns: 1fr;
-  }
-}
-
-.subscription-card {
-  background: var(--card-bg);
-  border-radius: 8px;
-  box-shadow: 0 2px 8px var(--card-shadow);
-  padding: 2rem;
-}
-
-.subscription-card h2 {
-  font-size: 1.75rem;
-  margin-bottom: 1rem;
-  color: var(--primary-color);
-}
-
-.subscription-card p {
-  margin-bottom: 1rem;
-  color: var(--text-muted);
-}
-
-.subscription-card .price {
-  font-size: 2rem;
-  font-weight: 700;
-  color: var(--primary-color);
-}
-
-.subscription-card .price-unit {
-  font-size: 0.9rem;
-  color: var(--text-muted);
-  margin-bottom: 1.5rem;
-}
-
-.subscribe-form {
-  display: flex;
-  flex-direction: column;
+  grid-template-columns: 2fr 1fr;
+  grid-template-rows: auto auto;
   gap: 1.5rem;
 }
-
-.subscribe-form label {
+.block1 {
+  grid-column: 1 / 2;
+  grid-row: 1 / 3;
+  background: var(--card-bg);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px var(--shadow);
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.block2 {
+  grid-column: 2 / 3;
+  grid-row: 1 / 2;
+  background: var(--card-bg);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px var(--shadow);
+  padding: 2rem;
+}
+.block3 {
+  grid-column: 2 / 3;
+  grid-row: 2 / 3;
+  background: var(--card-bg);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px var(--shadow);
+  padding: 2rem;
+}
+/* Block1 styles */
+.block1 h2 {
+  font-size: 1.8rem;
+  margin-bottom: 1rem;
+  color: var(--primary);
+}
+.block1 .duration-group {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.block1 select {
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  flex: 1;
+}
+.block1 .price-info {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 1rem;
+}
+.block1 .banner {
+  background: var(--primary);
+  color: #fff;
+  padding: 0.75rem;
+  border-radius: 4px;
+  text-align: center;
   font-weight: 500;
 }
-
-.subscribe-form select,
-.subscribe-form input[type="text"] {
+.block1 .banner.lifetime {
+  background: var(--primary-dark);
+}
+/* Block2 styles */
+.block2 h3 {
+  font-size: 1.4rem;
+  margin-bottom: 1rem;
+  color: var(--primary);
+}
+.block2 .voucher-group {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+.block2 input {
+  flex: 1;
   padding: 0.75rem;
-  border: 1px solid var(--input-border);
+  border: 1px solid var(--border);
   border-radius: 4px;
-  font-size: 1rem;
-  transition: border-color 0.2s;
-  background-color: #fff;
 }
-
-.subscribe-form select:focus,
-.subscribe-form input:focus {
-  border-color: var(--input-focus);
-  outline: none;
-}
-
-.subscribe-form .gift-message {
-  font-size: 0.9rem;
-  color: var(--primary-color);
-  min-height: 1.2em;
-}
-
-.subscribe-form .btn {
-  padding: 0.75rem 1.5rem;
-  background: var(--primary-color);
+.block2 button {
+  padding: 0.75rem 1.25rem;
+  background: var(--primary);
   color: #fff;
   border: none;
   border-radius: 4px;
-  font-size: 1rem;
   cursor: pointer;
-  transition: background 0.2s;
-  width: fit-content;
 }
-
-.subscribe-form .btn:hover {
-  background: var(--primary-hover);
+.block2 .summary {
+  margin-top: 1rem;
+  list-style: none;
 }
-
-/* QR Box with frame */
-.qr-box {
-  position: relative;
-  width: 300px;
-  height: 300px;
+.block2 .summary li {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+.block2 .summary li.total {
+  font-weight: 700;
+}
+/* Block3 styles */
+.block3 h3 {
+  font-size: 1.4rem;
+  margin-bottom: 1rem;
+  color: var(--primary);
+}
+.qr-frame {
+  width: 100%;
+  max-width: 260px;
   margin: 0 auto;
-  background: url('../assets/images/qr-frame.svg') no-repeat center center;
-  background-size: contain;
+  background: #fff;
+  border: 4px solid var(--primary);
+  border-radius: 8px;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
 }
-
-.qr-box img {
-  width: 260px;
-  height: 260px;
-  object-fit: cover;
-  border-radius: 8px;
+.qr-frame img {
+  width: 100%;
+  display: block;
+}
+.block3 .acct-info {
+  margin-top: 1rem;
+  font-size: 0.95rem;
+  color: var(--text);
+  line-height: 1.5;
 }
