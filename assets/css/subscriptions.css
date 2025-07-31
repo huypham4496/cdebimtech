@@ -1,35 +1,38 @@
-/* subscriptions.css – đơn giản, bỏ deco */
+/* assets/css/subscriptions.css */
 
 @import url('https://fonts.googleapis.com/css2?family=Lato:300,400&display=swap');
 
 :root {
   --primary: #fca415;
-  --primary-light: #fca415;
-  --shadow: rgba(0,0,0,0.1);
-  --text-dark: #333;
-  --text-muted: #84697c;
-  --card-bg: #fff;
+  --primary-light: #ffb547;
+  --shadow: rgba(0, 0, 0, 0.1);
+  --text-dark: #333333;
+  --text-muted: #666666;
+  --card-bg: #ffffff;
 }
 
+/* Layout */
 body {
   margin: 0;
   font-family: 'Lato', sans-serif;
   background: #f5f7fa;
-  -webkit-font-smoothing: antialiased;
 }
 
 .main {
-  margin-left: 250px;
+  margin-left: 250px; /* width of sidebar */
   padding: 2rem;
 }
 
+/* Grid container */
 .plans-grid {
   display: flex;
   flex-wrap: wrap;
   gap: 1.5rem;
   justify-content: center;
+  padding: 2rem 0;
 }
 
+/* Card */
 .plan-card {
   width: 280px;
   background: var(--card-bg);
@@ -38,62 +41,78 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  transition: transform .3s, box-shadow .3s;
+  transition: transform 0.3s, box-shadow 0.3s, opacity 0.3s;
 }
 .plan-card:hover {
   transform: translateY(-6px);
   box-shadow: 0 4px 16px var(--shadow);
 }
 
+/* “Included” and “Current” states gray out */
+.plan-card.included,
+.plan-card.current {
+  opacity: 0.6;
+}
+.plan-card.current {
+  border: 2px solid var(--primary);
+}
+
+/* Header */
 .plan-header {
   background: var(--primary);
-  color: #fff;
+  color: #ffffff;
   text-align: center;
   padding: 1.5rem 1rem;
 }
-
 .plan-price {
   font-size: 2rem;
   font-weight: bold;
+  margin: 0;
 }
 .plan-price span {
-  font-size: .4em;
+  font-size: 0.4em;
   font-style: italic;
 }
-
 .plan-name {
-  margin: .5rem 0 0;
+  margin: 0.5rem 0 0;
   text-transform: uppercase;
   letter-spacing: 1px;
 }
 
+/* Feature list */
 .plan-features {
   list-style: none;
   padding: 1rem;
   margin: 0;
   flex: 1;
   color: var(--text-muted);
-}
-.plan-features li {
-  padding: .5rem 0;
   line-height: 1.4;
 }
+.plan-features li {
+  padding: 0.5rem 0;
+}
 
+/* Button */
 .plan-choose {
   margin: 1rem;
-  padding: .75rem;
-  background: var(--primary-light);
-  color: #fff;
+  padding: 0.75rem;
+  background: var(--primary);
+  color: #ffffff;
   border: none;
   border-radius: 24px;
   font-weight: 600;
   cursor: pointer;
-  transition: background .3s;
+  transition: background 0.3s;
 }
-.plan-choose:hover {
-  background: var(--primary);
+.plan-choose:hover:not([disabled]) {
+  background: var(--primary-light);
+}
+.plan-choose[disabled] {
+  background: #cccccc;
+  cursor: default;
 }
 
+/* Responsive */
 @media (max-width: 768px) {
   .plan-card {
     flex: 1 1 100%;
