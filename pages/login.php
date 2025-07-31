@@ -2,7 +2,7 @@
 // pages/login.php
 session_start();
 
-// Nếu đã login, chuyển về dashboard
+// If already logged in, redirect
 if (!empty($_SESSION['user'])) {
     header('Location: ../pages/home.php');
     exit;
@@ -23,19 +23,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = $_POST['password'];
     try {
         $pdo = new PDO(
-            'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME,
+            'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=utf8mb4',
             DB_USER,
-            DB_PASS
+            DB_PASS,
+            [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
         );
-        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+        // 1) Authenticate user
         $stmt = $pdo->prepare(
             'SELECT * FROM users WHERE username = ? OR email = ?'
         );
         $stmt->execute([$login, $login]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
         if ($user && password_verify($password, $user['password_hash'])) {
             unset($user['password_hash']);
             $_SESSION['user'] = $user;
+
+            // 2) Check for expired subscription and reset if needed
+            //    Find default plan (smallest id)
+            $minPlan = $pdo->query('SELECT id FROM subscriptions ORDER BY id ASC LIMIT 1')
+                           ->fetchColumn();
+
+            //    Only if user has an expiry date and it's in the past
+            if (!empty($user['subscription_expires_at']) 
+                && $user['subscription_expires_at'] < date('Y-m-d')) 
+            {
+                $pdo->prepare(
+                    'UPDATE users SET subscription_id = ?, subscription_expires_at = NULL WHERE id = ?'
+                )->execute([ $minPlan, $user['id'] ]);
+
+                // Update session value so UI reflects the change immediately
+                $_SESSION['user']['subscription_id']        = $minPlan;
+                $_SESSION['user']['subscription_expires_at'] = null;
+            }
+
             header('Location: ../index.php');
             exit;
         } else {
@@ -70,7 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <?php endif; ?>
       <form action="" method="post" class="login-form">
         <label for="login">Username or Email</label>
-        <input id="login" name="login" type="text" required>
+        <input id="login" name="login" type="text" required autofocus>
         <label for="password">Password</label>
         <input id="password" name="password" type="password" required>
         <button type="submit">Login</button>
