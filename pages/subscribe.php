@@ -1,81 +1,97 @@
-// pages/subscribe.php
 <?php
+// pages/subscribe.php
 session_start();
-if (empty($_SESSION['user'])) { header('Location: login.php'); exit; }
-require_once __DIR__.'/config.php';
-// DB
-$pdo = new PDO('mysql:host='.DB_HOST.';dbname='.DB_NAME.';charset=utf8mb4', DB_USER, DB_PASS, [PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);
+if (empty($_SESSION['user'])) {
+    header('Location: login.php');
+    exit;
+}
 
-// Fetch subscription
-$id = (int)($_GET['sub_id'] ?? 0);
-$stmt = $pdo->prepare('SELECT * FROM subscriptions WHERE id=?');
-$stmt->execute([$id]);
-$sub = $stmt->fetch(PDO::FETCH_ASSOC);
-if (!$sub) { echo "Subscription not found."; exit; }
+// Nạp config từ thư mục gốc
+require_once __DIR__ . '/../config.php';
 
-// Payment settings
-$ps = $pdo->query('SELECT * FROM payment_settings WHERE id=1')->fetch(PDO::FETCH_ASSOC);
+// Kết nối database
+try {
+    $pdo = new PDO(
+        'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=utf8mb4',
+        DB_USER, DB_PASS,
+        [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
+    );
+} catch (PDOException $e) {
+    die('DB Error: ' . htmlspecialchars($e->getMessage()));
+}
 
-// Handle confirmation
-if ($_SERVER['REQUEST_METHOD']==='POST') {
-    $years = (int)($_POST['years'] ?? 1);
-    $total = $sub['price'] * ($years>0?$years:1);
-    $userId = $_SESSION['user']['id'];
-    // Generate memo: userID_name_years_XXXX
-    $rand = strtoupper(substr(bin2hex(random_bytes(2)),0,4));
-    $memo = $userId.'_'.$sub['name'].'_'.$years.'_'.$rand;
-    // Insert purchase
-    $ins = $pdo->prepare('INSERT INTO purchases (user_id, subscription_id, years, amount, memo) VALUES (?,?,?,?,?)');
-    $ins->execute([$userId, $id, $years, $total, $memo]);
-    header('Location: subscription_success.php'); exit;
+// Lấy danh sách gói
+$stmt = $pdo->query('SELECT id, name, price, description FROM subscriptions ORDER BY id ASC');
+$plans = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Xử lý khi bấm “Choose”
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['plan_id'], $_POST['years'])) {
+    $planId = (int)$_POST['plan_id'];
+    $years  = (int)$_POST['years'];
+    if (!in_array($years, [1,2,5,10,0], true)) {
+        $years = 1;
+    }
+    // Tìm gói đã chọn
+    foreach ($plans as $p) {
+        if ($p['id'] === $planId) {
+            $plan = $p;
+            break;
+        }
+    }
+    if (isset($plan)) {
+        $_SESSION['checkout'] = [
+            'plan_id'    => $plan['id'],
+            'plan_name'  => $plan['name'],
+            'unit_price' => $plan['price'],
+            'years'      => $years,
+            'total'      => $years === 0 ? 0 : $plan['price'] * $years,
+            'note'       => $_SESSION['user']['id'] 
+                           . $plan['name'] 
+                           . ($years === 0 ? 'perm' : $years) 
+                           . substr(bin2hex(random_bytes(2)), 0, 4)
+        ];
+        header('Location: purchase.php');
+        exit;
+    }
 }
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Subscribe: <?=htmlspecialchars($sub['name'])?></title>
-  <link rel="stylesheet" href="assets/css/subscribe.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Subscriptions | CDE Bimtech</title>
+  <link rel="stylesheet" href="../assets/css/subscriptions.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" integrity="sha512-dynvDxJ5aVF6oU1i6zfoalvVYvNvKcJste/0q5u+P%2FgPm4jG3E5s3UeJ8V+RaH59RUW2YCiMzZ6pyRrg58F3CA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link rel="stylesheet" href="../assets/css/dashboard.css?v=<?php echo filemtime('../assets/css/dashboard.css'); ?>">
+  <link rel="stylesheet" href="../assets/css/sidebar.css?v=<?php echo filemtime('../assets/css/sidebar.css'); ?>">
 </head>
 <body>
-  <?php include __DIR__.'/pages/sidebar.php'; ?>
+  <?php include __DIR__ . '/sidebar.php'; ?>
   <div class="main">
-    <header><h1>Subscribe: <?=htmlspecialchars($sub['name'])?></h1></header>
-    <div class="subscribe-container">
-      <div class="sub-details">
-        <p><?=nl2br(htmlspecialchars($sub['description']))?></p>
-        <p>Unit Price: <?=number_format($sub['price'],0,',','.')?> VND / năm</p>
+    <header><h1>Choose a Subscription</h1></header>
+    <div class="plans-list">
+      <?php foreach ($plans as $p): ?>
+      <div class="plan-card">
+        <h2><?= htmlspecialchars($p['name']) ?></h2>
+        <p><?= nl2br(htmlspecialchars($p['description'])) ?></p>
+        <p class="price"><?= number_format($p['price'],0,',','.') ?> VND / year</p>
         <form method="post">
-          <label>Số năm mua:
+          <input type="hidden" name="plan_id" value="<?= $p['id'] ?>">
+          <label>Years:
             <select name="years">
-              <option value="1">1 năm</option>
-              <option value="2">2 năm</option>
-              <option value="5">5 năm</option>
-              <option value="10">10 năm</option>
-              <option value="0">Vĩnh viễn</option>
+              <option value="1">1 year</option>
+              <option value="2">2 years</option>
+              <option value="5">5 years</option>
+              <option value="10">10 years</option>
+              <option value="0">Forever</option>
             </select>
           </label>
-          <p id="total">Tổng: <?=number_format($sub['price'],0,',','.')?> VND</p>
-          <button type="submit" class="btn-confirm">Xác nhận đã thanh toán</button>
+          <button type="submit" class="btn-choose">Choose</button>
         </form>
       </div>
-      <div class="payment-info">
-        <h2>Payment Information</h2>
-        <p><strong>Account:</strong> <?=htmlspecialchars($ps['account_name'])?> - <?=htmlspecialchars($ps['bank_name'])?> (<?=htmlspecialchars($ps['account_number'])?>)</p>
-        <p><strong>Note:</strong> Sử dụng memo tự động tạo</p>
-        <div class="qr-frame"><img src="<?=$qrUrl?>" class="qr-code"></div>
-      </div>
+      <?php endforeach; ?>
     </div>
   </div>
-  <script>
-    const price = <?=$sub['price']?>;
-    const sel = document.querySelector('select[name="years"]');
-    const totalP = document.getElementById('total');
-    sel.addEventListener('change', ()=>{
-      let y=Number(sel.value)||1;
-      let t= y>0? price*y : price;
-      totalP.textContent = 'Tổng: '+t.toLocaleString()+' VND';
-    });
-  </script>
 </body>
 </html>
