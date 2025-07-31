@@ -1,82 +1,155 @@
-/* File: assets/css/voucher.css */
+/* Modern Voucher Management Styles */
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+
 :root {
-    --primary-color: #fca415;
-    --background-light: #f5f5f5;
-    --text-dark: #333;
+  --primary: #fca415;
+  --primary-dark: #e5940e;
+  --bg: #f5f7fa;
+  --card-bg: #fff;
+  --text: #333;
+  --success-bg: #d4edda;
+  --success-text: #155724;
+  --error-bg: #f8d7da;
+  --error-text: #721c24;
+  --shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  --radius: 10px;
+  --transition: 0.3s ease;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Roboto', sans-serif;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+.main-content {
+  margin-left: 240px; /* sidebar width */
+  padding: 20px;
 }
 
 .voucher-container {
-    max-width: 800px;
-    margin: 20px auto;
-    padding: 20px;
-    background: var(--background-light);
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  max-width: 1000px;
+  margin: 0 auto;
 }
 
 .voucher-container h1 {
-    color: var(--primary-color);
-    text-align: center;
-    margin-bottom: 20px;
+  font-size: 2rem;
+  color: var(--primary);
+  margin-bottom: 20px;
+}
+
+.alert {
+  padding: 12px 20px;
+  border-radius: var(--radius);
+  margin-bottom: 20px;
+}
+
+.alert.success {
+  background: var(--success-bg);
+  color: var(--success-text);
+}
+
+.alert.error {
+  background: var(--error-bg);
+  color: var(--error-text);
 }
 
 .voucher-form {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 20px;
+  display: flex;
+  gap: 10px;
+  margin-bottom: 30px;
 }
 
 .voucher-form input,
 .voucher-form button {
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 1rem;
+  padding: 12px 16px;
+  font-size: 1rem;
+  border-radius: var(--radius);
+  border: 1px solid #ccc;
+  transition: border-color var(--transition), box-shadow var(--transition);
 }
 
-.voucher-form input {
-    flex: 1;
+.voucher-form input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(252, 164, 21, 0.2);
 }
 
 .voucher-form button {
-    background: var(--primary-color);
-    color: #fff;
-    border: none;
-    cursor: pointer;
-    transition: background 0.3s;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: background var(--transition);
 }
 
 .voucher-form button:hover {
-    background: #e5940e;
+  background: var(--primary-dark);
 }
 
-.voucher-table {
-    width: 100%;
-    border-collapse: collapse;
+.voucher-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 20px;
 }
 
-.voucher-table th,
-.voucher-table td {
-    padding: 12px;
-    text-align: left;
-    border-bottom: 1px solid #ddd;
+.voucher-card {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: transform var(--transition);
 }
 
-.voucher-table thead {
-    background: var(--primary-color);
-    color: #fff;
+.voucher-card:hover {
+  transform: translateY(-5px);
 }
 
-.voucher-table button {
-    background: transparent;
-    border: 1px solid var(--primary-color);
-    color: var(--primary-color);
-    padding: 5px 10px;
-    border-radius: 4px;
-    cursor: pointer;
+.voucher-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
-.voucher-table button:hover {
-    background: var(--primary-color);
-    color: #fff;
+.voucher-info span {
+  font-size: 0.9rem;
+}
+
+.voucher-id {
+  font-weight: 700;
+}
+
+.voucher-code {
+  font-size: 1.1rem;
+  color: var(--primary);
+}
+
+.voucher-discount {
+  color: var(--primary-dark);
+}
+
+.voucher-expiry {
+  color: #777;
+}
+
+.btn-delete {
+  background: transparent;
+  border: none;
+  color: #888;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: color var(--transition);
+}
+
+.btn-delete:hover {
+  color: #e74c3c;
 }
