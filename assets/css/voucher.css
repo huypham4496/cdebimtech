@@ -1,0 +1,82 @@
+/* File: assets/css/voucher.css */
+:root {
+    --primary-color: #fca415;
+    --background-light: #f5f5f5;
+    --text-dark: #333;
+}
+
+.voucher-container {
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 20px;
+    background: var(--background-light);
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.voucher-container h1 {
+    color: var(--primary-color);
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.voucher-form {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.voucher-form input,
+.voucher-form button {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.voucher-form input {
+    flex: 1;
+}
+
+.voucher-form button {
+    background: var(--primary-color);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.voucher-form button:hover {
+    background: #e5940e;
+}
+
+.voucher-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.voucher-table th,
+.voucher-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+.voucher-table thead {
+    background: var(--primary-color);
+    color: #fff;
+}
+
+.voucher-table button {
+    background: transparent;
+    border: 1px solid var(--primary-color);
+    color: var(--primary-color);
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.voucher-table button:hover {
+    background: var(--primary-color);
+    color: #fff;
+}
