@@ -33,6 +33,7 @@ $currentPage = basename($_SERVER['SCRIPT_NAME']);
       <li class="<?= $currentPage === 'subscriptions.php' ? 'active' : '' ?>"><a href="subscriptions.php"><i class="fas fa-file-contract"></i> Subscriptions</a></li>
       <li class="<?= $currentPage === 'payments.php' ? 'active' : '' ?>"><a href="payments.php"><i class="fas fa-credit-card"></i> Payments</a></li>
       <li class="<?= $currentPage === 'payment_requests.php' ? 'active' : '' ?>"><a href="payment_requests.php"><i class="fas fa-hand-holding-usd"></i> Payment Requests</a></li>
+    <li class="<?= $currentPage === 'voucher.php' ? 'active' : '' ?>"><a href="voucher.php"><i class="fas fa-ticket-alt"></i> Vouchers</a></li>
     </ul>
   </nav>
 
