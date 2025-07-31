@@ -1,4 +1,101 @@
-// assets/css/subscriptions.css
-.subscriptions-container { display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:1rem;padding:1rem; }
-.subscription-card {background:#fff;border:1px solid #e5e7eb;box-shadow:0 2px 4px rgba(0,0,0,0.05);border-radius:8px;padding:1rem;display:flex;flex-direction:column; }
-.subscription-card h2{margin-bottom:0.5rem;color:#fca415;} .subscription-card p{flex:1;margin-bottom:0.75rem;} .subscription-card .price{font-weight:600;} .btn-choose{align-self:flex-end;padding:0.5rem 1rem;background:#fca415;color:#fff;border:none;border-radius:4px;text-decoration:none;}
+/* subscriptions.css – đơn giản, bỏ deco */
+
+@import url('https://fonts.googleapis.com/css2?family=Lato:300,400&display=swap');
+
+:root {
+  --primary: #fca415;
+  --primary-light: #fca415;
+  --shadow: rgba(0,0,0,0.1);
+  --text-dark: #333;
+  --text-muted: #84697c;
+  --card-bg: #fff;
+}
+
+body {
+  margin: 0;
+  font-family: 'Lato', sans-serif;
+  background: #f5f7fa;
+  -webkit-font-smoothing: antialiased;
+}
+
+.main {
+  margin-left: 250px;
+  padding: 2rem;
+}
+
+.plans-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  justify-content: center;
+}
+
+.plan-card {
+  width: 280px;
+  background: var(--card-bg);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px var(--shadow);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: transform .3s, box-shadow .3s;
+}
+.plan-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 4px 16px var(--shadow);
+}
+
+.plan-header {
+  background: var(--primary);
+  color: #fff;
+  text-align: center;
+  padding: 1.5rem 1rem;
+}
+
+.plan-price {
+  font-size: 2rem;
+  font-weight: bold;
+}
+.plan-price span {
+  font-size: .4em;
+  font-style: italic;
+}
+
+.plan-name {
+  margin: .5rem 0 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.plan-features {
+  list-style: none;
+  padding: 1rem;
+  margin: 0;
+  flex: 1;
+  color: var(--text-muted);
+}
+.plan-features li {
+  padding: .5rem 0;
+  line-height: 1.4;
+}
+
+.plan-choose {
+  margin: 1rem;
+  padding: .75rem;
+  background: var(--primary-light);
+  color: #fff;
+  border: none;
+  border-radius: 24px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .3s;
+}
+.plan-choose:hover {
+  background: var(--primary);
+}
+
+@media (max-width: 768px) {
+  .plan-card {
+    flex: 1 1 100%;
+  }
+}
