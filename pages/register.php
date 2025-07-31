@@ -9,6 +9,7 @@ require_once __DIR__ . '/../includes/functions.php';
 $error   = '';
 $success = '';
 
+// Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // 1) Collect and sanitize input
     $username        = trim($_POST['username']        ?? '');
@@ -34,36 +35,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // 3) Hash password
         $password_hash = password_hash($password, PASSWORD_DEFAULT);
 
-        // 4) Attempt to register
+        // 4) Connect to database (inline, not getPDO)
         try {
-            $pdo = getPDO();
-            $ok  = registerUser(
-                $pdo,
-                $username,
-                $first_name,
-                $last_name,
-                $dob,
-                $address,
-                $company,
-                $phone,
-                $invite_code,
-                $email,
-                $password_hash,
-                'user',
-                null  // no avatar on register
+            $pdo = new PDO(
+                'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=utf8mb4',
+                DB_USER,
+                DB_PASS,
+                [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
             );
-            if ($ok) {
-                $success = 'Registration successful! You can <a href="login.php">log in now</a>.';
-            } else {
-                $error = 'Registration failed. Please try again.';
-            }
         } catch (PDOException $e) {
-            $error = 'System error. Please contact the administrator.';
+            die('Database connection failed: ' . htmlspecialchars($e->getMessage()));
+        }
+
+        // 5) Register user
+        $ok = registerUser(
+            $pdo,
+            $username,
+            $first_name,
+            $last_name,
+            $dob,
+            $address,
+            $company,
+            $phone,
+            $invite_code,
+            $email,
+            $password_hash,
+            'user',
+            null  // no avatar on register
+        );
+
+        if ($ok) {
+            $success = 'Registration successful! You can <a href="login.php">log in now</a>.';
+        } else {
+            $error = 'Registration failed. Please try again.';
         }
     }
 }
 
-// prepare cache-busted CSS link
+// Prepare CSS versioning
 $cssVer = file_exists(__DIR__ . '/../assets/css/login.css')
     ? filemtime(__DIR__ . '/../assets/css/login.css')
     : time();
