@@ -164,3 +164,30 @@ input[type="password"]::-ms-reveal,
 input[type="password"]::-ms-clear {
   display: none;
 }
+/* Alert banner */
+.alert-banner {
+  padding: 1rem 1.5rem;
+  border-radius: 6px;
+  margin-bottom: 1.5rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+}
+
+.alert-banner.success {
+  background-color: #e6ffed;
+  border-left: 4px solid #4caf50;
+  color: #2e7d32;
+}
+
+.alert-banner.error {
+  background-color: #ffe6e6;
+  border-left: 4px solid #f44336;
+  color: #c62828;
+}
+
+.alert-banner a {
+  color: inherit;
+  text-decoration: underline;
+  margin-left: 0.25rem;
+}
