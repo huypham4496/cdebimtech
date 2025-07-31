@@ -1,23 +1,4 @@
 <?php
-// includes/functions.php
-
-/**
- * Trả về PDO đã kết nối
- */
-function getPDO(): PDO
-{
-    return new PDO(
-        'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=utf8mb4',
-        DB_USER, DB_PASS,
-        [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
-    );
-}
-
-/**
- * Đăng ký user mới, tương ứng với trường trong DB:
- *   username, first_name, last_name, dob, address,
- *   company, phone, invite_code, email, password_hash, role, avatar
- */
 function registerUser(
     PDO    $pdo,
     string $username,
@@ -33,6 +14,7 @@ function registerUser(
     string $role = 'user',
     ?string $avatar = null
 ): bool {
+    // 1) Tạo user
     $sql = "INSERT INTO users
       (username, first_name, last_name, dob, address, company, phone,
        invite_code, email, password_hash, role, avatar)
@@ -40,7 +22,7 @@ function registerUser(
       (:username, :first, :last, :dob, :address, :company, :phone,
        :invite, :email, :phash, :role, :avatar)";
     $stmt = $pdo->prepare($sql);
-    return $stmt->execute([
+    $ok = $stmt->execute([
         ':username'  => $username,
         ':first'     => $first_name,
         ':last'      => $last_name,
@@ -54,6 +36,21 @@ function registerUser(
         ':role'      => $role,
         ':avatar'    => $avatar ?: null,
     ]);
+    if (! $ok) {
+        return false;
+    }
+
+    // 2) Lấy ID user mới
+    $userId = (int)$pdo->lastInsertId();
+
+    // 3) Tìm subscription_id nhỏ nhất
+    $minSub = (int)$pdo->query('SELECT MIN(id) FROM subscriptions')->fetchColumn();
+
+    // 4) Gán subscription_id cho user
+    $upd = $pdo->prepare('UPDATE users SET subscription_id = ? WHERE id = ?');
+    $upd->execute([$minSub, $userId]);
+
+    return true;
 }
 
 
