@@ -1,142 +1,118 @@
 <?php
-// File: pages/admin/voucher.php
-
 session_start();
 require_once __DIR__ . '/../../config.php';
 
-// Kết nối MySQLi theo mẫu subscriptions_info.php
-$connect = mysqli_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME);
-if (!$connect) {
-    die('Kết nối CSDL thất bại: ' . mysqli_connect_error());
+// Connect with PDO
+try {
+    $pdo = new PDO(
+        'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=utf8mb4',
+        DB_USER,
+        DB_PASS,
+        [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
+    );
+} catch (PDOException $e) {
+    die('Database connection failed: ' . htmlspecialchars($e->getMessage()));
 }
 
-// Kiểm tra login & quyền admin
-if (
-    empty($_SESSION['user'])
-    || empty($_SESSION['user']['role'])
-    || $_SESSION['user']['role'] !== 'admin'
-) {
-    header('Location: /pages/login.php');
+// Only admins may access
+if (empty($_SESSION['user']) || ($_SESSION['user']['role'] ?? '') !== 'admin') {
+    header('Location: ../../pages/login.php');
     exit;
 }
 
-$message = '';
-$error   = '';
+$msg   = '';
+$error = '';
 
-// Xử lý POST thêm/xóa voucher
+// Handle creation & deletion
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-
-    // Thêm voucher
     if (isset($_POST['add'])) {
-        $code     = mysqli_real_escape_string($connect, substr(trim($_POST['code']), 0, 50));
-        $discount = number_format(floatval($_POST['discount']), 2, '.', '');
+        $code     = trim($_POST['code']);
+        $discount = (float)$_POST['discount'];
         $expiry   = $_POST['expiry'];
-
-        $sql = "
-            INSERT INTO vouchers (code, discount, expiry_date)
-            VALUES ('$code', '$discount', '$expiry')
-        ";
-        if (mysqli_query($connect, $sql)) {
-            $message = 'Thêm voucher thành công.';
-        } else {
-            if (mysqli_errno($connect) === 1062) {
-                $error = 'Mã voucher đã tồn tại.';
+        try {
+            $stmt = $pdo->prepare(
+                'INSERT INTO vouchers (code, discount, expiry_date) VALUES (?, ?, ?)'
+            );
+            $stmt->execute([$code, $discount, $expiry]);
+            $msg = 'Voucher added successfully.';
+        } catch (PDOException $e) {
+            if ($e->errorInfo[1] === 1062) {
+                $error = 'Voucher code already exists.';
             } else {
-                $error = 'Lỗi thêm voucher: ' . mysqli_error($connect);
+                $error = 'Error adding voucher: ' . $e->getMessage();
             }
         }
     }
 
-    // Xóa voucher
     if (isset($_POST['delete'])) {
-        $id = intval($_POST['id']);
-        mysqli_query($connect, "DELETE FROM vouchers WHERE id = $id");
-        $message = 'Xóa voucher thành công.';
+        $id   = (int)$_POST['id'];
+        $stmt = $pdo->prepare('DELETE FROM vouchers WHERE id = ?');
+        $stmt->execute([$id]);
+        $msg = 'Voucher deleted successfully.';
     }
 
-    // Chuyển hướng lại để hiển thị thông báo
-    header(
-        'Location: /pages/admin/voucher.php'
-        . '?msg=' . urlencode($message)
-        . '&err=' . urlencode($error)
-    );
+    header('Location: voucher.php?msg=' . urlencode($msg) . '&error=' . urlencode($error));
     exit;
 }
 
-// Nhận thông báo từ query string
-$message = $_GET['msg'] ?? '';
-$error   = $_GET['err'] ?? '';
+$msg   = $_GET['msg']   ?? '';
+$error = $_GET['error'] ?? '';
 
-// Lấy danh sách vouchers
-$result   = mysqli_query($connect, "SELECT * FROM vouchers ORDER BY created_at DESC");
-$vouchers = mysqli_fetch_all($result, MYSQLI_ASSOC);
+$vouchers = $pdo
+    ->query('SELECT id, code, discount, expiry_date, created_at FROM vouchers ORDER BY created_at DESC')
+    ->fetchAll(PDO::FETCH_ASSOC);
 ?>
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Quản lý Voucher</title>
-<link rel="stylesheet" href="../../assets/css/sidebar_admin.css?v=<?php echo filemtime(__DIR__ . '/../../assets/css/sidebar_admin.css'); ?>">
-  <link rel="stylesheet" href="../../assets/css/voucher.css?v=<?php echo filemtime(__DIR__ . '/../../assets/css/voucher.css'); ?>">
-    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+  <meta charset="UTF-8">
+  <title>Voucher Management</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="../../assets/css/sidebar_admin.css?v=<?=filemtime(__DIR__.'/../../assets/css/sidebar_admin.css')?>">
+  <link rel="stylesheet" href="/assets/css/voucher.css?v=<?=filemtime(__DIR__.'/../../assets/css/voucher.css')?>">
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 </head>
 <body>
-    <?php include __DIR__ . '/../../includes/header.php'; ?>
+  <?php include __DIR__ . '/sidebar_admin.php'; ?>
 
-    <div class="admin-container">
-        <?php include __DIR__ . '/sidebar_admin.php'; ?>
+  <div class="main-content">
+    <div class="voucher-container">
+      <h1>Voucher Management</h1>
 
-        <div class="main-content">
-            <div class="voucher-container">
-                <h1>Quản lý Voucher</h1>
+      <?php if ($msg): ?>
+        <div class="alert success"><?= htmlspecialchars($msg) ?></div>
+      <?php endif; ?>
+      <?php if ($error): ?>
+        <div class="alert error"><?= htmlspecialchars($error) ?></div>
+      <?php endif; ?>
 
-                <?php if ($message): ?>
-                    <div class="alert success"><?= htmlspecialchars($message) ?></div>
-                <?php endif; ?>
-                <?php if ($error): ?>
-                    <div class="alert error"><?= htmlspecialchars($error) ?></div>
-                <?php endif; ?>
+      <form class="voucher-form" method="post">
+        <input type="text" name="code" placeholder="Voucher Code" maxlength="50" required>
+        <input type="number" name="discount" placeholder="Discount (%)" step="0.01" min="0" required>
+        <input type="date" name="expiry" required>
+        <button type="submit" name="add">Add Voucher</button>
+      </form>
 
-                <form class="voucher-form" method="post">
-                    <input type="text"   name="code"     placeholder="Mã voucher" maxlength="50" required>
-                    <input type="number" name="discount" placeholder="% Giảm giá" step="0.01" min="0" required>
-                    <input type="date"   name="expiry"   required>
-                    <button type="submit" name="add">Thêm Voucher</button>
-                </form>
-
-                <table class="voucher-table">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Mã</th>
-                            <th>Giảm giá</th>
-                            <th>Hết hạn</th>
-                            <th>Ngày tạo</th>
-                            <th>Hành động</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($vouchers as $v): ?>
-                        <tr>
-                            <td><?= $v['id'] ?></td>
-                            <td><?= htmlspecialchars($v['code']) ?></td>
-                            <td><?= htmlspecialchars($v['discount']) ?>%</td>
-                            <td><?= htmlspecialchars($v['expiry_date']) ?></td>
-                            <td><?= htmlspecialchars($v['created_at']) ?></td>
-                            <td>
-                                <form method="post"
-                                      onsubmit="return confirm('Xóa voucher này?');"
-                                      style="display:inline;">
-                                    <input type="hidden" name="id" value="<?= $v['id'] ?>">
-                                    <button type="submit" name="delete">Xóa</button>
-                                </form>
-                            </td>
-                        </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+      <div class="voucher-grid">
+        <?php foreach ($vouchers as $v): ?>
+          <div class="voucher-card">
+            <div class="voucher-info">
+              <span class="voucher-id">#<?= $v['id'] ?></span>
+              <span class="voucher-code"><?= htmlspecialchars($v['code']) ?></span>
+              <span class="voucher-discount"><?= htmlspecialchars($v['discount']) ?>% off</span>
+              <span class="voucher-expiry">Expires <?= htmlspecialchars($v['expiry_date']) ?></span>
             </div>
-        </div>
+            <form method="post" onsubmit="return confirm('Delete this voucher?');">
+              <input type="hidden" name="id" value="<?= $v['id'] ?>">
+              <button type="submit" name="delete" class="btn-delete">
+                <i class="fas fa-trash"></i>
+              </button>
+            </form>
+          </div>
+        <?php endforeach; ?>
+      </div>
     </div>
+  </div>
 </body>
 </html>
