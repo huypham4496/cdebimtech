@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jul 31, 2025 at 11:49 AM
+-- Generation Time: Jul 31, 2025 at 12:15 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -103,6 +103,20 @@ INSERT INTO `users` (`id`, `username`, `first_name`, `last_name`, `dob`, `addres
 (1, 'huypham', 'Phạm Mạnh', 'Huy', '0000-00-00', 'Hạ Long', 'NCC', '0888121496', NULL, 'phamhuy.cngt@gmail.com', '$2y$10$YXa/ryYZhrQyEE6rBuORVugmQSIQgmwJxBdebsPapaDuzQDaeKPhy', 'admin', 'avatar_1.png', NULL, '2025-07-30 01:18:51'),
 (4, 'user1', 'user1a', 'user1b', '2025-07-31', 'Hạ Long', 'NCC', '0888121496', NULL, 'user1@bimtech.edu.vn', '$2y$10$wX/QF1V8VS2dHRDEeVQgFO6KFkZM.oAZaPl9ixMa.SbtH9CkGeicy', 'user', NULL, 3, '2025-07-31 04:47:19');
 
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `vouchers`
+--
+
+CREATE TABLE `vouchers` (
+  `id` int(11) NOT NULL COMMENT 'Voucher ID',
+  `code` varchar(50) NOT NULL COMMENT 'Voucher code',
+  `discount` decimal(5,2) NOT NULL COMMENT 'Discount percentage',
+  `expiry_date` date NOT NULL COMMENT 'Expiry date',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp() COMMENT 'Created timestamp'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 --
 -- Indexes for dumped tables
 --
@@ -128,6 +142,13 @@ ALTER TABLE `users`
   ADD UNIQUE KEY `email` (`email`);
 
 --
+-- Indexes for table `vouchers`
+--
+ALTER TABLE `vouchers`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `code_unique` (`code`);
+
+--
 -- AUTO_INCREMENT for dumped tables
 --
 
@@ -142,6 +163,12 @@ ALTER TABLE `subscriptions`
 --
 ALTER TABLE `users`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
+-- AUTO_INCREMENT for table `vouchers`
+--
+ALTER TABLE `vouchers`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'Voucher ID';
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
