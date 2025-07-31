@@ -1,0 +1,95 @@
+/* Modern Thank You page */
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+:root {
+  --primary-color: #fca415;
+  --primary-dark: #e5940e;
+  --bg-light: #fafafa;
+  --text-dark: #333;
+  --card-bg: #ffffff;
+  --border-radius: 16px;
+  --shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  --transition: 0.3s ease;
+}
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Roboto', sans-serif;
+}
+body {
+  background: var(--bg-light);
+  color: var(--text-dark);
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.thankyou-container {
+  padding: 20px;
+}
+.thankyou-card {
+  background: var(--card-bg);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow);
+  max-width: 400px;
+  text-align: center;
+  padding: 40px 20px;
+  animation: fadeInUp var(--transition);
+}
+.icon-wrapper {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 20px;
+  position: relative;
+}
+.checkmark {
+  stroke: var(--primary-color);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+  animation: draw 0.6s ease-out forwards;
+}
+@keyframes draw {
+  0% {
+    stroke-dasharray: 0 100;
+  }
+  100% {
+    stroke-dasharray: 100 0;
+  }
+}
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.thankyou-card h1 {
+  font-size: 1.8rem;
+  margin-bottom: 10px;
+  font-weight: 700;
+}
+.thankyou-card p {
+  font-size: 1rem;
+  margin-bottom: 30px;
+  color: #555;
+  line-height: 1.5;
+}
+.btn-home {
+  display: inline-block;
+  padding: 12px 24px;
+  background: var(--primary-color);
+  color: #fff;
+  text-decoration: none;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: background var(--transition), transform var(--transition);
+}
+.btn-home:hover {
+  background: var(--primary-dark);
+  transform: translateY(-2px);
+}
