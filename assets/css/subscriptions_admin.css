@@ -1,0 +1,163 @@
+/* File: assets/css/subscriptions_admin.css */
+/* Modern, unified styles for Admin Subscriptions Page */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --bg-page: #fafafa;
+  --bg-card: #ffffff;
+  --primary: #fca415;
+  --primary-hover: #e5940e;
+  --text-default: #1e2937;
+  --text-muted: #6b7280;
+  --border: #e5e7eb;
+  --radius: 12px;
+  --shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  --transition: 0.3s ease;
+  --success-bg: #d1fae5;
+  --success-text: #065f46;
+  --error-bg: #fee2e2;
+  --error-text: #991b1b;
+}
+\* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Inter', sans-serif;
+}
+
+body {
+  background: var(--bg-page);
+  color: var(--text-default);
+}
+
+.main-content {
+  margin-left: 260px; /* sidebar width */
+  padding: 2rem;
+}
+
+.subscriptions-container h1 {
+  font-size: 2rem;
+  font-weight: 600;
+  color: var(--primary);
+  margin-bottom: 1rem;
+}
+
+/* Alert styles */
+.alert {
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius);
+  margin-bottom: 1rem;
+  font-weight: 500;
+}
+.alert.success {
+  background: var(--success-bg);
+  color: var(--success-text);
+}
+.alert.error {
+  background: var(--error-bg);
+  color: var(--error-text);
+}
+
+/* Table container */
+.table-wrapper {
+  overflow-x: auto;
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  box-shadow: var(--shadow);
+  margin-top: 1rem;
+}
+
+.subscriptions-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 0.5rem;
+}
+.subscriptions-table th,
+.subscriptions-table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  vertical-align: middle;
+  border: none;
+}
+.subscriptions-table thead th {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.subscriptions-table tbody tr {
+  background: var(--bg-card);
+  transition: transform var(--transition), box-shadow var(--transition);
+}
+.subscriptions-table tbody tr:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow);
+}
+
+/* Inline form styling */
+.inline-form {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+/* Unified control style for select and date inputs */
+.inline-form select,
+.inline-form input[type="date"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 160px;
+  padding: 0.5rem 1rem;
+  font-size: 0.95rem;
+  color: var(--text-default);
+  background: #fff url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7'%3E%3Cpath fill='%2364778a' d='M0 0l5 7 5-7z'/%3E%3C/svg%3E") no-repeat right 0.75rem center;
+  background-size: 10px 7px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+.inline-form select:hover,
+.inline-form input[type="date"]:hover {
+  border-color: var(--primary);
+}
+.inline-form select:focus,
+.inline-form input[type="date"]:focus {
+  outline: none;
+  border-color: var(--primary-hover);
+  box-shadow: 0 0 0 3px rgba(252, 164, 21, 0.2);
+}
+/* Hide native calendar icon in WebKit to rely on custom arrow */
+.inline-form input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  display: none;
+}
+
+/* Save button */
+.btn-save {
+  padding: 0.5rem 1rem;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background var(--transition), transform var(--transition);
+}
+.btn-save:hover {
+  background: var(--primary-hover);
+  transform: translateY(-2px);
+}
+
+/* No data fallback */
+.no-data {
+  text-align: center;
+  padding: 2rem;
+  color: var(--text-muted);
+  font-size: 1rem;
+}
+
+/* Responsive width adjustments */
+@media (max-width: 768px) {
+  .inline-form select,
+  .inline-form input[type="date"] {
+    width: 140px;
+  }
+}
