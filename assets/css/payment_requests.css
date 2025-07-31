@@ -1,0 +1,166 @@
+/* Modern, clean styles for Payment Requests */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --bg-page: #f5f6fa;
+  --bg-card: #ffffff;
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --text: #1e293b;
+  --muted: #64748b;
+  --border: #e2e8f0;
+  --radius: 12px;
+  --shadow: 0 10px 15px rgba(0,0,0,0.05);
+  --transition: 0.3s ease;
+  --pending: #f59e0b;
+  --approved: #10b981;
+  --rejected: #ef4444;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Inter', sans-serif;
+}
+
+body {
+  background: var(--bg-page);
+  color: var(--text);
+}
+
+.main-content {
+  margin-left: 260px; /* sidebar width */
+  padding: 2rem;
+}
+
+.requests-container h1 {
+  font-size: 2.25rem;
+  font-weight: 600;
+  color: var(--primary);
+  margin-bottom: 1rem;
+}
+
+.filter-form {
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.filter-form label {
+  color: var(--muted);
+  font-weight: 500;
+}
+.filter-form select {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #fff;
+  transition: border-color var(--transition);
+}
+.filter-form select:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.alert {
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius);
+  margin-bottom: 1rem;
+  font-weight: 500;
+}
+.alert.success {
+  background: #d1fae5;
+  color: #065f46;
+}
+.alert.error {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  box-shadow: var(--shadow);
+}
+.requests-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 0.5rem;
+}
+.requests-table th,
+.requests-table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  vertical-align: middle;
+  border: none;
+}
+.requests-table thead th {
+  color: var(--muted);
+  font-weight: 600;
+}
+.requests-table tbody tr {
+  background: var(--bg-card);
+  transition: transform var(--transition), box-shadow var(--transition);
+}
+.requests-table tbody tr:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow);
+}
+
+.status-pill {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #fff;
+}
+.status-pending { background: var(--pending); }
+.status-approved { background: var(--approved); }
+.status-rejected { background: var(--rejected); }
+
+code {
+  font-family: 'Courier New', monospace;
+  background: #f8fafc;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  color: var(--text);
+}
+
+.action-form {
+  display: flex;
+  gap: 0.5rem;
+}
+.btn-approve,
+.btn-reject {
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  transition: background var(--transition);
+}
+.btn-approve { background: var(--approved); }
+.btn-approve:hover { background: #059669; }
+.btn-reject  { background: var(--rejected); }
+.btn-reject:hover  { background: #dc2626; }
+
+.no-data {
+  text-align: center;
+  padding: 2rem;
+  color: var(--muted);
+  font-size: 1.1rem;
+}
+
+@media (max-width: 1024px) {
+  .requests-table th,
+  .requests-table td {
+    padding: 0.5rem;
+  }
+}
