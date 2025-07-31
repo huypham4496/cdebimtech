@@ -1,10 +1,10 @@
-
-/* Three-block Subscribe Layout */
+/* Unified Subscribe & Instruction Block Layout */
 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css');
 :root {
   --primary: #fca415;
   --primary-dark: #d18f0b;
+  --primary-light: #fff4e1;
   --bg: #f5f7fa;
   --card-bg: #ffffff;
   --shadow: rgba(0,0,0,0.1);
@@ -12,28 +12,19 @@
   --muted: #666;
   --border: #e0e0e0;
 }
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  font-family: 'Roboto', sans-serif;
-}
-body {
-  background: var(--bg);
-  color: var(--text);
-  padding: 2rem;
-}
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Roboto', sans-serif; }
+body { background: var(--bg); color: var(--text); padding: 2rem; }
 .subscribe-wrapper {
   max-width: 1200px;
   margin: 0 auto;
   display: grid;
   grid-template-columns: 2fr 1fr;
-  grid-template-rows: auto auto;
-  gap: 1.5rem;
+  grid-template-rows: auto 1fr;
+  column-gap: 2rem;
+  row-gap: 2rem;
 }
-.block1 {
+.primary-card {
   grid-column: 1 / 2;
-  grid-row: 1 / 3;
   background: var(--card-bg);
   border-radius: 8px;
   box-shadow: 0 4px 12px var(--shadow);
@@ -42,7 +33,7 @@ body {
   flex-direction: column;
   justify-content: space-between;
 }
-.block2 {
+.order-card {
   grid-column: 2 / 3;
   grid-row: 1 / 2;
   background: var(--card-bg);
@@ -50,7 +41,7 @@ body {
   box-shadow: 0 4px 12px var(--shadow);
   padding: 2rem;
 }
-.block3 {
+.payment-card {
   grid-column: 2 / 3;
   grid-row: 2 / 3;
   background: var(--card-bg);
@@ -58,104 +49,137 @@ body {
   box-shadow: 0 4px 12px var(--shadow);
   padding: 2rem;
 }
-/* Block1 styles */
-.block1 h2 {
+/* Primary block content */
+.primary-card h2 {
   font-size: 1.8rem;
-  margin-bottom: 1rem;
   color: var(--primary);
+  margin-bottom: 1rem;
 }
-.block1 .duration-group {
+.primary-card .duration-group {
   display: flex;
   align-items: center;
   gap: 1rem;
   margin-bottom: 1rem;
+  position: relative;
 }
-.block1 select {
+.primary-card select {
+  appearance: none;
   padding: 0.75rem;
   border: 1px solid var(--border);
   border-radius: 4px;
   flex: 1;
+  background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7'%3E%3Cpath fill='%23666' d='M0 0l5 7 5-7z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: calc(100% - 10px) center;
+  background-size: 10px 7px;
 }
-.block1 .price-info {
+.primary-card .price-info {
   font-size: 1.5rem;
   font-weight: 700;
-  color: var(--text);
   margin-bottom: 1rem;
 }
-.block1 .banner {
-  background: var(--primary);
-  color: #fff;
-  padding: 0.75rem;
+.primary-card .promo {
+  background: var(--primary-light);
+  color: var(--primary);
+  padding: 0.75rem 1rem;
   border-radius: 4px;
   text-align: center;
   font-weight: 500;
+  border: 1px solid var(--primary);
+  margin-bottom: 1rem;
 }
-.block1 .banner.lifetime {
+.primary-card .instructions {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--text);
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+.primary-card .confirm-btn {
+  align-self: flex-start;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  transition: background 0.3s, transform 0.2s;
+}
+.primary-card .confirm-btn:hover {
   background: var(--primary-dark);
+  transform: translateY(-2px);
 }
-/* Block2 styles */
-.block2 h3 {
+/* Order card */
+.order-card h3, .payment-card h3 {
+  display: flex;
+  align-items: center;
   font-size: 1.4rem;
   margin-bottom: 1rem;
   color: var(--primary);
 }
-.block2 .voucher-group {
+.order-card h3::before {
+  content: '\f02d';
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  margin-right: 0.5rem;
+}
+.order-card .voucher-group {
   display: flex;
   gap: 0.5rem;
+  align-items: center;
   margin-bottom: 1rem;
 }
-.block2 input {
+.order-card input {
   flex: 1;
-  padding: 0.75rem;
+  padding: 0.75rem 1rem;
   border: 1px solid var(--border);
   border-radius: 4px;
 }
-.block2 button {
-  padding: 0.75rem 1.25rem;
+.order-card button {
   background: var(--primary);
   color: #fff;
+  padding: 0.75rem 1.25rem;
   border: none;
   border-radius: 4px;
   cursor: pointer;
+  transition: background 0.3s;
 }
-.block2 .summary {
-  margin-top: 1rem;
+.order-card button:hover {
+  background: var(--primary-dark);
+}
+.order-card .summary {
   list-style: none;
+  margin-top: 1rem;
 }
-.block2 .summary li {
+.order-card .summary li {
   display: flex;
   justify-content: space-between;
   padding: 0.5rem 0;
   border-bottom: 1px solid #f0f0f0;
 }
-.block2 .summary li.total {
+.order-card .summary li.total {
   font-weight: 700;
 }
-/* Block3 styles */
-.block3 h3 {
-  font-size: 1.4rem;
-  margin-bottom: 1rem;
-  color: var(--primary);
+/* Payment card */
+.payment-card h3::before {
+  content: '\f091';
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  margin-right: 0.5rem;
 }
-.qr-frame {
+.payment-card .qr-frame {
   width: 100%;
   max-width: 260px;
-  margin: 0 auto;
-  background: #fff;
+  margin: 0 auto 1rem;
   border: 4px solid var(--primary);
   border-radius: 8px;
   overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
-.qr-frame img {
+.payment-card .qr-frame img {
   width: 100%;
-  display: block;
 }
-.block3 .acct-info {
-  margin-top: 1rem;
+.payment-card .acct-info {
   font-size: 0.95rem;
-  color: var(--text);
   line-height: 1.5;
 }
