@@ -1,31 +1,25 @@
 <?php
-// pages/admin/subscription_features.php
 session_start();
-
-// chỉ cho admin
 if (empty($_SESSION['user']) || $_SESSION['user']['role'] !== 'admin') {
     header('Location: ../login.php');
     exit;
 }
-
 require_once __DIR__ . '/../../config.php';
 
-// --- KẾT NỐI DATABASE ---
+// DB connection
+$charset = defined('DB_CHARSET') ? DB_CHARSET : 'utf8mb4';
 try {
-    $dsn = sprintf(
-        'mysql:host=%s;dbname=%s;charset=%s',
-        DB_HOST, DB_NAME, DB_CHARSET
+    $pdo = new PDO(
+        sprintf('mysql:host=%s;dbname=%s;charset=%s', DB_HOST, DB_NAME, $charset),
+        DB_USER, DB_PASS,
+        [PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]
     );
-    $pdo = new PDO($dsn, DB_USER, DB_PASS, [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-    ]);
 } catch (PDOException $e) {
-    die('Database Connection Failed: ' . $e->getMessage());
+    die('Database connection failed: '.$e->getMessage());
 }
 
-// xử lý form khi submit
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['features'])) {
+// Handle submission
+if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['features'])) {
     $sql = "
         UPDATE subscriptions
            SET max_storage_gb             = :max_storage_gb,
@@ -37,64 +31,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['features'])) {
     ";
     $stmt = $pdo->prepare($sql);
 
-    foreach ($_POST['features'] as $id => $f) {
+    foreach ($_POST['features'] as $id => $values) {
+        // if left blank (or zero), treat as unlimited => store 0
+        $maxStorage = ($values['max_storage_gb'] !== '' ? (int)$values['max_storage_gb'] : 0);
+        $maxProj    = ($values['max_projects']    !== '' ? (int)$values['max_projects']    : 0);
+        $maxMembers = ($values['max_company_members'] !== '' ? (int)$values['max_company_members'] : 0);
+
         $stmt->execute([
-            ':max_storage_gb'      => (int)$f['max_storage_gb'],
-            ':max_projects'        => (int)$f['max_projects'],
-            ':max_company_members' => (int)$f['max_company_members'],
-            ':allow_org'           => isset($f['allow_organization_members']) ? 1 : 0,
-            ':allow_diary'         => isset($f['allow_work_diary'])           ? 1 : 0,
+            ':max_storage_gb'      => $maxStorage,
+            ':max_projects'        => $maxProj,
+            ':max_company_members' => $maxMembers,
+            ':allow_org'           => isset($values['allow_organization_members']) ? 1 : 0,
+            ':allow_diary'         => isset($values['allow_work_diary'])           ? 1 : 0,
             ':id'                  => (int)$id,
         ]);
     }
-    $message = 'Cập nhật tính năng thành công.';
+    $message = 'Features updated successfully.';
 }
 
-// lấy danh sách các gói subscription
+// Fetch plans
 $plans = $pdo->query("SELECT * FROM subscriptions ORDER BY id")->fetchAll();
 
-// cache-busting CSS
-$cssFile = __DIR__ . '/../../assets/css/admin/subscription_features.css';
-$version = file_exists($cssFile) ? filemtime($cssFile) : time();
+// versioning
+$cssDir     = __DIR__ . '/../../assets/css';
+$verPage    = file_exists("$cssDir/subscription_features.css") ? filemtime("$cssDir/subscription_features.css") : time();
+$verSidebar = file_exists("$cssDir/sidebar_admin.css")       ? filemtime("$cssDir/sidebar_admin.css")       : time();
 
-// include header chung (nơi xuất <head>, <body> mở)
+// header
 include __DIR__ . '/../../includes/header.php';
 ?>
-
-<!-- Font Awesome & CSS riêng -->
-<link
-  rel="stylesheet"
-  href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.2/css/all.min.css"
-  integrity="sha512-olb1y6Rv7uyYCRykpY7ZZ6vqpKILvQPWZG1aJeyeWQ1m/5nYy8WpuM8aOQW4ZcStSz2/fW+N5hWwcX96Iqb0FQ=="
-  crossorigin="anonymous"
-  referrerpolicy="no-referrer"
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.2/css/all.min.css"
+      integrity="sha512-olb1y6Rv7uyYCRykpY7ZZ6vqpKILvQPWZG1aJeyeWQ1m/5nYy8WpuM8aOQW4ZcStSz2/fW+N5hWwcX96Iqb0FQ=="
+      crossorigin="anonymous" referrerpolicy="no-referrer"
 />
-<link
-  rel="stylesheet"
-  href="../../assets/css/admin/subscription_features.css?v=<?= $version ?>"
-/>
+<link rel="stylesheet" href="../../assets/css/sidebar_admin.css?v=<?= $verSidebar ?>"/>
+<link rel="stylesheet" href="../../assets/css/subscription_features.css?v=<?= $verPage ?>"/>
 
-<div class="sidebar-admin">
-  <a href="dashboard.php">
-    <i class="fas fa-tachometer-alt"></i> Dashboard
-  </a>
-  <a href="subscription_features.php" class="active">
-    <i class="fas fa-sliders-h"></i> Subscription Features
-  </a>
-  <a href="users.php">
-    <i class="fas fa-users"></i> Users
-  </a>
-  <a href="projects.php">
-    <i class="fas fa-folder-open"></i> Projects
-  </a>
-  <!-- … thêm các mục khác nếu cần … -->
-</div>
+<?php include __DIR__ . '/sidebar_admin.php'; ?>
 
 <div class="main-content">
-  <h1>
-    <i class="fas fa-sliders-h feature-icon"></i>
-    Quản lý Tính năng Subscription
-  </h1>
+  <h1><i class="fas fa-sliders-h feature-icon"></i> Manage Subscription Features</h1>
 
   <?php if (!empty($message)): ?>
     <div class="alert alert-success"><?= htmlspecialchars($message) ?></div>
@@ -104,60 +81,69 @@ include __DIR__ . '/../../includes/header.php';
     <table class="features-table">
       <thead>
         <tr>
-          <th>Gói</th>
-          <th><i class="fas fa-hdd feature-icon"></i> Storage (GB)</th>
-          <th><i class="fas fa-project-diagram feature-icon"></i> Dự án</th>
-          <th><i class="fas fa-user-friends feature-icon"></i> Thành viên</th>
-          <th class="text-center">
-            <i class="fas fa-sitemap feature-icon"></i> Org Members
-          </th>
-          <th class="text-center">
-            <i class="fas fa-book feature-icon"></i> Work Diary
-          </th>
+          <th>Plan</th>
+          <th><i class="fas fa-hdd"></i> Storage (GB)</th>
+          <th><i class="fas fa-project-diagram"></i> Projects</th>
+          <th><i class="fas fa-user-friends"></i> Members</th>
+          <th class="text-center"><i class="fas fa-sitemap"></i> Org Members</th>
+          <th class="text-center"><i class="fas fa-book"></i> Work Diary</th>
         </tr>
       </thead>
       <tbody>
-      <?php foreach ($plans as $plan): ?>
+        <?php foreach ($plans as $plan): ?>
         <tr>
           <td><?= htmlspecialchars($plan['name']) ?></td>
           <td>
-            <input type="number"
-                   name="features[<?= $plan['id'] ?>][max_storage_gb]"
-                   value="<?= $plan['max_storage_gb'] ?>"
-                   min="0" />
+            <input
+              type="number"
+              name="features[<?= $plan['id'] ?>][max_storage_gb]"
+              value="<?= $plan['max_storage_gb']>0 ? $plan['max_storage_gb'] : '' ?>"
+              placeholder="Unlimited"
+              min="0"
+            />
           </td>
           <td>
-            <input type="number"
-                   name="features[<?= $plan['id'] ?>][max_projects]"
-                   value="<?= $plan['max_projects'] ?>"
-                   min="0" />
+            <input
+              type="number"
+              name="features[<?= $plan['id'] ?>][max_projects]"
+              value="<?= $plan['max_projects']>0 ? $plan['max_projects'] : '' ?>"
+              placeholder="Unlimited"
+              min="0"
+            />
           </td>
           <td>
-            <input type="number"
-                   name="features[<?= $plan['id'] ?>][max_company_members]"
-                   value="<?= $plan['max_company_members'] ?>"
-                   min="0" />
+            <input
+              type="number"
+              name="features[<?= $plan['id'] ?>][max_company_members]"
+              value="<?= $plan['max_company_members']>0 ? $plan['max_company_members'] : '' ?>"
+              placeholder="Unlimited"
+              min="0"
+            />
           </td>
           <td class="text-center">
-            <input type="checkbox"
-                   name="features[<?= $plan['id'] ?>][allow_organization_members]"
-                   <?= $plan['allow_organization_members'] ? 'checked' : '' ?> />
+            <input
+              type="checkbox"
+              name="features[<?= $plan['id'] ?>][allow_organization_members]"
+              <?= $plan['allow_organization_members'] ? 'checked' : '' ?>
+            />
           </td>
           <td class="text-center">
-            <input type="checkbox"
-                   name="features[<?= $plan['id'] ?>][allow_work_diary]"
-                   <?= $plan['allow_work_diary'] ? 'checked' : '' ?> />
+            <input
+              type="checkbox"
+              name="features[<?= $plan['id'] ?>][allow_work_diary]"
+              <?= $plan['allow_work_diary'] ? 'checked' : '' ?>
+            />
           </td>
         </tr>
-      <?php endforeach; ?>
+        <?php endforeach; ?>
       </tbody>
     </table>
+
     <button type="submit" class="btn-save">
-      <i class="fas fa-save"></i> Lưu thay đổi
+      <i class="fas fa-save"></i> Save Changes
     </button>
   </form>
 </div>
 
-<?php
-// include footer chung (đóng </body>, </html>)
-include __DIR__ . '/../../includes/footer.php';
+</body>
+</html>
