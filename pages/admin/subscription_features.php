@@ -1,20 +1,32 @@
 <?php
 // pages/admin/subscription_features.php
 session_start();
-require_once __DIR__ . '/../../config.php';
-require_once __DIR__ . '/../../includes/functions.php';
 
-// Chỉ cho admin
+// chỉ cho admin
 if (empty($_SESSION['user']) || $_SESSION['user']['role'] !== 'admin') {
     header('Location: ../login.php');
     exit;
 }
 
-$pdo = get_pdo_connection();
+require_once __DIR__ . '/../../config.php';
 
-// Xử lý form khi submit
+// --- KẾT NỐI DATABASE ---
+try {
+    $dsn = sprintf(
+        'mysql:host=%s;dbname=%s;charset=%s',
+        DB_HOST, DB_NAME, DB_CHARSET
+    );
+    $pdo = new PDO($dsn, DB_USER, DB_PASS, [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+    ]);
+} catch (PDOException $e) {
+    die('Database Connection Failed: ' . $e->getMessage());
+}
+
+// xử lý form khi submit
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['features'])) {
-    $stmt = $pdo->prepare("
+    $sql = "
         UPDATE subscriptions
            SET max_storage_gb             = :max_storage_gb,
                max_projects               = :max_projects,
@@ -22,7 +34,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['features'])) {
                allow_organization_members = :allow_org,
                allow_work_diary           = :allow_diary
          WHERE id = :id
-    ");
+    ";
+    $stmt = $pdo->prepare($sql);
+
     foreach ($_POST['features'] as $id => $f) {
         $stmt->execute([
             ':max_storage_gb'      => (int)$f['max_storage_gb'],
@@ -33,17 +47,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['features'])) {
             ':id'                  => (int)$id,
         ]);
     }
-    $message = "Cập nhật tính năng thành công.";
+    $message = 'Cập nhật tính năng thành công.';
 }
 
-// Lấy tất cả các gói subscription
-$plans = $pdo->query("SELECT * FROM subscriptions ORDER BY id")->fetchAll(PDO::FETCH_ASSOC);
+// lấy danh sách các gói subscription
+$plans = $pdo->query("SELECT * FROM subscriptions ORDER BY id")->fetchAll();
 
-// Cache-busting: lấy timestamp lần sửa cuối CSS
+// cache-busting CSS
 $cssFile = __DIR__ . '/../../assets/css/admin/subscription_features.css';
-$version  = file_exists($cssFile) ? filemtime($cssFile) : time();
+$version = file_exists($cssFile) ? filemtime($cssFile) : time();
 
-// Include header chung
+// include header chung (nơi xuất <head>, <body> mở)
 include __DIR__ . '/../../includes/header.php';
 ?>
 
@@ -73,7 +87,7 @@ include __DIR__ . '/../../includes/header.php';
   <a href="projects.php">
     <i class="fas fa-folder-open"></i> Projects
   </a>
-  <!-- thêm các mục khác -->
+  <!-- … thêm các mục khác nếu cần … -->
 </div>
 
 <div class="main-content">
@@ -84,7 +98,7 @@ include __DIR__ . '/../../includes/header.php';
 
   <?php if (!empty($message)): ?>
     <div class="alert alert-success"><?= htmlspecialchars($message) ?></div>
-  <?php endif ?>
+  <?php endif; ?>
 
   <form method="post">
     <table class="features-table">
@@ -103,7 +117,7 @@ include __DIR__ . '/../../includes/header.php';
         </tr>
       </thead>
       <tbody>
-        <?php foreach ($plans as $plan): ?>
+      <?php foreach ($plans as $plan): ?>
         <tr>
           <td><?= htmlspecialchars($plan['name']) ?></td>
           <td>
@@ -135,7 +149,7 @@ include __DIR__ . '/../../includes/header.php';
                    <?= $plan['allow_work_diary'] ? 'checked' : '' ?> />
           </td>
         </tr>
-        <?php endforeach ?>
+      <?php endforeach; ?>
       </tbody>
     </table>
     <button type="submit" class="btn-save">
@@ -144,4 +158,6 @@ include __DIR__ . '/../../includes/header.php';
   </form>
 </div>
 
-<?php include __DIR__ . '/../../includes/footer.php'; ?>
+<?php
+// include footer chung (đóng </body>, </html>)
+include __DIR__ . '/../../includes/footer.php';
