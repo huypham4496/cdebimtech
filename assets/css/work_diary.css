@@ -1,0 +1,428 @@
+/*──────────────────────────────────────────
+  work_diary.css
+──────────────────────────────────────────*/
+
+/* Variables & Reset */
+:root {
+  --ff:              'Inter', sans-serif;
+  --color-primary:   #fca415;
+  --color-secondary: #3b82f6;
+  --bg:              #f5f7fa;
+  --card:            #ffffff;
+  --text:            #2d3a45;
+  --muted:           #64748b;
+  --border:          #e2e8f0;
+  --radius:          0.75rem;
+  --shadow:          0 2px 8px rgba(0,0,0,0.1);
+  --sidebar-w:       240px;
+}
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+body {
+  font-family: var(--ff);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  font-size: 1rem;
+}
+
+/* Layout */
+.main-content {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 2rem;
+  padding: 2rem;
+  margin-left: var(--sidebar-w);
+}
+.card-block {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+/*──────────────────────────────────────────
+  Calendar (Left Column) — Ultra Modern
+──────────────────────────────────────────*/
+.calendar-container {
+  width: 100%;
+  max-width: 320px;
+  background: var(--card);
+  border-left: 4px solid var(--color-primary);
+  border-radius: var(--radius);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  transition: box-shadow 0.3s;
+}
+.calendar-container:hover {
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+}
+
+.calendar-header {
+  position: relative;
+  background: linear-gradient(140deg, var(--color-primary), var(--color-secondary));
+  color: #fff;
+  padding: 2rem 1rem 2.5rem;
+  text-align: center;
+  border-bottom-left-radius: 50% 20px;
+  border-bottom-right-radius: 50% 20px;
+}
+
+.calendar-header .calendar-day {
+  font-size: 4rem;
+  font-weight: 800;
+  line-height: 1;
+  transition: transform 0.3s;
+}
+.calendar-header .calendar-day:hover {
+  transform: scale(1.05);
+}
+
+.calendar-header .calendar-month {
+  font-size: 1.1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  margin-top: 0.3em;
+  display: block;
+  opacity: 0.9;
+}
+
+.calendar-header .nav {
+  position: absolute;
+  top: 1.2rem;
+  right: 1rem;
+  display: flex;
+  gap: 0.4rem;
+}
+.calendar-header .nav button {
+  background: rgba(255,255,255,0.25);
+  border: none;
+  border-radius: 50%;
+  width: 2.2rem;
+  height: 2.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: background 0.3s, transform 0.2s;
+}
+.calendar-header .nav button:hover {
+  background: rgba(255,255,255,0.4);
+  transform: translateY(-2px);
+}
+
+/* Weekday labels */
+.calendar thead {
+  display: flex;
+  background: var(--bg);
+  padding: 0.5rem 0;
+}
+.calendar thead th {
+  flex: 1;
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--muted);
+  letter-spacing: 0.05em;
+}
+
+/* Date grid */
+.calendar {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0.4rem;
+  padding: 0.5rem 0;
+  background: var(--bg);
+}
+.calendar tbody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.calendar tbody tr {
+  display: flex;
+  gap: 0.4rem;
+}
+
+/* Individual day cell */
+.calendar tbody td {
+  flex: 1;
+  position: relative;
+  height: 2.8rem;
+  background: var(--card);
+  border-radius: 0.6rem;
+  transition: transform 0.2s, box-shadow 0.2s;
+  overflow: hidden;
+}
+.calendar tbody td:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+}
+
+/* Link inside cell */
+.calendar tbody td a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: var(--text);
+  font-weight: 500;
+  text-decoration: none;
+  transition: background 0.3s, color 0.3s;
+}
+.calendar tbody td a:hover:not(.selected) {
+  background: var(--color-primary);
+  color: #fff;
+}
+.calendar tbody td.selected a {
+  background: var(--color-secondary);
+  color: #fff;
+}
+
+/* Empty cells */
+.calendar tbody td.empty {
+  background: transparent;
+  pointer-events: none;
+}
+
+/* Highlight today */
+.calendar tbody td.today {
+  box-shadow: 0 0 0 2px var(--color-accent);
+}
+
+.calendar-container {
+  height: 560px !important;
+}
+
+
+/*──────────────────────────────────────────
+  Notify Panel
+──────────────────────────────────────────*/
+.notify-panel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+}
+.company-label,
+.notify-label {
+  font-weight: 600;
+  white-space: nowrap;
+}
+.company-label span {
+  font-weight: normal;
+  color: var(--muted);
+  margin-left: 0.25rem;
+}
+.colleague-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+.colleague-list label {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.9rem;
+}
+.colleague-list small {
+  margin-left: 0.5rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+.btn-send-report {
+  margin-left: auto;
+  padding: 0.5rem 1rem;
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+.btn-send-report:hover {
+  background: #e05550;
+}
+
+/*──────────────────────────────────────────
+  Period Panels (Morning/Afternoon)
+──────────────────────────────────────────*/
+.period {
+  display: grid;
+  grid-template-columns: 100px auto auto 1fr;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+.period label {
+  font-weight: 600;
+}
+.period textarea,
+.period input[type="time"] {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.75rem;
+  transition: border 0.3s, box-shadow 0.3s;
+}
+.period textarea {
+  grid-column: 4 / -1;
+  resize: none;
+  overflow: hidden;
+}
+.period textarea:disabled,
+.period input:disabled {
+  background: var(--bg);
+}
+.period textarea:focus,
+.period input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(252,164,21,0.2);
+}
+
+/*──────────────────────────────────────────
+  Evening Panel
+──────────────────────────────────────────*/
+.period.evening {
+  display: grid;
+  grid-template-columns: 100px auto 100px 100px 1fr;
+  grid-template-rows: auto 1fr;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+.period.evening label {
+  grid-column: 1 / 2;
+  grid-row: 1 / 2;
+  font-weight: 600;
+}
+.period.evening .btn-toggle.break {
+  grid-column: 2 / 3;
+  grid-row: 1 / 2;
+  padding: 0.4rem 0.75rem;
+}
+.period.evening input[type="hidden"] {
+  display: none;
+}
+.period.evening input.start {
+  grid-column: 3 / 4;
+  grid-row: 1 / 2;
+  width: 100px;
+  padding: 0.5rem;
+}
+.period.evening input.end {
+  grid-column: 4 / 5;
+  grid-row: 1 / 2;
+  width: 100px;
+  padding: 0.5rem;
+}
+.period.evening textarea {
+  grid-column: 1 / 6;
+  grid-row: 2 / 3;
+  min-height: 4rem;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.75rem;
+  resize: none;
+  overflow: hidden;
+  transition: border 0.3s, box-shadow 0.3s;
+}
+.period.evening textarea:disabled,
+.period.evening input:disabled {
+  background: var(--bg);
+  pointer-events: none;
+  opacity: 0.6;
+}
+.period.evening textarea:focus,
+.period.evening input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(252,164,21,0.2);
+}
+
+/*──────────────────────────────────────────
+  Toggles & Actions
+──────────────────────────────────────────*/
+.btn-toggle {
+  padding: 0.4rem 0.75rem;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.3s, background 0.3s;
+}
+.btn-toggle.break {
+  background: var(--color-primary);
+  color: #fff;
+}
+.btn-toggle.break.active {
+  background: var(--muted);
+}
+.btn-toggle.late {
+  background: #ef4444;
+  color: #fff;
+}
+.btn-toggle.late.active {
+  background: #9b1c1c;
+}
+.btn-toggle:hover {
+  transform: translateY(-1px);
+}
+.actions {
+  text-align: right;
+  margin: 1rem 0;
+}
+.actions button {
+  margin-left: 1rem;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: var(--radius);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s, transform 0.3s;
+}
+.actions .export {
+  background: var(--color-secondary);
+}
+.actions .export:hover {
+  background: #2563eb;
+  transform: translateY(-2px);
+}
+.actions .save {
+  background: var(--color-primary);
+}
+.actions .save:hover {
+  background: #e05550;
+  transform: translateY(-2px);
+}
+
+/* Floating Notification */
+.alert-abs {
+  position: fixed;
+  top: 1rem; right: 1rem;
+  background: var(--color-secondary);
+  color: #fff;
+  padding: 0.75rem 1.25rem;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  opacity: 0;
+  animation: fadeIn 0.3s forwards, fadeOut 0.3s 2s forwards;
+}
+@keyframes fadeIn { to { opacity: 1 } }
+@keyframes fadeOut { to { opacity: 0 } }
+
+.autoexpand {
+  height: 80px !important;
+}
