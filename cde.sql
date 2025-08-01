@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jul 31, 2025 at 12:15 PM
+-- Generation Time: Jul 31, 2025 at 05:58 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -74,6 +74,34 @@ INSERT INTO `subscriptions` (`id`, `name`, `price`, `description`, `created_at`,
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `subscription_orders`
+--
+
+CREATE TABLE `subscription_orders` (
+  `id` int(11) NOT NULL COMMENT 'Order ID',
+  `user_id` int(11) NOT NULL COMMENT 'ID of the user',
+  `subscription_id` int(11) NOT NULL COMMENT 'ID of the subscription plan',
+  `duration` varchar(20) NOT NULL COMMENT 'Duration selected (e.g. 5y, LT)',
+  `voucher_code` varchar(50) DEFAULT NULL COMMENT 'Applied voucher code',
+  `discount_percent` decimal(5,2) NOT NULL DEFAULT 0.00 COMMENT 'Discount percentage',
+  `amount_paid` decimal(12,2) NOT NULL COMMENT 'Final amount paid',
+  `memo` varchar(100) NOT NULL COMMENT 'Payment memo',
+  `status` enum('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp() COMMENT 'Order timestamp'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `subscription_orders`
+--
+
+INSERT INTO `subscription_orders` (`id`, `user_id`, `subscription_id`, `duration`, `voucher_code`, `discount_percent`, `amount_paid`, `memo`, `status`, `created_at`) VALUES
+(1, 4, 4, '5', '', 0.00, 28000000.00, 'BT_4_Bussines_5y_8MOY', 'approved', '2025-07-31 14:39:40'),
+(2, 4, 4, '0', '', 0.00, 210000000.00, 'BT_4_Bussines_LT_H0LA', 'rejected', '2025-07-31 14:43:12'),
+(3, 4, 4, '1', '', 0.00, 7000000.00, 'BT_4_Bussines_1y_U95Z', 'approved', '2025-07-31 15:25:18');
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `users`
 --
 
@@ -92,6 +120,7 @@ CREATE TABLE `users` (
   `role` enum('admin','user') DEFAULT 'user',
   `avatar` varchar(255) DEFAULT NULL,
   `subscription_id` int(11) DEFAULT NULL,
+  `subscription_expires_at` date DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -99,9 +128,9 @@ CREATE TABLE `users` (
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `username`, `first_name`, `last_name`, `dob`, `address`, `company`, `phone`, `invite_code`, `email`, `password_hash`, `role`, `avatar`, `subscription_id`, `created_at`) VALUES
-(1, 'huypham', 'Phạm Mạnh', 'Huy', '0000-00-00', 'Hạ Long', 'NCC', '0888121496', NULL, 'phamhuy.cngt@gmail.com', '$2y$10$YXa/ryYZhrQyEE6rBuORVugmQSIQgmwJxBdebsPapaDuzQDaeKPhy', 'admin', 'avatar_1.png', NULL, '2025-07-30 01:18:51'),
-(4, 'user1', 'user1a', 'user1b', '2025-07-31', 'Hạ Long', 'NCC', '0888121496', NULL, 'user1@bimtech.edu.vn', '$2y$10$wX/QF1V8VS2dHRDEeVQgFO6KFkZM.oAZaPl9ixMa.SbtH9CkGeicy', 'user', NULL, 3, '2025-07-31 04:47:19');
+INSERT INTO `users` (`id`, `username`, `first_name`, `last_name`, `dob`, `address`, `company`, `phone`, `invite_code`, `email`, `password_hash`, `role`, `avatar`, `subscription_id`, `subscription_expires_at`, `created_at`) VALUES
+(1, 'huypham', 'Phạm Mạnh', 'Huy', '0000-00-00', 'Hạ Long', 'NCC', '0888121496', NULL, 'phamhuy.cngt@gmail.com', '$2y$10$YXa/ryYZhrQyEE6rBuORVugmQSIQgmwJxBdebsPapaDuzQDaeKPhy', 'admin', 'avatar_1.png', 3, NULL, '2025-07-30 01:18:51'),
+(4, 'user1', 'user1a', 'user1b', '2025-07-31', 'Hạ Long', 'NCC', '0888121496', NULL, 'user1@bimtech.edu.vn', '$2y$10$wX/QF1V8VS2dHRDEeVQgFO6KFkZM.oAZaPl9ixMa.SbtH9CkGeicy', 'user', NULL, 4, '2025-07-31', '2025-07-31 04:47:19');
 
 -- --------------------------------------------------------
 
@@ -118,6 +147,14 @@ CREATE TABLE `vouchers` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
+-- Dumping data for table `vouchers`
+--
+
+INSERT INTO `vouchers` (`id`, `code`, `discount`, `expiry_date`, `created_at`) VALUES
+(1, 'NCCdemo', 10.00, '2025-12-31', '2025-07-31 14:03:07'),
+(3, '767363', 50.00, '2025-07-31', '2025-07-31 14:48:56');
+
+--
 -- Indexes for dumped tables
 --
 
@@ -132,6 +169,14 @@ ALTER TABLE `payment_settings`
 --
 ALTER TABLE `subscriptions`
   ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `subscription_orders`
+--
+ALTER TABLE `subscription_orders`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_user` (`user_id`),
+  ADD KEY `idx_subscription` (`subscription_id`);
 
 --
 -- Indexes for table `users`
@@ -159,6 +204,12 @@ ALTER TABLE `subscriptions`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
+-- AUTO_INCREMENT for table `subscription_orders`
+--
+ALTER TABLE `subscription_orders`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'Order ID', AUTO_INCREMENT=4;
+
+--
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
@@ -168,7 +219,18 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `vouchers`
 --
 ALTER TABLE `vouchers`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'Voucher ID';
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'Voucher ID', AUTO_INCREMENT=4;
+
+--
+-- Constraints for dumped tables
+--
+
+--
+-- Constraints for table `subscription_orders`
+--
+ALTER TABLE `subscription_orders`
+  ADD CONSTRAINT `subscription_orders_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `subscription_orders_ibfk_2` FOREIGN KEY (`subscription_id`) REFERENCES `subscriptions` (`id`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
