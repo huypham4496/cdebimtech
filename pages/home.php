@@ -9,7 +9,7 @@ if (isset($_GET['logout'])) {
     exit;
 }
 
-// Redirect to login if not authenticated
+// Redirect if not authenticated
 if (empty($_SESSION['user'])) {
     header('Location: login.php');
     exit;
@@ -29,34 +29,47 @@ try {
     die('Database connection failed.');
 }
 
-$userId = $_SESSION['user']['id'];
-$role   = $_SESSION['user']['role'] ?? 'user';
+// Pull user data from session
+$user    = $_SESSION['user'];
+$userId  = $user['id'];
+$role    = $user['role'] ?? 'user';
 
+// Default to Free plan until we see otherwise
+$planName = 'Free';
+$expires  = null;
+
+// If they have a subscription_id, load its name & expiry
+if (!empty($user['subscription_id'])) {
+    // Fetch plan name
+    $stmt = $pdo->prepare('SELECT name FROM subscriptions WHERE id = ?');
+    $stmt->execute([ (int)$user['subscription_id'] ]);
+    $planName = $stmt->fetchColumn() ?: $planName;
+
+    // Read expiry from session if present
+    if (isset($user['subscription_expires_at'])) {
+        $expires = $user['subscription_expires_at'];
+    } else {
+        // Fallback: query users table directly
+        $stmt2 = $pdo->prepare('SELECT subscription_expires_at FROM users WHERE id = ?');
+        $stmt2->execute([$userId]);
+        $expires = $stmt2->fetchColumn();
+    }
+}
+
+// Build the banner text
 if ($role === 'admin') {
-    // Admin banner
     $bannerText = 'Your account is on the Admin plan with unlimited access.';
-} else {
-    // Fetch plan name and expiry date
-    $stmt = $pdo->prepare('
-        SELECT s.name AS plan_name, u.subscription_expires_at
-        FROM users u
-        LEFT JOIN subscriptions s ON u.subscription_id = s.id
-        WHERE u.id = ?
-    ');
-    $stmt->execute([$userId]);
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    $planName = $row['plan_name'] ?? 'Basic';
-    $expires  = $row['subscription_expires_at'];
-
-    if (is_null($expires) || $expires === '' || $expires === '0000-00-00') {
+}
+elseif (strcasecmp($planName, 'Free') === 0) {
+    $bannerText = 'You are using the Free plan.';
+}
+else {
+    // If expiry is empty or zero-date, treat as unlimited
+    if (empty($expires) || $expires === '0000-00-00') {
         $bannerText = "You are using the {$planName} plan with unlimited access.";
     } else {
-        $today = new DateTimeImmutable('today');
-        $exp   = new DateTimeImmutable($expires);
-        $diff  = $today->diff($exp);
-        $days  = $diff->invert ? 0 : $diff->days;
-        $bannerText = "You are using the {$planName} plan with {$days} day" . ($days !== 1 ? 's' : '') . " remaining.";
+        // Show exact expiry date
+        $bannerText = "You are using the {$planName} plan until {$expires}.";
     }
 }
 ?>
@@ -66,11 +79,16 @@ if ($role === 'admin') {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Home | CDE Bimtech</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" integrity="sha512-dynvDxJ5aVF6oU1i6zfoalvVYvNvKcJste/0q5u+P%2FgPm4jG3E5s3UeJ8V+RaH59RUW2YCiMzZ6pyRrg58F3CA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-  <link rel="stylesheet" href="../assets/css/dashboard.css?v=<?php echo filemtime('../assets/css/dashboard.css'); ?>">
-  <link rel="stylesheet" href="../assets/css/sidebar.css?v=<?php echo filemtime('../assets/css/sidebar.css'); ?>">
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
+        integrity="sha512-dynvDxJ5aVF6oU1i6zfoalvVYvNvKcJste/0q5u+P%2FgPm4jG3E5s3UeJ8V+RaH59RUW2YCiMzZ6pyRrg58F3CA=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link rel="stylesheet"
+        href="../assets/css/dashboard.css?v=<?php echo filemtime('../assets/css/dashboard.css'); ?>">
+  <link rel="stylesheet"
+        href="../assets/css/sidebar.css?v=<?php echo filemtime('../assets/css/sidebar.css'); ?>">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="../assets/js/dashboard.js?v=<?php echo filemtime('../assets/js/dashboard.js');?>" defer></script>
+  <script src="../assets/js/dashboard.js?v=<?php echo filemtime('../assets/js/dashboard.js'); ?>" defer></script>
 </head>
 <body>
   <?php include __DIR__ . '/sidebar.php'; ?>
@@ -78,8 +96,8 @@ if ($role === 'admin') {
   <div class="main">
     <!-- Info banner -->
     <div class="alert-banner info-banner">
-      
-      <?php echo htmlspecialchars($bannerText); ?>
+      <span class="alert-icon"><i class="fas fa-info-circle"></i></span>
+      <?= htmlspecialchars($bannerText) ?>
     </div>
 
     <!-- Stats cards -->
