@@ -50,8 +50,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt = $pdo->prepare("
             SELECT entry_date, period, content
               FROM work_diary_entries
-             WHERE user_id = ? 
-               AND MONTH(entry_date) = ? 
+             WHERE user_id = ?
+               AND MONTH(entry_date) = ?
                AND YEAR(entry_date)  = ?
              ORDER BY entry_date, FIELD(period,'morning','afternoon','evening')
         ");
@@ -81,74 +81,132 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
            // Title row
            . 'tr.title-row td{border:none;height:40px;vertical-align:middle;'
              . 'font-size:13pt;font-weight:bold;text-align:center;}'
-           // Data table: outer double, inner thin
+           // Table borders
            . 'table.data{width:100%;border-collapse:collapse;border:3px double #000;}'
-           . 'table.data tr.header-row th, table.data tr.data-row td{border:thin solid #000;}'
-           . 'tr.header-row th{font-size:11pt;font-weight:bold;text-align:center;}'
-           . 'tr.data-row td{font-size:10pt;white-space:normal;word-wrap:break-word;}'
-           . 'tr.date-row td{font-weight:bold;}'
-           // Column widths
-           . 'colgroup col:nth-child(1),colgroup col:nth-child(2),colgroup col:nth-child(4){white-space:nowrap;width:auto;}'
-           . 'colgroup col:nth-child(3){width:60%;}'
+           . 'table.data tr.header-row th, table.data tr.data-row td{'
+           .   'border-top:thin dashed #000;'
+           .   'border-bottom:thin dashed #000;'
+           .   'border-left:thin solid #000;'
+           .   'border-right:thin solid #000;'
+           . '}'
+           // Header row
+           . 'table.data tr.header-row th{'
+           .   'font-size:11pt;'
+           .   'font-weight:bold;'
+           .   'text-align:center;'
+           .   'height:40px;'
+           . '}'
+           // Data rows
+           . 'table.data tr.data-row td{'
+           .   'font-size:10pt;'
+           .   'white-space:normal;'
+           .   'word-wrap:break-word;'
+           . '}'
            // Signature styles
-           . '.signature{border:none;font-size:10pt;}'
+           . '.signature{font-size:10pt;}'
            . '.signature.bold{font-weight:bold;font-size:11pt;}'
-           . '</style></head><body>';
+           . '.signature-block-table, .signature-block-table td{border:none;}'
+           . '</style>'
+           // Freeze panes & fit width (Excel directive)
+           . '<!--[if gte mso 9]><xml>'
+           . '<x:ExcelWorkbook>'
+           .   '<x:ExcelWorksheets>'
+           .     '<x:ExcelWorksheet>'
+           .       '<x:Name>Sheet1</x:Name>'
+           .       '<x:WorksheetOptions>'
+           .         '<x:Print><x:FitWidth>1</x:FitWidth></x:Print>'
+           .         '<x:FreezePanes/>'
+           .         '<x:FrozenNoSplit/>'
+           .         '<x:SplitHorizontal>2</x:SplitHorizontal>'
+           .         '<x:TopRowBottomPane>2</x:TopRowBottomPane>'
+           .       '</x:WorksheetOptions>'
+           .     '</x:ExcelWorksheet>'
+           .   '</x:ExcelWorksheets>'
+           . '</x:ExcelWorkbook>'
+           . '</xml><![endif]-->'
+           . '</head><body>';
 
         // Title
         echo '<table><tr class="title-row"><td colspan="4">'
            . "NHẬT KÝ CÔNG VIỆC THÁNG {$month}/{$year}"
            . '</td></tr></table>';
 
-        // Data table
+        // Data table with fixed column widths
         echo '<table class="data">';
-        echo '<colgroup><col/><col/><col/><col/></colgroup>';
-        // Header
+        echo '<colgroup>'
+           // Column A (STT) auto
+           . '<col/>'
+           // Column B: 110px
+           . '<col style="width:110px;"/>'
+           // Column C: 340px
+           . '<col style="width:340px;"/>'
+           // Column D: 150px
+           . '<col style="width:150px;"/>'
+           . '</colgroup>';
+
+        // Header row
         echo '<tr class="header-row">'
-           . '<th>STT</th><th>NGÀY LÀM VIỆC</th><th>TASK</th><th>GHI CHÚ</th>'
+           . '<th>STT</th>'
+           . '<th>NGÀY LÀM VIỆC</th>'
+           . '<th>TASK</th>'
+           . '<th>GHI CHÚ</th>'
            . '</tr>';
-        // Rows
+
+        // Data rows
         $weekday = ['Chủ Nhật','Thứ Hai','Thứ Ba','Thứ Tư','Thứ Năm','Thứ Sáu','Thứ Bảy'];
         $i = 0;
         foreach ($grouped as $day => $periods) {
             $i++;
             $w    = date('w', strtotime($day));
             $dstr = $weekday[$w] . ', ' . date('d/m', strtotime($day));
-            echo '<tr class="data-row date-row">'
-               . "<td>{$i}</td><td>{$dstr}</td><td></td><td></td>"
+            // Inline for bold, italic, and top border
+            echo '<tr class="data-row">'
+               . '<td style="font-weight:bold;font-style:italic;border-top:thin solid #000;">' . $i . '</td>'
+               . '<td style="font-weight:bold;font-style:italic;border-top:thin solid #000;">' . $dstr . '</td>'
+               . '<td style="border-top:thin solid #000;"></td>'
+               . '<td style="border-top:thin solid #000;"></td>'
                . '</tr>';
+
             $subs = ['morning'=>'Buổi sáng','afternoon'=>'Buổi trưa','evening'=>'Buổi tối'];
-            $j = 1;
-            foreach ($subs as $k => $lbl) {
-                $cont = htmlspecialchars($periods[$k] ?? '', ENT_QUOTES);
-                echo '<tr class="data-row">'
-                   . "<td>{$i}.{$j}</td><td>{$lbl}</td><td>{$cont}</td><td></td>"
-                   . '</tr>';
-                $j++;
+            foreach ($subs as $key => $label) {
+                if (!empty($periods[$key])) {
+                    echo '<tr class="data-row">'
+                       . '<td></td>'
+                       . '<td>' . $label . '</td>'
+                       . '<td>' . nl2br(htmlspecialchars($periods[$key], ENT_QUOTES)) . '</td>'
+                       . '<td></td>'
+                       . '</tr>';
+                }
             }
         }
         echo '</table>';
 
-        // Signature: single row with bold labels and bold username
-        echo '<br/><br/><table><tr>'
-           . '<td class="signature bold" colspan="2" style="text-align:center;">Người lập bảng:</td>'
+        // Spacer to push signature down
+        echo '<table style="border:none;"><tr>'
+           . '<td colspan="4" style="height:20px;"></td>'
+           . '</tr></table>';
+
+        // Signature block
+        echo '<table class="signature-block-table" style="border:none;">'
+           . '<tr>'
+           . '<td class="signature bold" colspan="2" style="text-align:center;font-weight:bold;">Người lập bảng</td>'
            . '<td></td>'
-           . '<td class="signature bold" style="text-align:center;">Phòng thiết kế:</td>'
-           . '</tr>';
-        // Three blank rows
-        echo '<tr><td colspan="4" style="border:none;height:15px;"></td></tr>';
-        echo '<tr><td colspan="4" style="border:none;height:15px;"></td></tr>';
-        echo '<tr><td colspan="4" style="border:none;height:15px;"></td></tr>';
-        // Username row, merged A+B, bold
-        echo '<tr>'
-           . '<td class="signature bold" colspan="2" style="text-align:center;">' . $userName . '</td>'
+           . '<td class="signature bold" style="text-align:center;font-weight:bold;">Phòng thiết kế</td>'
+           . '</tr>'
+           . '<tr><td colspan="4" style="height:15px;"></td></tr>'
+           . '<tr><td colspan="4" style="height:15px;"></td></tr>'
+           . '<tr><td colspan="4" style="height:15px;"></td></tr>'
+           . '<tr>'
+           . '<td class="signature bold" colspan="2" style="text-align:center;font-weight:bold;">' . $userName . '</td>'
            . '<td></td><td></td>'
-           . '</tr>';
-        echo '</table>';
+           . '</tr>'
+           . '</table>';
 
         echo '</body></html>';
         exit;
     }
+
+
     // === Send Report ===
     if (isset($_POST['send_report'])) {
         // … your mailing logic …
@@ -165,6 +223,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             DELETE FROM work_diary_entries
              WHERE user_id=? AND entry_date=? AND period=?
         ");
+        // Morning & Afternoon
         foreach (['morning','afternoon'] as $prd) {
             $break = !empty($_POST["{$prd}_break"]);
             $late  = !empty($_POST["{$prd}_late"]);
@@ -179,6 +238,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $del->execute([$userId,$date,$prd]);
             }
         }
+        // Evening
         $eb = !empty($_POST['evening_break']);
         if ($eb) {
             $up->execute([$userId,$date,'evening','Break']);
@@ -204,7 +264,7 @@ $f = $pdo->prepare("
 ");
 $f->execute([$userId,$date]);
 $rows = $f->fetchAll();
-$diary = [];
+$diary = ['morning'=>'','afternoon'=>'','evening'=>''];
 foreach ($rows as $r) {
     $diary[$r['period']] = $r['content'];
 }
@@ -267,7 +327,7 @@ include $root.'/includes/header.php';
         <?php foreach ($weeks as $row): ?>
           <tr>
             <?php for ($d = 1; $d <= 7; $d++): ?>
-              <?php if ($row[$d]): 
+              <?php if ($row[$d]):
                 $ds  = sprintf('%04d-%02d-%02d',$year,$month,$row[$d]);
                 $sel = $ds === $date ? 'selected' : '';
               ?>
@@ -287,7 +347,6 @@ include $root.'/includes/header.php';
 
   <!-- Entry Panel -->
   <form method="post" class="entry-panel" id="entryPanel">
-    <!-- Notify colleagues -->
     <div class="card-block notify-panel">
       <div class="company-label">Company:<span><?= htmlspecialchars($company, ENT_QUOTES) ?></span></div>
       <div class="notify-label">Notify colleagues:</div>
