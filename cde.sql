@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Aug 02, 2025 at 01:56 PM
+-- Generation Time: Aug 02, 2025 at 02:05 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -30,6 +30,21 @@ SET time_zone = "+00:00";
 CREATE TABLE `companies` (
   `id` int(11) UNSIGNED NOT NULL,
   `name` varchar(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `notifications`
+--
+
+CREATE TABLE `notifications` (
+  `id` int(11) NOT NULL,
+  `sender_id` int(11) NOT NULL COMMENT 'ID người gửi (users.id)',
+  `receiver_id` int(11) NOT NULL COMMENT 'ID người nhận (users.id)',
+  `entry_date` date NOT NULL COMMENT 'Ngày nhật ký đã gửi',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp() COMMENT 'Thời gian gửi thông báo',
+  `is_read` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Đánh dấu đã đọc'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -211,6 +226,14 @@ ALTER TABLE `companies`
   ADD PRIMARY KEY (`id`);
 
 --
+-- Indexes for table `notifications`
+--
+ALTER TABLE `notifications`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `receiver_id` (`receiver_id`),
+  ADD KEY `fk_notify_sender` (`sender_id`);
+
+--
 -- Indexes for table `payment_settings`
 --
 ALTER TABLE `payment_settings`
@@ -264,6 +287,12 @@ ALTER TABLE `companies`
   MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT for table `notifications`
+--
+ALTER TABLE `notifications`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `subscriptions`
 --
 ALTER TABLE `subscriptions`
@@ -290,6 +319,13 @@ ALTER TABLE `vouchers`
 --
 -- Constraints for dumped tables
 --
+
+--
+-- Constraints for table `notifications`
+--
+ALTER TABLE `notifications`
+  ADD CONSTRAINT `fk_notify_receiver` FOREIGN KEY (`receiver_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_notify_sender` FOREIGN KEY (`sender_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `subscription_orders`
