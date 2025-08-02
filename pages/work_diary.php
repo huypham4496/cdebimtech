@@ -1,147 +1,231 @@
 <?php
 session_start();
 require_once __DIR__ . '/../config.php';
-$root  = dirname(__DIR__);
+$root = dirname(__DIR__);
 
 // — DB Connection —
 $pdo = new PDO(
-  "mysql:host=".DB_HOST.";dbname=".DB_NAME.";charset=utf8mb4",
-  DB_USER, DB_PASS,
-  [PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]
+    "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4",
+    DB_USER, DB_PASS,
+    [PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]
 );
 
 // — Auth & Company —
 $userId = $_SESSION['user']['id'] ?? null;
 if (!$userId) {
-  header('Location: login.php');
-  exit;
+    header('Location: login.php');
+    exit;
 }
-$stmt = $pdo->prepare("
-  SELECT s.allow_work_diary, u.company
-    FROM users u
-    JOIN subscriptions s ON u.subscription_id=s.id
-   WHERE u.id=?
-");
+$stmt = $pdo->prepare("SELECT first_name, last_name, company FROM users WHERE id = ?");
 $stmt->execute([$userId]);
-$row     = $stmt->fetch();
-$company = $row['company'];
+$user = $stmt->fetch();
+$userName = htmlspecialchars("{$user['first_name']} {$user['last_name']}", ENT_QUOTES);
+$company  = $user['company'];
 
-// — Colleagues —
+// — Colleagues for notification —
 $colleagues = [];
 if ($company) {
-  $cq = $pdo->prepare("
-    SELECT id, first_name, last_name, email
-      FROM users
-     WHERE company=? AND id<>?
-  ");
-  $cq->execute([$company, $userId]);
-  $colleagues = $cq->fetchAll();
+    $cq = $pdo->prepare("
+        SELECT id, first_name, last_name, email
+          FROM users
+         WHERE company = ? AND id <> ?
+    ");
+    $cq->execute([$company, $userId]);
+    $colleagues = $cq->fetchAll();
 }
 
 // — Date context —
-$month = $_GET['month'] ?? date('n');
-$year  = $_GET['year']  ?? date('Y');
-$date  = $_GET['date']  ?? date('Y-m-d');
+$month = (int)($_GET['month'] ?? date('n'));
+$year  = (int)($_GET['year']  ?? date('Y'));
+$date  = $_GET['date'] ?? date('Y-m-d');
 $prev  = (new DateTime("$year-$month-01"))->modify('-1 month');
 $next  = (new DateTime("$year-$month-01"))->modify('+1 month');
 
 // — Handle POST —
-if ($_SERVER['REQUEST_METHOD']==='POST') {
-  if (isset($_POST['export_excel'])) {
-    header('Content-Type: text/csv');
-    header('Content-Disposition:attachment;filename="work_diary_'.$month.'_'.$year.'.csv"');
-    $out = fopen('php://output','w');
-    fputcsv($out,['Date','Period','Task']);
-    $ents = $pdo->prepare("
-      SELECT entry_date,period,content
-        FROM work_diary_entries
-       WHERE user_id=? AND MONTH(entry_date)=? AND YEAR(entry_date)=?
-    ");
-    $ents->execute([$userId,$month,$year]);
-    while($e=$ents->fetch()){
-      fputcsv($out,[$e['entry_date'],$e['period'],$e['content']]);
-    }
-    fclose($out); exit;
-  }
-  if (isset($_POST['send_report'])) {
-    // … mailing logic …
-    $notifyMsg = "Report sent.";
-  }
-  if (isset($_POST['save_diary'])) {
-    $up  = $pdo->prepare("
-      REPLACE INTO work_diary_entries (user_id,entry_date,period,content)
-      VALUES (?,?,?,?)
-    ");
-    $del = $pdo->prepare("
-      DELETE FROM work_diary_entries
-       WHERE user_id=? AND entry_date=? AND period=?
-    ");
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-    foreach (['morning','afternoon'] as $prd) {
-      $break = !empty($_POST["{$prd}_break"]);
-      $late  = !empty($_POST["{$prd}_late"]);
-      $txt   = trim($_POST["{$prd}_task"] ?? '');
-      if ($break) {
-        $up->execute([$userId,$date,$prd,'Break']);
-      } elseif ($late) {
-        $up->execute([$userId,$date,$prd,"Late: {$txt}"]);
-      } elseif ($txt!=='') {
-        $up->execute([$userId,$date,$prd,$txt]);
-      } else {
-        $del->execute([$userId,$date,$prd]);
-      }
+    // === Export Excel (HTML → .xls) ===
+    if (isset($_POST['export_excel'])) {
+        // 1) Fetch entries
+        $stmt = $pdo->prepare("
+            SELECT entry_date, period, content
+              FROM work_diary_entries
+             WHERE user_id = ? 
+               AND MONTH(entry_date) = ? 
+               AND YEAR(entry_date)  = ?
+             ORDER BY entry_date, FIELD(period,'morning','afternoon','evening')
+        ");
+        $stmt->execute([$userId, $month, $year]);
+        $rows = $stmt->fetchAll();
+
+        // 2) Group by date
+        $grouped = [];
+        foreach ($rows as $r) {
+            $grouped[$r['entry_date']][$r['period']] = $r['content'];
+        }
+
+        // 3) Send headers
+        header("Content-Type: application/vnd.ms-excel; charset=UTF-8");
+        header("Content-Disposition: attachment; filename=\"work_diary_{$month}_{$year}.xls\"");
+
+        // 4) Output HTML → Excel
+        echo '<html xmlns:o="urn:schemas-microsoft-com:office:office" '
+           . 'xmlns:x="urn:schemas-microsoft-com:office:excel" '
+           . 'xmlns="http://www.w3.org/TR/REC-html40"><head>'
+           . '<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>'
+           . '<style>'
+           // Global font
+           . 'body, table, th, td { font-family:"Times New Roman"; }'
+           // Page setup
+           . '@page{size:A4;margin:0.5in 0.25in 0.25in 0.75in;}'
+           // Title row
+           . 'tr.title-row td{border:none;height:40px;vertical-align:middle;'
+             . 'font-size:13pt;font-weight:bold;text-align:center;}'
+           // Data table: outer double, inner thin
+           . 'table.data{width:100%;border-collapse:collapse;border:3px double #000;}'
+           . 'table.data tr.header-row th, table.data tr.data-row td{border:thin solid #000;}'
+           . 'tr.header-row th{font-size:11pt;font-weight:bold;text-align:center;}'
+           . 'tr.data-row td{font-size:10pt;white-space:normal;word-wrap:break-word;}'
+           . 'tr.date-row td{font-weight:bold;}'
+           // Column widths
+           . 'colgroup col:nth-child(1),colgroup col:nth-child(2),colgroup col:nth-child(4){white-space:nowrap;width:auto;}'
+           . 'colgroup col:nth-child(3){width:60%;}'
+           // Signature styles
+           . '.signature{border:none;font-size:10pt;}'
+           . '.signature.bold{font-weight:bold;font-size:11pt;}'
+           . '</style></head><body>';
+
+        // Title
+        echo '<table><tr class="title-row"><td colspan="4">'
+           . "NHẬT KÝ CÔNG VIỆC THÁNG {$month}/{$year}"
+           . '</td></tr></table>';
+
+        // Data table
+        echo '<table class="data">';
+        echo '<colgroup><col/><col/><col/><col/></colgroup>';
+        // Header
+        echo '<tr class="header-row">'
+           . '<th>STT</th><th>NGÀY LÀM VIỆC</th><th>TASK</th><th>GHI CHÚ</th>'
+           . '</tr>';
+        // Rows
+        $weekday = ['Chủ Nhật','Thứ Hai','Thứ Ba','Thứ Tư','Thứ Năm','Thứ Sáu','Thứ Bảy'];
+        $i = 0;
+        foreach ($grouped as $day => $periods) {
+            $i++;
+            $w    = date('w', strtotime($day));
+            $dstr = $weekday[$w] . ', ' . date('d/m', strtotime($day));
+            echo '<tr class="data-row date-row">'
+               . "<td>{$i}</td><td>{$dstr}</td><td></td><td></td>"
+               . '</tr>';
+            $subs = ['morning'=>'Buổi sáng','afternoon'=>'Buổi trưa','evening'=>'Buổi tối'];
+            $j = 1;
+            foreach ($subs as $k => $lbl) {
+                $cont = htmlspecialchars($periods[$k] ?? '', ENT_QUOTES);
+                echo '<tr class="data-row">'
+                   . "<td>{$i}.{$j}</td><td>{$lbl}</td><td>{$cont}</td><td></td>"
+                   . '</tr>';
+                $j++;
+            }
+        }
+        echo '</table>';
+
+        // Signature: single row with bold labels and bold username
+        echo '<br/><br/><table><tr>'
+           . '<td class="signature bold" colspan="2" style="text-align:center;">Người lập bảng:</td>'
+           . '<td></td>'
+           . '<td class="signature bold" style="text-align:center;">Phòng thiết kế:</td>'
+           . '</tr>';
+        // Three blank rows
+        echo '<tr><td colspan="4" style="border:none;height:15px;"></td></tr>';
+        echo '<tr><td colspan="4" style="border:none;height:15px;"></td></tr>';
+        echo '<tr><td colspan="4" style="border:none;height:15px;"></td></tr>';
+        // Username row, merged A+B, bold
+        echo '<tr>'
+           . '<td class="signature bold" colspan="2" style="text-align:center;">' . $userName . '</td>'
+           . '<td></td><td></td>'
+           . '</tr>';
+        echo '</table>';
+
+        echo '</body></html>';
+        exit;
+    }
+    // === Send Report ===
+    if (isset($_POST['send_report'])) {
+        // … your mailing logic …
+        $notifyMsg = "Report sent.";
     }
 
-    $eb = !empty($_POST['evening_break']);
-    if ($eb) {
-      $up->execute([$userId,$date,'evening','Break']);
-    } else {
-      $ts = $_POST['evening_start'] ?? '17:00';
-      $te = $_POST['evening_end']   ?? '19:30';
-      $tk = trim($_POST['evening_task'] ?? '');
-      if ($tk!=='') {
-        $up->execute([$userId,$date,'evening',"{$ts}-{$te}: {$tk}"]);
-      } else {
-        $del->execute([$userId,$date,'evening']);
-      }
+    // === Save Diary Entries ===
+    if (isset($_POST['save_diary'])) {
+        $up = $pdo->prepare("
+            REPLACE INTO work_diary_entries (user_id,entry_date,period,content)
+            VALUES (?,?,?,?)
+        ");
+        $del = $pdo->prepare("
+            DELETE FROM work_diary_entries
+             WHERE user_id=? AND entry_date=? AND period=?
+        ");
+        foreach (['morning','afternoon'] as $prd) {
+            $break = !empty($_POST["{$prd}_break"]);
+            $late  = !empty($_POST["{$prd}_late"]);
+            $txt   = trim($_POST["{$prd}_task"] ?? '');
+            if ($break) {
+                $up->execute([$userId,$date,$prd,'Break']);
+            } elseif ($late) {
+                $up->execute([$userId,$date,$prd,"Late: {$txt}"]);
+            } elseif ($txt !== '') {
+                $up->execute([$userId,$date,$prd,$txt]);
+            } else {
+                $del->execute([$userId,$date,$prd]);
+            }
+        }
+        $eb = !empty($_POST['evening_break']);
+        if ($eb) {
+            $up->execute([$userId,$date,'evening','Break']);
+        } else {
+            $ts = $_POST['evening_start'] ?? '17:00';
+            $te = $_POST['evening_end']   ?? '19:30';
+            $tk = trim($_POST["evening_task"] ?? '');
+            if ($tk !== '') {
+                $up->execute([$userId,$date,'evening',"{$ts}-{$te}: {$tk}"]);
+            } else {
+                $del->execute([$userId,$date,'evening']);
+            }
+        }
+        $saveMsg = "Successfully updated";
     }
-
-    $saveMsg = "Successfully updated";
-  }
 }
 
-// — Load Today's entries —
+// — Load today's entries & render UI (unchanged) —
 $f = $pdo->prepare("
-  SELECT period,content
-    FROM work_diary_entries
-   WHERE user_id=? AND entry_date=?
+    SELECT period,content
+      FROM work_diary_entries
+     WHERE user_id=? AND entry_date=?
 ");
 $f->execute([$userId,$date]);
 $rows = $f->fetchAll();
 $diary = [];
 foreach ($rows as $r) {
-  $diary[$r['period']] = $r['content'];
+    $diary[$r['period']] = $r['content'];
 }
 
 // — Build calendar weeks —
 $first = new DateTime("$year-$month-01");
 $days  = (int)$first->format('t');
 $weeks = []; $w = array_fill(1,7,null);
-for ($i=1; $i<=$days; $i++) {
-  $d = (int)(new DateTime("$year-$month-$i"))->format('N');
-  $w[$d] = $i;
-  if ($d===7 || $i===$days) {
-    $weeks[] = $w;
-    $w = array_fill(1,7,null);
-  }
+for ($i = 1; $i <= $days; $i++) {
+    $d = (int)(new DateTime("$year-$month-$i"))->format('N');
+    $w[$d] = $i;
+    if ($d === 7 || $i === $days) {
+        $weeks[] = $w;
+        $w = array_fill(1,7,null);
+    }
 }
-
-// — Prepare header values —
-$current = new DateTime($date);
-$dayNum  = $current->format('j');
+$current   = new DateTime($date);
+$dayNum    = $current->format('j');
 $monthName = strtolower($current->format('F'));
 
-// — Render —
+// — Render UI —
 $vS = filemtime(__DIR__.'/../assets/css/sidebar.css');
 $vD = filemtime(__DIR__.'/../assets/css/work_diary.css');
 include $root.'/includes/header.php';
@@ -154,10 +238,10 @@ include $root.'/includes/header.php';
       crossorigin="anonymous"
       referrerpolicy="no-referrer"/>
 
-<?php include __DIR__.'/sidebar.php'; ?>
+<?php include __DIR__ . '/sidebar.php'; ?>
 
 <?php if (!empty($saveMsg)): ?>
-  <div class="alert-abs"><?= htmlspecialchars($saveMsg) ?></div>
+  <div class="alert-abs"><?= htmlspecialchars($saveMsg, ENT_QUOTES) ?></div>
 <?php endif; ?>
 
 <div class="main-content">
@@ -180,15 +264,16 @@ include $root.'/includes/header.php';
         </tr>
       </thead>
       <tbody>
-        <?php foreach ($weeks as $w): ?>
+        <?php foreach ($weeks as $row): ?>
           <tr>
-            <?php for ($d=1; $d<=7; $d++): ?>
-              <?php if ($w[$d]): 
-                $ds = sprintf('%04d-%02d-%02d',$year,$month,$w[$d]);
-                $sel = $ds===$date?'selected':''; ?>
+            <?php for ($d = 1; $d <= 7; $d++): ?>
+              <?php if ($row[$d]): 
+                $ds  = sprintf('%04d-%02d-%02d',$year,$month,$row[$d]);
+                $sel = $ds === $date ? 'selected' : '';
+              ?>
                 <td class="<?= $sel ?>">
                   <a href="?month=<?= $month ?>&year=<?= $year ?>&date=<?= $ds ?>">
-                    <?= $w[$d] ?>
+                    <?= $row[$d] ?>
                   </a>
                 </td>
               <?php else: ?>
@@ -200,17 +285,18 @@ include $root.'/includes/header.php';
     </table>
   </div>
 
+  <!-- Entry Panel -->
   <form method="post" class="entry-panel" id="entryPanel">
-    <!-- Notify Panel -->
+    <!-- Notify colleagues -->
     <div class="card-block notify-panel">
-      <div class="company-label">Company:<span><?= htmlspecialchars($company) ?></span></div>
+      <div class="company-label">Company:<span><?= htmlspecialchars($company, ENT_QUOTES) ?></span></div>
       <div class="notify-label">Notify colleagues:</div>
       <div class="colleague-list">
         <?php foreach ($colleagues as $c): ?>
           <label>
             <input type="checkbox" name="notify_users[]" value="<?= $c['id'] ?>">
-            <?= htmlspecialchars($c['first_name'].' '.$c['last_name']) ?>
-            <small><?= htmlspecialchars($c['email']) ?></small>
+            <?= htmlspecialchars($c['first_name'].' '.$c['last_name'], ENT_QUOTES) ?>
+            <small><?= htmlspecialchars($c['email'], ENT_QUOTES) ?></small>
           </label>
         <?php endforeach; ?>
       </div>
@@ -222,24 +308,24 @@ include $root.'/includes/header.php';
     <!-- Morning & Afternoon -->
     <?php foreach (['morning','afternoon'] as $prd):
       $val = $diary[$prd] ?? '';
-      $isB = $val==='Break';
+      $isB = $val === 'Break';
       $isL = (!$isB && preg_match('/^Late:\s*(.*)$/',$val,$m));
       $txt = $isL ? $m[1] : $val;
     ?>
       <div class="card-block period" data-period="<?= $prd ?>">
         <label><?= ucfirst($prd) ?></label>
         <button type="button" class="btn-toggle break <?= $isB?'active':'' ?>">Break</button>
-        <button type="button" class="btn-toggle late  <?= $isL?'active':'' ?>">Late</button>
-        <textarea name="<?= $prd ?>_task" class="autoexpand" <?= $isB?'disabled':'' ?>><?= htmlspecialchars($txt) ?></textarea>
+        <button type="button" class="btn-toggle late <?= $isL?'active':'' ?>">Late</button>
+        <textarea name="<?= $prd ?>_task" class="autoexpand" <?= $isB?'disabled':'' ?>><?= htmlspecialchars($txt, ENT_QUOTES) ?></textarea>
         <input type="hidden" name="<?= $prd ?>_break" value="<?= $isB?1:0 ?>">
-        <input type="hidden" name="<?= $prd ?>_late"  value="<?= $isL?1:0 ?>">
+        <input type="hidden" name="<?= $prd ?>_late" value="<?= $isL?1:0 ?>">
       </div>
     <?php endforeach; ?>
 
     <!-- Evening -->
     <?php
       $e    = $diary['evening'] ?? '';
-      $isEB = $e==='Break';
+      $isEB = $e === 'Break';
       if (!$isEB && preg_match('/^(\d{2}:\d{2})-(\d{2}:\d{2}):\s*(.*)$/',$e,$z)) {
         [, $ts, $te, $tkt] = $z;
       } else {
@@ -250,9 +336,9 @@ include $root.'/includes/header.php';
       <label>Evening</label>
       <button type="button" class="btn-toggle break <?= $isEB?'active':'' ?>">Break</button>
       <input type="hidden" name="evening_break" value="<?= $isEB?1:0 ?>">
-      <input type="time"  name="evening_start" class="start" value="<?= $ts ?>" <?= $isEB?'disabled':'' ?>>
-      <input type="time"  name="evening_end"   class="end"   value="<?= $te ?>" <?= $isEB?'disabled':'' ?>>
-      <textarea name="evening_task" class="autoexpand" <?= $isEB?'disabled':'' ?>><?= htmlspecialchars($tkt) ?></textarea>
+      <input type="time" name="evening_start" class="start" value="<?= $ts ?>" <?= $isEB?'disabled':'' ?>>
+      <input type="time" name="evening_end" class="end" value="<?= $te ?>" <?= $isEB?'disabled':'' ?>>
+      <textarea name="evening_task" class="autoexpand" <?= $isEB?'disabled':'' ?>><?= htmlspecialchars($tkt, ENT_QUOTES) ?></textarea>
     </div>
 
     <!-- Actions -->
@@ -270,12 +356,11 @@ include $root.'/includes/header.php';
 <script>
 // Toggle Break/Late
 document.querySelectorAll('.period').forEach(panel => {
-  const pr    = panel.dataset.period;
-  const ta    = panel.querySelector('textarea');
-  const hb    = panel.querySelector(`[name="${pr}_break"]`);
-  const hl    = panel.querySelector(`[name="${pr}_late"]`);
+  const pr = panel.dataset.period;
+  const ta = panel.querySelector('textarea');
+  const hb = panel.querySelector(`[name="${pr}_break"]`);
+  const hl = panel.querySelector(`[name="${pr}_late"]`);
   const times = panel.querySelectorAll('input[type="time"]');
-
   panel.querySelectorAll('.btn-toggle.break').forEach(btn => {
     btn.addEventListener('click', () => {
       const on = btn.classList.toggle('active');
