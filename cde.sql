@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Aug 01, 2025 at 12:04 PM
+-- Generation Time: Aug 02, 2025 at 01:56 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -20,6 +20,17 @@ SET time_zone = "+00:00";
 --
 -- Database: `cde`
 --
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `companies`
+--
+
+CREATE TABLE `companies` (
+  `id` int(11) UNSIGNED NOT NULL,
+  `name` varchar(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -125,6 +136,7 @@ CREATE TABLE `users` (
   `role` enum('admin','user') DEFAULT 'user',
   `avatar` varchar(255) DEFAULT NULL,
   `subscription_id` int(11) DEFAULT NULL,
+  `company_id` int(11) UNSIGNED DEFAULT NULL,
   `subscription_expires_at` date DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -133,9 +145,10 @@ CREATE TABLE `users` (
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `username`, `first_name`, `last_name`, `dob`, `address`, `company`, `phone`, `invite_code`, `email`, `password_hash`, `role`, `avatar`, `subscription_id`, `subscription_expires_at`, `created_at`) VALUES
-(1, 'huypham', 'Phạm Mạnh', 'Huy', '1996-04-04', 'Hạ Long', 'NCC', '0888121496', NULL, 'phamhuy.cngt@gmail.com', '$2y$10$YXa/ryYZhrQyEE6rBuORVugmQSIQgmwJxBdebsPapaDuzQDaeKPhy', 'admin', 'avatar_1.png', 3, NULL, '2025-07-30 01:18:51'),
-(4, 'user1', 'user1a', 'user1b', '2025-07-31', 'Hạ Long', 'NCC', '0888121496', NULL, 'user1@bimtech.edu.vn', '$2y$10$wX/QF1V8VS2dHRDEeVQgFO6KFkZM.oAZaPl9ixMa.SbtH9CkGeicy', 'user', NULL, 4, '2025-12-01', '2025-07-31 04:47:19');
+INSERT INTO `users` (`id`, `username`, `first_name`, `last_name`, `dob`, `address`, `company`, `phone`, `invite_code`, `email`, `password_hash`, `role`, `avatar`, `subscription_id`, `company_id`, `subscription_expires_at`, `created_at`) VALUES
+(1, 'huypham', 'Phạm Mạnh', 'Huy', '1996-04-04', 'Hạ Long', 'NCC', '0888121496', NULL, 'phamhuy.cngt@gmail.com', '$2y$10$YXa/ryYZhrQyEE6rBuORVugmQSIQgmwJxBdebsPapaDuzQDaeKPhy', 'admin', 'avatar_1.png', 3, NULL, NULL, '2025-07-30 01:18:51'),
+(4, 'user1', 'user1a', 'user1b', '2025-07-31', 'Hạ Long', 'NCC', '0888121496', NULL, 'user1@bimtech.edu.vn', '$2y$10$wX/QF1V8VS2dHRDEeVQgFO6KFkZM.oAZaPl9ixMa.SbtH9CkGeicy', 'user', NULL, 4, NULL, '2025-12-01', '2025-07-31 04:47:19'),
+(5, 'user2', 'user2a', 'user2b', '0000-00-00', 'Hạ Long', 'NCC', '000000000', NULL, 'user2@bimtech.edu.vn', '$2y$10$joRVpVd0LQDnrM7xYP5kYuoAl6BaFqcTkFcVkK3dJKPv3LSMA5bXq', 'user', NULL, 4, NULL, NULL, '2025-08-01 13:48:30');
 
 -- --------------------------------------------------------
 
@@ -159,9 +172,43 @@ INSERT INTO `vouchers` (`id`, `code`, `discount`, `expiry_date`, `created_at`) V
 (1, 'NCCdemo', 10.00, '2025-12-31', '2025-07-31 14:03:07'),
 (3, '767363', 50.00, '2025-07-31', '2025-07-31 14:48:56');
 
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `work_diary_entries`
+--
+
+CREATE TABLE `work_diary_entries` (
+  `user_id` int(11) NOT NULL COMMENT 'References users.id',
+  `entry_date` date NOT NULL COMMENT 'The date of this entry',
+  `period` enum('morning','afternoon','evening') NOT NULL COMMENT 'Which part of day',
+  `content` text DEFAULT NULL COMMENT 'Tasks/work done',
+  `note` text DEFAULT NULL COMMENT 'Additional notes',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `work_diary_entries`
+--
+
+INSERT INTO `work_diary_entries` (`user_id`, `entry_date`, `period`, `content`, `note`, `created_at`, `updated_at`) VALUES
+(4, '2025-08-01', 'morning', 'Sửa QTBT cầu Làng Lốc, Khe Pụt', NULL, '2025-08-02 07:08:04', '2025-08-02 07:08:04'),
+(4, '2025-08-01', 'afternoon', 'Sửa QTBT cầu Làng Lốc, Khe Pụt', NULL, '2025-08-02 07:08:04', '2025-08-02 07:08:04'),
+(4, '2025-08-01', 'evening', 'Break', NULL, '2025-08-02 07:08:04', '2025-08-02 07:08:04'),
+(4, '2025-08-02', 'morning', 'Cập nhật tính năng ghi nhật ký công việc trên CDE', NULL, '2025-08-02 11:40:36', '2025-08-02 11:40:36'),
+(4, '2025-08-02', 'afternoon', 'Cập nhật tính năng ghi nhật ký công việc trên CDE', NULL, '2025-08-02 11:40:36', '2025-08-02 11:40:36'),
+(4, '2025-08-02', 'evening', '17:00-19:30: Cập nhật tính năng xuất Nhật ký công việc ra Excel', NULL, '2025-08-02 11:40:36', '2025-08-02 11:40:36');
+
 --
 -- Indexes for dumped tables
 --
+
+--
+-- Indexes for table `companies`
+--
+ALTER TABLE `companies`
+  ADD PRIMARY KEY (`id`);
 
 --
 -- Indexes for table `payment_settings`
@@ -189,7 +236,8 @@ ALTER TABLE `subscription_orders`
 ALTER TABLE `users`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `username` (`username`),
-  ADD UNIQUE KEY `email` (`email`);
+  ADD UNIQUE KEY `email` (`email`),
+  ADD KEY `company_id` (`company_id`);
 
 --
 -- Indexes for table `vouchers`
@@ -199,8 +247,21 @@ ALTER TABLE `vouchers`
   ADD UNIQUE KEY `code_unique` (`code`);
 
 --
+-- Indexes for table `work_diary_entries`
+--
+ALTER TABLE `work_diary_entries`
+  ADD PRIMARY KEY (`user_id`,`entry_date`,`period`),
+  ADD KEY `idx_user_date` (`user_id`,`entry_date`);
+
+--
 -- AUTO_INCREMENT for dumped tables
 --
+
+--
+-- AUTO_INCREMENT for table `companies`
+--
+ALTER TABLE `companies`
+  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `subscriptions`
@@ -218,7 +279,7 @@ ALTER TABLE `subscription_orders`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `vouchers`
@@ -236,6 +297,18 @@ ALTER TABLE `vouchers`
 ALTER TABLE `subscription_orders`
   ADD CONSTRAINT `subscription_orders_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `subscription_orders_ibfk_2` FOREIGN KEY (`subscription_id`) REFERENCES `subscriptions` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `users`
+--
+ALTER TABLE `users`
+  ADD CONSTRAINT `fk_user_company` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+--
+-- Constraints for table `work_diary_entries`
+--
+ALTER TABLE `work_diary_entries`
+  ADD CONSTRAINT `fk_wde_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
