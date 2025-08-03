@@ -18,6 +18,15 @@ if (!empty($avatar) && file_exists($uploadPath)) {
 } else {
     $avatarUrl = $defaultAvatarUrl;
 }
+
+// Đếm thông báo chưa đọc
+$userId = $user['id'] ?? null;
+$unreadCount = 0;
+if ($userId) {
+    $nq = $pdo->prepare("SELECT COUNT(*) FROM notifications WHERE receiver_id = ? AND is_read = 0");
+    $nq->execute([$userId]);
+    $unreadCount = (int)$nq->fetchColumn();
+}
 ?>
 <div class="sidebar">
   <!-- Header -->
@@ -34,31 +43,22 @@ if (!empty($avatar) && file_exists($uploadPath)) {
   <!-- Navigation -->
   <nav class="sidebar-nav">
     <ul>
-      <li class="<?= $current==='home.php' ? 'active' : '' ?>">
+      <li class="<?= $current=== 'home.php' ? 'active' : '' ?>">
         <a href="home.php"><i class="fas fa-home"></i> Home</a>
       </li>
-      <li class="<?= $current==='projects.php' ? 'active' : '' ?>">
+      <li class="<?= $current=== 'projects.php' ? 'active' : '' ?>">
         <a href="projects.php"><i class="fas fa-project-diagram"></i> Projects</a>
       </li>
-      <li class="<?= $current==='members.php' ? 'active' : '' ?>">
+      <li class="<?= $current=== 'members.php' ? 'active' : '' ?>">
         <a href="members.php"><i class="fas fa-users"></i> Members</a>
       </li>
-      <li class="<?= $current==='meetings.php' ? 'active' : '' ?>">
+      <li class="<?= $current=== 'meetings.php' ? 'active' : '' ?>">
         <a href="meetings.php"><i class="fas fa-file-alt"></i> Meetings</a>
       </li>
-      <li class="<?= $current==='work_diary.php' ? 'active' : '' ?>">
+      <li class="<?= $current=== 'work_diary.php' ? 'active' : '' ?>">
         <a href="work_diary.php"><i class="fas fa-book"></i> Work Diary</a>
       </li>
-      <li class="<?= $current==='activity_history.php' ? 'active' : '' ?>">
-        <a href="activity_history.php"><i class="fas fa-history"></i> Activity History</a>
-      </li>
-      <li class="<?= $current==='rule.php' ? 'active' : '' ?>">
-        <a href="rule.php"><i class="fas fa-gavel"></i> Rule</a>
-      </li>
-      <li class="<?= $current==='organization_members.php' ? 'active' : '' ?>">
-        <a href="organization_members.php"><i class="fas fa-building"></i> Organization Members</a>
-      </li>
-      <li class="<?= $current==='subscriptions.php' ? 'active' : '' ?>">
+      <li class="<?= $current=== 'subscriptions.php' ? 'active' : '' ?>">
         <a href="subscriptions.php"><i class="fas fa-file-contract"></i> Subscriptions</a>
       </li>
     </ul>
@@ -80,7 +80,11 @@ if (!empty($avatar) && file_exists($uploadPath)) {
       </div>
     </div>
     <div class="sidebar-actions">
-      <a href="#"><i class="fas fa-bell"></i> Notification</a>
+      <a href="notifications.php"><i class="fas fa-bell"></i> Notifications
+        <?php if ($unreadCount > 0): ?>
+          <span class="notification-badge blink"><?= $unreadCount ?></span>
+        <?php endif; ?>
+      </a>
       <a href="settings.php"><i class="fas fa-cog"></i> Settings</a>
       <?php if (isset($user['role']) && $user['role'] === 'admin'): ?>
         <a href="admin/index.php"><i class="fas fa-user-shield"></i> AdminCP</a>
