@@ -191,3 +191,23 @@
   margin-top: 0.5rem;
   color: #ff0000;
 }
+/* Badge thông báo */
+.notification-badge {
+  position: relative;
+  top: -8px;
+  left: -4px;
+  background: #e53e3e;
+  color: #fff;
+  border-radius: 50%;
+  padding: 0.15rem 0.45rem;
+  font-size: 0.7rem;
+}
+
+/* Hiệu ứng nhấp nháy */
+.blink {
+  animation: blink 1s infinite;
+}
+@keyframes blink {
+  0%, 50%, 100% { opacity: 1; }
+  25%, 75%      { opacity: 0; }
+}
