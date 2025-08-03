@@ -1,0 +1,114 @@
+/* assets/css/notifications.css */
+
+/* ─── Color Palette ─────────────────────────────────── */
+:root {
+  --primary-color: #fca415;      /* Màu cam chủ đạo */
+  --secondary-color: #2d3748;    /* Màu chữ tối */
+  --bg-color: #f3f4f6;           /* Nền trang tổng thể */
+  --card-bg: #ffffff;            /* Nền thẻ nội dung */
+  --border-color: #e5e7eb;       /* Màu viền yếu */
+  --text-color: #374151;         /* Màu chữ chính */
+  --link-hover: #1a202c;         /* Màu hover link */
+}
+
+/* ─── Global Styles ─────────────────────────────────── */
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg-color);
+  color: var(--text-color);
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  font-size: 16px;
+}
+
+.main-content {
+  margin-left: 260px;           /* Khớp với chiều rộng sidebar */
+  padding: 2rem;
+  min-height: 100vh;
+}
+
+/* ─── Card Container ────────────────────────────────── */
+.card-block {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 0.75rem;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  max-width: 800px;
+  margin: 0 auto 2rem;
+  padding: 2rem;
+  transition: box-shadow 0.2s ease;
+}
+.card-block:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.card-block h2 {
+  margin: 0 0 1.5rem;
+  font-size: 2rem;
+  color: var(--secondary-color);
+  border-bottom: 3px solid var(--primary-color);
+  padding-bottom: 0.5rem;
+}
+
+/* ─── Notifications List ────────────────────────────── */
+.notifications-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.notifications-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-left: 4px solid var(--primary-color);
+  border-radius: 0.5rem;
+  padding: 1rem 1.5rem;
+  margin-bottom: 1rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.notifications-list li:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+}
+
+/* Text */
+.notifications-list li strong {
+  color: var(--primary-color);
+  font-weight: 600;
+}
+.notifications-list li em {
+  margin: 0 0.25rem;
+  color: var(--secondary-color);
+}
+
+/* View Link */
+.notifications-list li a {
+  color: var(--primary-color);
+  text-decoration: none;
+  font-weight: 600;
+  border-bottom: 2px solid var(--primary-color);
+  padding-bottom: 2px;
+  transition: color 0.2s, border-color 0.2s;
+}
+.notifications-list li a:hover {
+  color: var(--link-hover);
+  border-color: var(--link-hover);
+}
+
+/* ─── Responsive ────────────────────────────────────── */
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 0;
+    padding: 1rem;
+  }
+  .notifications-list li {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .notifications-list li a {
+    margin-top: 0.75rem;
+  }
+}
