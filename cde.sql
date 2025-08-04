@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Aug 02, 2025 at 02:05 PM
+-- Generation Time: Aug 04, 2025 at 02:28 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -46,6 +46,15 @@ CREATE TABLE `notifications` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp() COMMENT 'Thời gian gửi thông báo',
   `is_read` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Đánh dấu đã đọc'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `notifications`
+--
+
+INSERT INTO `notifications` (`id`, `sender_id`, `receiver_id`, `entry_date`, `created_at`, `is_read`) VALUES
+(5, 4, 1, '2025-08-01', '2025-08-03 11:07:53', 1),
+(6, 4, 1, '2025-08-01', '2025-08-03 11:21:46', 1),
+(7, 4, 1, '2025-08-03', '2025-08-03 11:22:42', 1);
 
 -- --------------------------------------------------------
 
@@ -290,7 +299,7 @@ ALTER TABLE `companies`
 -- AUTO_INCREMENT for table `notifications`
 --
 ALTER TABLE `notifications`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `subscriptions`
