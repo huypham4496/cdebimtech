@@ -1,74 +1,104 @@
 <?php
-// pages/work_diary_view.php
 session_start();
 require_once __DIR__ . '/../config.php';
 
-// — DB Connection —
-$pdo = new PDO(
-    "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4",
-    DB_USER, DB_PASS,
-    [PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]
-);
-
-// — Auth —
-$userId = $_SESSION['user']['id'] ?? null;
-if (!$userId) {
+// Kiểm tra đăng nhập
+if (empty($_SESSION['user'])) {
     header('Location: login.php');
     exit;
 }
+$currentUser = $_SESSION['user']['id'];
+$viewUser    = isset($_GET['user_id']) ? (int)$_GET['user_id'] : $currentUser;
 
-// — Params validation —
-$senderId = isset($_GET['user_id']) ? intval($_GET['user_id']) : 0;
-$date     = $_GET['date'] ?? '';
-if (!$senderId || !$date) {
-    exit('Invalid parameters.');
-}
-
-// — Get sender info —
-$u = $pdo->prepare("SELECT first_name, last_name FROM users WHERE id = ?");
-$u->execute([$senderId]);
-$user   = $u->fetch();
-$sender = htmlspecialchars("{$user['first_name']} {$user['last_name']}", ENT_QUOTES);
-
-// — Get diary entries —
-$e = $pdo->prepare(
-    "SELECT period, content
-       FROM work_diary_entries
-      WHERE user_id = ? AND entry_date = ?
-      ORDER BY FIELD(period,'morning','afternoon','evening')"
+// Kết nối DB
+$pdo = new PDO(
+    'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=utf8mb4',
+    DB_USER, DB_PASS,
+    [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]
 );
-$e->execute([$senderId, $date]);
-$entries = $e->fetchAll();
 
-// — Render header & sidebar —
-$root = dirname(__DIR__);
-$vS   = filemtime(__DIR__ . '/../assets/css/sidebar.css');
-$vD   = filemtime(__DIR__ . '/../assets/css/work_diary.css');
-include $root . '/includes/header.php';
+// Xác định tháng để xem (YYYY-MM)
+if (isset($_GET['month'])) {
+    $month = $_GET['month'];
+} elseif (isset($_GET['date'])) {
+    $month = substr($_GET['date'], 0, 7);
+} else {
+    $month = date('Y-m');
+}
+$start = $month . '-01';
+$end   = date('Y-m-t', strtotime($start));
+
+// Tiêu đề
+$title = 'Work Diary of ' .
+    ($viewUser === $currentUser ? 'You' : 'User #' . $viewUser) .
+    ' for ' . date('F Y', strtotime($start));
+
+// Lấy dữ liệu cả tháng
+$stmt = $pdo->prepare(
+    "SELECT entry_date, period, content
+       FROM work_diary_entries
+      WHERE user_id = ? AND entry_date BETWEEN ? AND ?
+      ORDER BY entry_date, FIELD(period,'morning','afternoon','evening')"
+);
+$stmt->execute([$viewUser, $start, $end]);
+$entries = $stmt->fetchAll();
+
+// Nhóm dữ liệu theo ngày và period
+$periods = ['morning','afternoon','evening'];
+$grouped = [];
+$current = $start;
+while ($current <= $end) {
+    $grouped[$current] = array_fill_keys($periods, []);
+    $current = date('Y-m-d', strtotime($current . ' +1 day'));
+}
+foreach ($entries as $row) {
+    $grouped[$row['entry_date']][$row['period']][] = $row['content'];
+}
 ?>
-<link rel="stylesheet" href="../assets/css/sidebar.css?v=<?= $vS ?>" />
-<link rel="stylesheet" href="../assets/css/work_diary.css?v=<?= $vD ?>" />
-<link rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.2/css/all.min.css"
-      integrity="sha512-..."
-      crossorigin="anonymous"
-      referrerpolicy="no-referrer"
-/>
-<?php include __DIR__ . '/sidebar.php'; ?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title><?= htmlspecialchars($title) ?></title>
+    <link rel="stylesheet" href="../assets/css/sidebar.css">
+    <link rel="stylesheet" href="../assets/css/dashboard.css">
+    <link rel="stylesheet" href="../assets/css/work_diary_view.css">
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
+        integrity="sha512-dynvDxJ5aVF6oU1i6zfoalvVYvNvKcJste/0q5u+P%2FgPm4jG3E5s3UeJ8V+RaH59RUW2YCiMzZ6pyRrg58F3CA=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+</head>
+<body class="layout diary-view-page">
+    <?php require_once __DIR__ . '/../includes/header.php'; ?>
+    <div class="sidebar">
+        <?php require_once __DIR__ . '/sidebar.php'; ?>
+    </div>
+    <div class="main-content" id="diaryViewContent">
+        <div class="container-fluid">
+            <!-- Chọn tháng -->
+            <form method="get" class="view-form">
+                <input type="hidden" name="user_id" value="<?= $viewUser ?>">
+                <label for="month">Select month:</label>
+                <input type="month" id="month" name="month" value="<?= htmlspecialchars($month) ?>">
+                <button type="submit">View Month</button>
+            </form>
 
-<main class="main-content">
-  <div class="card-block">
-    <h2>Work Diary of <?= $sender ?> on <?= htmlspecialchars($date, ENT_QUOTES) ?></h2>
+            <h1><?= htmlspecialchars($title) ?></h1>
 
-    <?php if (empty($entries)): ?>
-      <p>No entries found for this date.</p>
-    <?php else: ?>
-      <?php foreach ($entries as $row): ?>
-        <section class="period <?= htmlspecialchars($row['period'], ENT_QUOTES) ?>">
-          <h3><?= ucfirst(htmlspecialchars($row['period'], ENT_QUOTES)) ?></h3>
-          <p><?= nl2br(htmlspecialchars($row['content'], ENT_QUOTES)) ?></p>
-        </section>
-      <?php endforeach; ?>
-    <?php endif; ?>
-  </div>
-</main>
+            <?php foreach ($grouped as $date => $periodsArr): ?>
+                <div class="day-block">
+                    <h2 class="date-title"><?= date('F j, Y', strtotime($date)) ?></h2>
+                    <?php foreach ($periods as $period): ?>
+                        <section class="period <?= $period ?>">
+                            <h3><?= ucfirst($period) ?></h3>
+                            <p><?= nl2br(htmlspecialchars(implode("\n", $periodsArr[$period] ?? []))) ?></p>
+                        </section>
+                    <?php endforeach; ?>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+    <script src="../assets/js/work_diary.js"></script>
+</body>
+</html>
