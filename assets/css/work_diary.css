@@ -199,7 +199,7 @@ body {
 }
 
 .calendar-container {
-  height: 560px !important;
+  height: 530px !important;
 }
 
 
@@ -258,7 +258,8 @@ body {
 ──────────────────────────────────────────*/
 .period {
   display: grid;
-  grid-template-columns: 100px auto auto 1fr;
+  /* thêm 1 cột auto cho nút Late */
+  grid-template-columns: 100px auto auto auto 1fr;
   align-items: center;
   gap: 1rem;
   margin-top: 1rem;
@@ -275,7 +276,7 @@ body {
   transition: border 0.3s, box-shadow 0.3s;
 }
 .period textarea {
-  grid-column: 4 / -1;
+  grid-column: 5 / 6;
   resize: none;
   overflow: hidden;
 }
@@ -316,18 +317,18 @@ body {
 .period.evening input.start {
   grid-column: 3 / 4;
   grid-row: 1 / 2;
-  width: 100px;
+  width: 110px;
   padding: 0.5rem;
 }
 .period.evening input.end {
   grid-column: 4 / 5;
   grid-row: 1 / 2;
-  width: 100px;
+  width: 110px;
   padding: 0.5rem;
 }
 .period.evening textarea {
-  grid-column: 1 / 6;
-  grid-row: 2 / 3;
+  grid-column: 5 / 6;
+  grid-row: 1 / 2;
   min-height: 4rem;
   background: transparent;
   border: 1px solid var(--border);
@@ -424,5 +425,34 @@ body {
 @keyframes fadeOut { to { opacity: 0 } }
 
 .autoexpand {
-  height: 80px !important;
+  height: 84px !important;
+}
+/* assets/css/work_diary.css */
+/* … phần đầu giữ nguyên … */
+
+/* Holiday button */
+.btn-toggle.holiday {
+  background: #805ad5;
+  color: #fff;
+}
+.btn-toggle.holiday.active {
+  background: #6b46c1;
+}
+
+
+
+/* Holiday button */
+.period .btn-toggle.holiday {
+  grid-column: 2 / 3;
+  grid-row: 1 / 2;
+}
+/* Break button */
+.period .btn-toggle.break {
+  grid-column: 3 / 4;
+  grid-row: 1 / 2;
+}
+/* Late button */
+.period .btn-toggle.late {
+  grid-column: 4 / 5;
+  grid-row: 1 / 2;
 }
