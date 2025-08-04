@@ -208,12 +208,14 @@ include dirname(__DIR__) . '/includes/header.php';
             $clsAft = getCellClass($aft, 'afternoon', $dow);
             $clsEve = getCellClass($eve, 'evening',   $dow);
         ?>
-        <tr>
-          <td class="cell-date"><?= $dt->format('d/m (D)') ?></td>
-          <td class="<?= $clsMor ?>"><?= htmlspecialchars($mor, ENT_QUOTES) ?></td>
-          <td class="<?= $clsAft ?>"><?= htmlspecialchars($aft, ENT_QUOTES) ?></td>
-          <td class="<?= $clsEve ?>"><?= htmlspecialchars($eve, ENT_QUOTES) ?></td>
-        </tr>
+<tr>
+  <td class="cell-date <?= $dow===7 ? 'cell-date-sunday' : '' ?>">
+    <?= $dt->format('d/m (D)') ?>
+  </td>
+  <td class="<?= $clsMor ?>"><?= htmlspecialchars($mor, ENT_QUOTES) ?></td>
+  <td class="<?= $clsAft ?>"><?= htmlspecialchars($aft, ENT_QUOTES) ?></td>
+  <td class="<?= $clsEve ?>"><?= htmlspecialchars($eve, ENT_QUOTES) ?></td>
+</tr>
         <?php
             $dt->modify('+1 day');
         endwhile;
