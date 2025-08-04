@@ -36,6 +36,18 @@ $year  = (int)($_GET['year']  ?? date('Y'));
 $date  = $_GET['date'] ?? date('Y-m-d');
 $prev  = (new DateTime("$year-$month-01"))->modify('-1 month');
 $next  = (new DateTime("$year-$month-01"))->modify('+1 month');
+// — Khóa nếu đã có 1 notification gửi báo cáo cho tháng này —
+$startMonth = "$year-" . str_pad($month,2,'0',STR_PAD_LEFT) . "-01";
+$endMonth   = date('Y-m-t', strtotime($startMonth));
+$stmtLock = $pdo->prepare("
+  SELECT 1
+    FROM notifications
+   WHERE sender_id  = ?
+     AND entry_date BETWEEN ? AND ?
+   LIMIT 1
+");
+$stmtLock->execute([$userId, $startMonth, $endMonth]);
+$locked = (bool)$stmtLock->fetchColumn();
 
 // — Handle POST —
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -325,7 +337,11 @@ include $root . '/includes/header.php';
   $vJs = filemtime(__DIR__ . '/../assets/js/work_diary.js');
 ?>
 <script src="../assets/js/work_diary.js?v=<?= $vJs ?>"></script>
+<?php if ($locked): ?>
+  <div class="alert-abs">Báo cáo tháng <?= sprintf('%02d',$month) ?>/<?= $year ?> đã gửi, không thể chỉnh sửa.</div>
+<?php endif; ?>
   <!-- Entry Panel -->
+<fieldset <?= $locked ? 'disabled' : '' ?> class="entry-wrapper">
   <form method="post" class="entry-panel" id="entryPanel">
     <div class="card-block notify-panel">
       <div class="company-label">Company: <span><?= htmlspecialchars($company, ENT_QUOTES) ?></span></div>
@@ -393,13 +409,15 @@ include $root . '/includes/header.php';
 
     <!-- Actions -->
     <div class="actions">
-      <button type="submit" name="export_excel" class="export">
-        <i class="fas fa-file-excel"></i> Export CSV
-      </button>
-      <button type="submit" name="save_diary" class="save">
-        <i class="fas fa-save"></i> Save
-      </button>
+      <?php if (!$locked): ?>
+        <button type="submit" name="export_excel" class="export">
+          <i class="fas fa-file-excel"></i> Export CSV
+        </button>
+        <button type="submit" name="save_diary" class="save">
+          <i class="fas fa-save"></i> Save
+        </button>
+      <?php endif; ?>
     </div>
   </form>
-</div>
+</fieldset>
 
