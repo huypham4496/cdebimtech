@@ -1,0 +1,126 @@
+/* assets/css/members-table.css */
+
+/* 1. Import fonts & icons */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css');
+
+/* 2. Variables */
+:root {
+  --primary: #fca415;
+  --bg-light: #f4f4f4;
+  --bg-card: #ffffff;
+  --text: #333333;
+  --muted: #666666;
+  --row-hover: rgba(252,164,21,0.1);
+  --radius: 12px;
+  --shadow: rgba(0,0,0,0.08);
+  --font-base: 'Poppins', sans-serif;
+}
+
+/* 3. Global resets */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+body {
+  font-family: var(--font-base);
+  background: var(--bg-light);
+  color: var(--text);
+  display: flex;
+  min-height: 100vh;
+}
+
+/* 4. Ensure main content is shifted right of sidebar */
+.main-content {
+  flex: 1;
+  margin-left: 260px; /* adjust to your sidebar width + gutter */
+  padding: 2rem;
+}
+
+/* 5. Page title */
+.main-content h1 {
+  font-size: 2rem;
+  font-weight: 600;
+  color: var(--primary);
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* 6. Table styling */
+.members-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: 0 4px 16px var(--shadow);
+}
+
+/* Header */
+.members-table thead {
+  background: var(--primary);
+}
+.members-table thead th {
+  color: #fff;
+  font-weight: 500;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  padding: 1rem;
+  text-align: left;
+}
+
+/* Rows */
+.members-table tbody tr {
+  transition: background 0.2s;
+}
+.members-table tbody tr:nth-child(even) {
+  background: #fafafa;
+}
+.members-table tbody tr:hover {
+  background: var(--row-hover);
+}
+
+/* Cells */
+.members-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #eee;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+/* 7. Responsive: horizontal scroll on mobile */
+@media (max-width: 768px) {
+  .members-table {
+    display: block;
+    overflow-x: auto;
+  }
+  .members-table thead,
+  .members-table tbody,
+  .members-table th,
+  .members-table td,
+  .members-table tr {
+    display: block;
+  }
+  .members-table thead {
+    display: none;
+  }
+  .members-table tr {
+    margin-bottom: 1rem;
+  }
+  .members-table td {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    border: none;
+    border-bottom: 1px solid #eee;
+  }
+  .members-table td::before {
+    content: attr(data-label);
+    font-weight: 500;
+    color: var(--muted);
+    margin-right: 1rem;
+  }
+}
