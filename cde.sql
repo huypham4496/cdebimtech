@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Aug 04, 2025 at 12:11 PM
+-- Generation Time: Aug 04, 2025 at 04:47 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -56,7 +56,104 @@ INSERT INTO `notifications` (`id`, `sender_id`, `receiver_id`, `entry_date`, `cr
 (6, 4, 1, '2025-08-01', '2025-08-03 11:21:46', 1),
 (7, 4, 1, '2025-08-03', '2025-08-03 11:22:42', 1),
 (8, 1, 4, '2025-07-01', '2025-08-04 02:00:12', 1),
-(9, 4, 1, '2025-08-04', '2025-08-04 03:03:47', 1);
+(9, 4, 1, '2025-08-04', '2025-08-04 03:03:47', 1),
+(10, 1, 4, '2025-08-04', '2025-08-04 11:27:08', 1),
+(11, 1, 4, '2025-08-04', '2025-08-04 11:27:11', 1);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `organizations`
+--
+
+CREATE TABLE `organizations` (
+  `id` int(11) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `abbreviation` varchar(50) NOT NULL,
+  `address` text NOT NULL,
+  `department` varchar(255) DEFAULT NULL,
+  `created_by` int(11) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `organizations`
+--
+
+INSERT INTO `organizations` (`id`, `name`, `abbreviation`, `address`, `department`, `created_by`, `created_at`) VALUES
+(1, 'Công ty cổ phần Tư vấn miền Bắc', 'NCC', 'Tổ 5, khu 1, Phường Bãi Cháy, Tỉnh Quảng Ninh', 'Phòng thiết kế', 1, '2025-08-04 14:06:12');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `organization_invitations`
+--
+
+CREATE TABLE `organization_invitations` (
+  `id` int(11) NOT NULL,
+  `organization_id` int(11) NOT NULL,
+  `invited_user_email` varchar(255) NOT NULL,
+  `token` char(64) NOT NULL,
+  `status` enum('pending','accepted','rejected') NOT NULL DEFAULT 'pending',
+  `sent_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `responded_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `organization_invitations`
+--
+
+INSERT INTO `organization_invitations` (`id`, `organization_id`, `invited_user_email`, `token`, `status`, `sent_at`, `responded_at`) VALUES
+(6, 1, '', '934a83d3d54625fc9b6f004cc130edcd', 'accepted', '2025-08-04 14:29:08', '2025-08-04 14:43:48');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `organization_members`
+--
+
+CREATE TABLE `organization_members` (
+  `id` int(11) NOT NULL,
+  `organization_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `role` enum('admin','member') NOT NULL DEFAULT 'member',
+  `subscribed_id` int(11) NOT NULL,
+  `joined_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `organization_members`
+--
+
+INSERT INTO `organization_members` (`id`, `organization_id`, `user_id`, `role`, `subscribed_id`, `joined_at`) VALUES
+(1, 1, 4, 'member', 1, '2025-08-04 14:29:26'),
+(2, 1, 5, 'member', 1, '2025-08-04 14:43:48');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `organization_member_profiles`
+--
+
+CREATE TABLE `organization_member_profiles` (
+  `member_id` int(11) NOT NULL,
+  `full_name` varchar(255) DEFAULT NULL,
+  `expertise` varchar(255) DEFAULT NULL,
+  `position` varchar(255) DEFAULT NULL,
+  `dob` date DEFAULT NULL,
+  `hometown` varchar(255) DEFAULT NULL,
+  `residence` varchar(255) DEFAULT NULL,
+  `phone` varchar(50) DEFAULT NULL,
+  `monthly_performance` decimal(5,2) DEFAULT 0.00
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `organization_member_profiles`
+--
+
+INSERT INTO `organization_member_profiles` (`member_id`, `full_name`, `expertise`, `position`, `dob`, `hometown`, `residence`, `phone`, `monthly_performance`) VALUES
+(1, 'Hoàng Văn Đoàn', 'Kỹ sư Kỹ thuật GT', 'NVTK', '2001-10-22', 'Ba Chẽ - Quảng Ninh', 'Phường Bãi Cháy', '0329.112.707', 1.10),
+(2, 'Nguyễn Tiến Thành', 'ThS. Quản lý xây dựng', 'Phó GĐ, TPTK', '1986-06-24', 'Khoái Châu - Hưng Yên', 'Phường Bãi Cháy', '0988.848.065', 1.18);
 
 -- --------------------------------------------------------
 
@@ -354,6 +451,34 @@ ALTER TABLE `notifications`
   ADD KEY `fk_notify_sender` (`sender_id`);
 
 --
+-- Indexes for table `organizations`
+--
+ALTER TABLE `organizations`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `created_by` (`created_by`);
+
+--
+-- Indexes for table `organization_invitations`
+--
+ALTER TABLE `organization_invitations`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `organization_id` (`organization_id`);
+
+--
+-- Indexes for table `organization_members`
+--
+ALTER TABLE `organization_members`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `organization_id` (`organization_id`),
+  ADD KEY `user_id` (`user_id`);
+
+--
+-- Indexes for table `organization_member_profiles`
+--
+ALTER TABLE `organization_member_profiles`
+  ADD PRIMARY KEY (`member_id`);
+
+--
 -- Indexes for table `payment_settings`
 --
 ALTER TABLE `payment_settings`
@@ -410,7 +535,25 @@ ALTER TABLE `companies`
 -- AUTO_INCREMENT for table `notifications`
 --
 ALTER TABLE `notifications`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+
+--
+-- AUTO_INCREMENT for table `organizations`
+--
+ALTER TABLE `organizations`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT for table `organization_invitations`
+--
+ALTER TABLE `organization_invitations`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+
+--
+-- AUTO_INCREMENT for table `organization_members`
+--
+ALTER TABLE `organization_members`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `subscriptions`
@@ -446,6 +589,31 @@ ALTER TABLE `vouchers`
 ALTER TABLE `notifications`
   ADD CONSTRAINT `fk_notify_receiver` FOREIGN KEY (`receiver_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `fk_notify_sender` FOREIGN KEY (`sender_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `organizations`
+--
+ALTER TABLE `organizations`
+  ADD CONSTRAINT `organizations_ibfk_1` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `organization_invitations`
+--
+ALTER TABLE `organization_invitations`
+  ADD CONSTRAINT `organization_invitations_ibfk_1` FOREIGN KEY (`organization_id`) REFERENCES `organizations` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `organization_members`
+--
+ALTER TABLE `organization_members`
+  ADD CONSTRAINT `organization_members_ibfk_1` FOREIGN KEY (`organization_id`) REFERENCES `organizations` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `organization_members_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `organization_member_profiles`
+--
+ALTER TABLE `organization_member_profiles`
+  ADD CONSTRAINT `organization_member_profiles_ibfk_1` FOREIGN KEY (`member_id`) REFERENCES `organization_members` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `subscription_orders`
