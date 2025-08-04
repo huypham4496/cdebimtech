@@ -145,14 +145,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Signature block
         echo '<table class="signature-block-table" style="border:none;"><tr>'
-           . '<td class="signature bold" colspan="2" style="text-align:center;">Người lập bảng</td>'
-           . '<td></td><td class="signature bold" style="text-align:center;">Phòng thiết kế</td>'
+           . '<td class="signature bold" colspan="2" style="text-align:center;font-weight:bold;">Người lập bảng</td>'
+           . '<td></td><td class="signature bold" style="text-align:center;font-weight:bold;">Phòng thiết kế</td>'
            . '</tr>'
            . '<tr><td colspan="4" style="height:15px;"></td></tr>'
            . '<tr><td colspan="4" style="height:15px;"></td></tr>'
            . '<tr><td colspan="4" style="height:15px;"></td></tr>'
            . '<tr>'
-           . '<td class="signature bold" colspan="2" style="text-align:center;">' . $userName . '</td>'
+           . '<td class="signature bold" colspan="2" style="text-align:center;font-weight:bold;">' . $userName . '</td>'
            . '<td></td><td></td>'
            . '</tr>'
            . '</table>';
@@ -183,37 +183,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             "DELETE FROM work_diary_entries WHERE user_id=? AND entry_date=? AND period=?"
         );
         // Morning & Afternoon
-        foreach (['morning','afternoon'] as $prd) {
-            $break = !empty($_POST["{$prd}_break"]);
-            $late  = !empty($_POST["{$prd}_late"]);
-            $txt   = trim($_POST["{$prd}_task"] ?? '');
-            if ($break) {
-                $up->execute([$userId,$date,$prd,'Break']);
-            } elseif ($late) {
-                $up->execute([$userId,$date,$prd,"Late: {$txt}"]);
-            } elseif ($txt !== '') {
-                $up->execute([$userId,$date,$prd,$txt]);
-            } else {
-                $del->execute([$userId,$date,$prd]);
-            }
-        }
-        // Evening
-        $eb = !empty($_POST['evening_break']);
-        if ($eb) {
-            $up->execute([$userId,$date,'evening','Break']);
-        } else {
-            $ts = $_POST['evening_start'] ?? '17:00';
-            $te = $_POST['evening_end']   ?? '19:30';
-            $tk = trim($_POST['evening_task'] ?? '');
-            if ($tk !== '') {
-                $up->execute([$userId,$date,'evening',"{$ts}-{$te}: {$tk}"]);
-            } else {
-                $del->execute([$userId,$date,'evening']);
-            }
+foreach (['morning','afternoon'] as $prd) {
+    // Chỉ coi là “checked” khi value thực sự là '1'
+    $holiday = isset($_POST["{$prd}_holiday"]) 
+               && $_POST["{$prd}_holiday"] === '1';
+    $break   = isset($_POST["{$prd}_break"]) 
+               && $_POST["{$prd}_break"]   === '1';
+    $late    = isset($_POST["{$prd}_late"]) 
+               && $_POST["{$prd}_late"]    === '1';
+    $txt     = trim($_POST["{$prd}_task"] ?? '');
+
+    // ==== Thay block này ====
+    if ($holiday) {
+        $up->execute([$userId, $date, $prd, 'Nghỉ lễ']);
+    } elseif ($break) {
+        $up->execute([$userId, $date, $prd, 'Nghỉ']);
+    } elseif ($late) {
+        $up->execute([$userId, $date, $prd, 'Đi muộn,']);
+    } elseif ($txt !== '') {
+        $up->execute([$userId, $date, $prd, $txt]);
+    } else {
+        $del->execute([$userId, $date, $prd]);
+    }
+}
+// Evening
+$holidayE = isset($_POST['evening_holiday']) 
+            && $_POST['evening_holiday'] === '1';
+$breakE   = isset($_POST['evening_break']) 
+            && $_POST['evening_break']   === '1';
+$lateE    = isset($_POST['evening_late']) 
+            && $_POST['evening_late']    === '1';
+$ts       = $_POST['evening_start'] ?? '17:00';
+$te       = $_POST['evening_end']   ?? '19:30';
+$taskE    = trim($_POST['evening_task'] ?? '');
+
+// Ưu tiên textarea trước
+if ($taskE !== '') {
+    $up->execute([$userId, $date, 'evening', "{$ts}-{$te}: {$taskE}"]);
+} elseif ($holidayE) {
+    $up->execute([$userId, $date, 'evening', 'Nghỉ lễ']);
+} elseif ($breakE) {
+    $up->execute([$userId, $date, 'evening', 'Nghỉ']);
+} else {
+    $del->execute([$userId, $date, 'evening']);
+}
         }
         $saveMsg = "Successfully updated";
     }
-}
 
 // — Load today's entries & render UI data —
 
@@ -248,9 +264,9 @@ $dayNum    = $current->format('j');
 $monthName = strtolower($current->format('F'));
 
 // — Render UI —
-$vS = filemtime(__DIR__.'/../assets/css/sidebar.css');
-$vD = filemtime(__DIR__.'/../assets/css/work_diary.css');
-include $root.'/includes/header.php';
+$vS = filemtime(__DIR__ . '/../assets/css/sidebar.css');
+$vD = filemtime(__DIR__ . '/../assets/css/work_diary.css');
+include $root . '/includes/header.php';
 ?>
 <link rel="stylesheet" href="../assets/css/sidebar.css?v=<?= $vS ?>" />
 <link rel="stylesheet" href="../assets/css/work_diary.css?v=<?= $vD ?>" />
@@ -258,12 +274,8 @@ include $root.'/includes/header.php';
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.2/css/all.min.css"
       crossorigin="anonymous"
       referrerpolicy="no-referrer"/>
-
 <?php include __DIR__ . '/sidebar.php'; ?>
 
-<?php if (!empty($notifyMsg)): ?>
-  <div class="alert-abs"><?= htmlspecialchars($notifyMsg, ENT_QUOTES) ?></div>
-<?php endif; ?>
 <?php if (!empty($saveMsg)): ?>
   <div class="alert-abs"><?= htmlspecialchars($saveMsg, ENT_QUOTES) ?></div>
 <?php endif; ?>
@@ -308,7 +320,11 @@ include $root.'/includes/header.php';
       </tbody>
     </table>
   </div>
-
+<?php
+  // Cache‐bust JS khi work_diary.js thay đổi
+  $vJs = filemtime(__DIR__ . '/../assets/js/work_diary.js');
+?>
+<script src="../assets/js/work_diary.js?v=<?= $vJs ?>"></script>
   <!-- Entry Panel -->
   <form method="post" class="entry-panel" id="entryPanel">
     <div class="card-block notify-panel">
@@ -327,47 +343,58 @@ include $root.'/includes/header.php';
         <i class="fas fa-bell"></i> Send Report
       </button>
     </div>
-
     <!-- Morning & Afternoon -->
     <?php foreach (['morning','afternoon'] as $prd):
-      $val = $diary[$prd] ?? '';
-      $isB = ($val === 'Break');
-      $isL = (!$isB && preg_match('/^Late:\s*(.*)$/', $val, $m));
-      $txt = $isL ? $m[1] : $val;
+      $val      = $diary[$prd] ?? '';
+      $isH      = isset($_POST["{$prd}_holiday"]) && $_POST["{$prd}_holiday"] === '1';
+      $isB      = isset($_POST["{$prd}_break"])   && $_POST["{$prd}_break"]   === '1';
+      $isL      = isset($_POST["{$prd}_late"])    && $_POST["{$prd}_late"]    === '1';
+      $txt      = htmlspecialchars($val, ENT_QUOTES);
     ?>
       <div class="card-block period" data-period="<?= $prd ?>">
         <label><?= ucfirst($prd) ?></label>
-        <button type="button" class="btn-toggle break <?= $isB?'active':'' ?>">Break</button>
-        <button type="button" class="btn-toggle late <?= $isL?'active':'' ?>">Late</button>
-        <textarea name="<?= $prd ?>_task" class="autoexpand" <?= $isB?'disabled':'' ?>><?= htmlspecialchars($txt, ENT_QUOTES) ?></textarea>
-        <input type="hidden" name="<?= $prd ?>_break" value="<?= $isB?1:0 ?>">
-        <input type="hidden" name="<?= $prd ?>_late" value="<?= $isL?1:0 ?>">
+        <button type="button" class="btn-toggle holiday <?= $isH?'active':'' ?>">Holiday</button>
+        <button type="button" class="btn-toggle break   <?= $isB?'active':'' ?>">Break</button>
+        <button type="button" class="btn-toggle late    <?= $isL?'active':'' ?>">Late</button>
+        <textarea name="<?= $prd ?>_task" class="autoexpand"><?= $txt ?></textarea>
+        <input type="hidden" name="<?= $prd ?>_holiday" value="<?= $isH?1:0 ?>">
+        <input type="hidden" name="<?= $prd ?>_break"   value="<?= $isB?1:0 ?>">
+        <input type="hidden" name="<?= $prd ?>_late"    value="<?= $isL?1:0 ?>">
       </div>
     <?php endforeach; ?>
 
     <!-- Evening -->
     <?php
-      $e    = $diary['evening'] ?? '';
-      $isEB = ($e === 'Break');
-      if (!$isEB && preg_match('/^(\d{2}:\d{2})-(\d{2}:\d{2}):\s*(.*)$/', $e, $z)) {
-        [, $ts, $te, $tkt] = $z;
+      $valE   = $diary['evening'] ?? '';
+      $isEH   = isset($_POST['evening_holiday']) && $_POST['evening_holiday'] === '1';
+      $isEB   = isset($_POST['evening_break'])   && $_POST['evening_break']   === '1';
+      if (preg_match('/^(\d{2}:\d{2})-(\d{2}:\d{2}):\s*(.*)$/', $valE, $m)) {
+        [, $ts, $te, $taskE] = $m;
       } else {
-        $ts='17:00'; $te='19:30'; $tkt='';
+        $ts    = '17:00';
+        $te    = '19:30';
+        $taskE = trim($valE);
       }
     ?>
     <div class="card-block period evening" data-period="evening">
       <label>Evening</label>
-      <button type="button" class="btn-toggle break <?= $isEB?'active':'' ?>">Break</button>
-      <input type="hidden" name="evening_break" value="<?= $isEB?1:0 ?>">
-      <input type="time" name="evening_start" class="start" value="<?= $ts ?>" <?= $isEB?'disabled':'' ?>>
-      <input type="time" name="evening_end" class="end" value="<?= $te ?>" <?= $isEB?'disabled':'' ?>>
-      <textarea name="evening_task" class="autoexpand" <?= $isEB?'disabled':'' ?>><?= htmlspecialchars($tkt, ENT_QUOTES) ?></textarea>
+      <button type="button" class="btn-toggle holiday <?= $isEH?'active':'' ?>">Holiday</button>
+      <button type="button" class="btn-toggle break   <?= $isEB?'active':'' ?>">Break</button>
+
+
+      <input type="hidden" name="evening_holiday" value="<?= $isEH?1:0 ?>">
+      <input type="hidden" name="evening_break"   value="<?= $isEB?1:0 ?>">
+
+
+      <input type="time" name="evening_start" class="start" value="<?= $ts ?>">
+      <input type="time" name="evening_end"   class="end"   value="<?= $te ?>">
+      <textarea name="evening_task" class="autoexpand"><?= htmlspecialchars($taskE, ENT_QUOTES) ?></textarea>
     </div>
 
     <!-- Actions -->
     <div class="actions">
       <button type="submit" name="export_excel" class="export">
-        <i class="fas fa-file-excel"></i> Export Excel
+        <i class="fas fa-file-excel"></i> Export CSV
       </button>
       <button type="submit" name="save_diary" class="save">
         <i class="fas fa-save"></i> Save
@@ -376,55 +403,3 @@ include $root.'/includes/header.php';
   </form>
 </div>
 
-<script>
-// Toggle Break/Late buttons
-document.querySelectorAll('.period').forEach(panel => {
-  const pr = panel.dataset.period;
-  const ta = panel.querySelector('textarea');
-  const hb = panel.querySelector(`[name="${pr}_break"]`);
-  const hl = panel.querySelector(`[name="${pr}_late"]`);
-  const times = panel.querySelectorAll('input[type="time"]');
-
-  panel.querySelectorAll('.btn-toggle.break').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const on = btn.classList.toggle('active');
-      hb.value = on ? 1 : 0;
-      ta.disabled = on;
-      times.forEach(i => i.disabled = on);
-      if (on) ta.value = '';
-    });
-  });
-
-  panel.querySelectorAll('.btn-toggle.late').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const on = btn.classList.toggle('active');
-      hl.value = on ? 1 : 0;
-      if (on) {
-        panel.querySelector('.btn-toggle.break.active')?.classList.remove('active');
-        hb.value = 0;
-        times.forEach(i => i.disabled = false);
-      }
-    });
-  });
-});
-
-// Auto-expand textareas
-document.querySelectorAll('textarea.autoexpand').forEach(t => {
-  t.style.overflow = 'hidden';
-  const resize = () => {
-    t.style.height = 'auto';
-    t.style.height = t.scrollHeight + 'px';
-  };
-  t.addEventListener('input', resize);
-  resize();
-});
-
-// Match calendar height to entry panel
-function matchHeight() {
-  const cal = document.getElementById('calendar'),
-        ep  = document.getElementById('entryPanel');
-  if (cal && ep) cal.style.height = ep.offsetHeight + 'px';
-}
-window.addEventListener('load', matchHeight);
-window.addEventListener('resize', matchHeight);
-</script>
