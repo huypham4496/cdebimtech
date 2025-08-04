@@ -169,3 +169,7 @@ html, body {
   text-decoration: none;
   border-radius: 4px;
 }
+/* Màu text ngày Chủ Nhật (cell-date) */
+.cell-date.cell-date-sunday {
+  color: var(--primary-color);
+}
