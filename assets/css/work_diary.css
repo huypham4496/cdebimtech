@@ -456,3 +456,89 @@ body {
   grid-column: 4 / 5;
   grid-row: 1 / 2;
 }
+  
+/* Khi form ở trạng thái locked */
+.entry-wrapper.locked,
+fieldset.entry-wrapper[disabled] {
+  /* nothing needed here; overlay đã xử lý ở trên */
+}
+
+/* Làm mờ và vô hiệu hóa tất cả button */
+.entry-wrapper.locked button,
+fieldset.entry-wrapper[disabled] button {
+  background-color: #d1d5db !important;  /* gray-300 */
+  color: #6b7280 !important;            /* gray-500 */
+  border-color: #d1d5db !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+  box-shadow: none !important;
+}
+
+/* Làm mờ và vô hiệu hóa textarea */
+.entry-wrapper.locked textarea,
+fieldset.entry-wrapper[disabled] textarea {
+  background-color: #f3f4f6 !important; /* gray-100 */
+  color: #9ca3af !important;            /* gray-400 */
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+  border-color: #e5e7eb !important;     /* gray-200 */
+}
+
+/* (tuỳ chọn) Giữ cho inputs khác như time và hidden input */
+.entry-wrapper.locked input[type="time"],
+fieldset.entry-wrapper[disabled] input[type="time"] {
+  background-color: #f3f4f6 !important;
+  color: #9ca3af !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+  border-color: #e5e7eb !important;
+}
+/* Remove any border around the wrapper */
+.entry-wrapper.locked,
+fieldset.entry-wrapper[disabled] {
+  border: none !important;
+}
+
+/* Remove borders on the inner cards too */
+.entry-wrapper.locked .card-block,
+fieldset.entry-wrapper[disabled] .card-block {
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Also remove borders on each period block */
+.entry-wrapper.locked .card-block.period,
+fieldset.entry-wrapper[disabled] .card-block.period {
+  border: none !important;
+}
+
+/* And if any textarea or input still has a border, clear it */
+.entry-wrapper.locked textarea,
+.entry-wrapper.locked input,
+fieldset.entry-wrapper[disabled] textarea,
+fieldset.entry-wrapper[disabled] input {
+  border: none !important;
+}
+/* Lock notification banner */
+.alert-abs.lock-message,
+.alert-abs { /* nếu dùng chung class alert-abs */
+  background-color: #e53e3e !important; /* đỏ tươi */
+  color: #fff !important;
+  border: none !important;
+}
+
+/* Nếu bạn dùng riêng class cho thông báo khóa, ví dụ .lock-alert */
+.lock-alert {
+  background-color: #e53e3e !important;
+  color: #fff !important;
+  border: none !important;
+}
+/* Luôn bỏ viền quanh wrapper form */
+.entry-wrapper,
+fieldset.entry-wrapper {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  margin: 0;
+  padding: 0;
+}
