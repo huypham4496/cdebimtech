@@ -1,0 +1,171 @@
+/* assets/css/stats_days_off.css */
+
+/* ─── Palette ───────────────────────────────────────────────── */
+:root {
+  --primary-color:    #fca415;
+  --secondary-color:  #2d3748;
+  --bg-color:         #f3f4f6;
+  --card-bg:          #ffffff;
+  --border-color:     #e5e7eb;
+  --text-color:       #374151;
+}
+
+/* ─── Global & Layout ───────────────────────────────────────── */
+html, body {
+  margin: 0; padding: 0;
+  background: var(--bg-color);
+  color: var(--text-color);
+  font-family: "Helvetica Neue", Arial, sans-serif;
+}
+.main-content {
+  margin-left: 260px;  /* Width of sidebar */
+  padding: 2rem;
+}
+
+/* ─── Card Styles ──────────────────────────────────────────── */
+.card-block {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: .75rem;
+  max-width: 900px;
+  margin: 0 auto 2rem;
+  padding: 2rem;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+.card-block h2 {
+  margin-top: 0;
+  font-size: 1.8rem;
+  color: var(--secondary-color);
+  border-bottom: 3px solid var(--primary-color);
+  padding-bottom: .5rem;
+}
+
+/* ─── Filter Form ─────────────────────────────────────────── */
+.filter-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 1rem 0;
+  align-items: center;
+}
+.filter-form label {
+  font-size: 0.9rem;
+}
+.filter-form select {
+  padding: 6px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+}
+.filter-form button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: var(--primary-color);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* ─── Summary ─────────────────────────────────────────────── */
+.summary {
+  font-size: 1rem;
+  margin-bottom: 1.5rem;
+}
+.summary strong {
+  color: var(--primary-color);
+}
+
+/* ─── Week Table ──────────────────────────────────────────── */
+.week-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1.5rem;
+}
+.week-table th,
+.week-table td {
+  padding: 8px;
+  border: 1px solid var(--border-color);
+  text-align: center;
+  vertical-align: middle;
+  font-size: 0.9rem;
+}
+.week-table th {
+  background: var(--card-bg);
+  color: var(--secondary-color);
+}
+.cell-date {
+  background: var(--bg-color);
+  font-weight: 600;
+}
+
+/* Buổi nghỉ */
+.cell-break {
+  background-color: #e2e8f0;
+  color: #718096;
+}
+/* Ngày thường (T2–T6 & sáng T7) */
+.cell-weekday {
+  background-color: #bee3f8;
+  color: #2c5282;
+}
+/* Chiều Thứ 7 */
+.cell-sat-afternoon {
+  background-color: #fbd38d;
+  color: #744210;
+}
+/* Chủ Nhật */
+.cell-sunday {
+  background-color: #fed7d7;
+  color: #742a2a;
+}
+/* Buổi tối */
+.cell-evening {
+  background-color: #c6f6d5;
+  color: #276749;
+}
+/* — Highlight ngày lễ có task — */
+.stats-table td.cell-holiday-work {
+  background-color: #e9d8fd;
+  color: #6b46c1;
+}
+
+/* ─── Chart Container ─────────────────────────────────────── */
+.chart-container {
+  width: 100%;
+  max-width: 800px;
+  height: 400px;
+  margin: 2rem auto 0;
+}
+.chart-container canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* ─── Responsive ──────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 0;
+    padding: 1rem;
+  }
+  .filter-form {
+    flex-direction: column;
+  }
+}
+
+/* Nút Xem chi tiết */
+.detail-button {
+  margin-top: 1rem;
+  text-align: right;
+}
+.btn-detail {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: var(--primary-color);
+  color: #fff;
+  text-decoration: none;
+  border-radius: 4px;
+}
