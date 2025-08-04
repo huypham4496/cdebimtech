@@ -61,6 +61,9 @@ if ($userId) {
       <li class="<?= $current=== 'subscriptions.php' ? 'active' : '' ?>">
         <a href="subscriptions.php"><i class="fas fa-file-contract"></i> Subscriptions</a>
       </li>
+       <li><a href="organization_manage.php"><i class="fas fa-building"></i> Quản lý Tổ chức</a></li>
+  <li><a href="organization_members.php"><i class="fas fa-users"></i> Thành viên Tổ chức</a></li>
+
     </ul>
   </nav>
 
