@@ -104,7 +104,7 @@ function wkndCell($date, $work, $holidays, $weekday) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Thống kê tổ <?= htmlspecialchars($orgName) ?> – <?= sprintf('%02d/%04d',$month,$year) ?></title>
+  <title>Thống kê <?= htmlspecialchars($orgName) ?> – <?= sprintf('%02d/%04d',$month,$year) ?></title>
   <link rel="stylesheet" href="../assets/css/sidebar.css">
   <link rel="stylesheet" href="../assets/css/stats_org_detail.css">
   <link rel="stylesheet"
@@ -116,7 +116,7 @@ function wkndCell($date, $work, $holidays, $weekday) {
   <div class="main-content">
     <h1>
       <i class="fas fa-chart-bar"></i>
-      Thống kê tổ <?= htmlspecialchars($orgName) ?>
+      Thống kê <?= htmlspecialchars($orgName) ?>
       (<?= sprintf('%02d/%04d',$month,$year) ?>)
     </h1>
 
@@ -269,7 +269,18 @@ function wkndCell($date, $work, $holidays, $weekday) {
         </tbody>
       </table>
     </section>
+<!-- Xuất Excel nút dưới cùng -->
+    <?php
+      $exportUrl = sprintf(
+        'export_stats_org_excel.php?org_id=%d&month=%d&year=%d',
+        $orgId, $month, $year
+      );
+    ?>
+    <a href="<?= htmlspecialchars($exportUrl) ?>" class="btn-export">
+      <i class="fas fa-file-excel"></i> Xuất Excel
+    </a>
 
   </div>
 </body>
 </html>
+
