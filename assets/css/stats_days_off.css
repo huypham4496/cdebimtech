@@ -1,4 +1,9 @@
 /* assets/css/stats_days_off.css */
+/* 1. Font Awesome */
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css');
+
+/* 2. Google Font Poppins */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
 
 /* ─── Palette ───────────────────────────────────────────────── */
 :root {
