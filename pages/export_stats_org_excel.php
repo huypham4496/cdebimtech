@@ -8,7 +8,7 @@ if (empty($_SESSION['user']['id'])) {
     exit;
 }
 
-$autoload = __DIR__ . '/../lib/autoload.php';
+$autoload = __DIR__ . '/../vendor/autoload.php';
 if (!file_exists($autoload)) {
     die('<p>Chưa cài PhpSpreadsheet. Vui lòng chạy <code>composer require phpoffice/phpspreadsheet</code></p>');
 }
@@ -232,7 +232,7 @@ foreach ($members as $idx => $m) {
 
 /// Đóng border và set font size cho bảng
 $lastRow = $row - 1;
-$range = "A6:AN{$lastRow}";
+$range = "A5:AN{$lastRow}";
 $sh1->getStyle($range)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
 $sh1->getStyle("A7:AN{$lastRow}")->getFont()->setSize(10);
 $sh1->getStyle($range)->getAlignment()->setWrapText(true);
