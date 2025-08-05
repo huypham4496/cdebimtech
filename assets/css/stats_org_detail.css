@@ -203,3 +203,52 @@ h3 { font-size: 1.1rem; margin-top: 1.5rem; }
   text-overflow: ellipsis;
   text-align: center;
 }
+/* Container chung cho các nút hành động */
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Wrapper cho các nút hành động */
+.actions {
+  display: flex;
+  justify-content: flex-end; /* căn phải toàn bộ nội dung */
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Nút Xuất Excel */
+.btn-export {
+  padding: 0.6rem 1.2rem;
+  background-color: #28a745;
+  color: #fff;
+  border: 1px solid #28a745;
+  border-radius: 0.25rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.1s ease;
+}
+
+.btn-export i {
+  font-size: 1.1rem;
+}
+
+.btn-export:hover {
+  background-color: #218838;
+  border-color: #1e7e34;
+  transform: translateY(-1px);
+}
+
+.btn-export:active {
+  background-color: #1e7e34;
+  border-color: #1c7430;
+  transform: translateY(0);
+}
