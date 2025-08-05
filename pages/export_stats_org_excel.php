@@ -9,116 +9,210 @@ if (empty($_SESSION['user']['id'])) {
 }
 
 // — Params —
-$orgId       = isset($_GET['org_id']) ? (int)$_GET['org_id'] : null;
-$month       = isset($_GET['month'])  ? (int)$_GET['month']  : date('n');
-$year        = isset($_GET['year'])   ? (int)$_GET['year']   : date('Y');
+$orgId       = (int)($_GET['org_id'] ?? 0);
+$month       = (int)($_GET['month']  ?? date('n'));
+$year        = (int)($_GET['year']   ?? date('Y'));
 $startDate   = sprintf('%04d-%02d-01', $year, $month);
-$daysInMonth = (int)date('t', strtotime($startDate));
 $endDate     = date('Y-m-t', strtotime($startDate));
+$daysInMonth = (int)date('t', strtotime($startDate));
 
-// — DB & data fetch —
+// — DB —
 $pdo = new PDO(
-    "mysql:host=".DB_HOST.";dbname=".DB_NAME.";charset=utf8mb4",
-    DB_USER, DB_PASS,
-    [PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]
+  "mysql:host=".DB_HOST.";dbname=".DB_NAME.";charset=utf8mb4",
+  DB_USER, DB_PASS,
+  [PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]
 );
 
-function fetchEntries($uid, $start, $end) {
-    global $pdo;
-    $s = $pdo->prepare("
-        SELECT entry_date, period, content
-        FROM work_diary_entries
-        WHERE user_id = :uid
-          AND entry_date BETWEEN :start AND :end
-    ");
-    $s->execute([':uid'=>$uid, ':start'=>$start, ':end'=>$end]);
-    return $s->fetchAll();
-}
-
-$ms = $pdo->prepare("
-    SELECT u.id, COALESCE(p.full_name, u.email) AS full_name
-    FROM organization_members m
-    JOIN users u ON u.id = m.user_id
-    LEFT JOIN organization_member_profiles p ON p.member_id = m.id
-    WHERE m.organization_id = :oid
-    ORDER BY u.email
+// fetch members
+$stmt = $pdo->prepare("
+  SELECT u.id, COALESCE(p.full_name,u.email) AS full_name
+  FROM organization_members m
+  JOIN users u ON u.id=m.user_id
+  LEFT JOIN organization_member_profiles p ON p.member_id=m.id
+  WHERE m.organization_id=:oid
+  ORDER BY u.email
 ");
-$ms->execute([':oid'=>$orgId]);
-$members = $ms->fetchAll();
+$stmt->execute([':oid'=>$orgId]);
+$members = $stmt->fetchAll();
 
-// Tính ngày lễ
-$orgHolidayDates = [];
-foreach ($members as $m) {
-    foreach (fetchEntries($m['id'],$startDate,$endDate) as $r) {
-        $d=(new DateTime($r['entry_date']))->format('Y-m-d');
-        if (preg_match('/^(Ngày lễ|Nghỉ lễ)\b/iu',trim($r['content']))) {
-            $orgHolidayDates[$d]=true;
-        }
-    }
+// fetch entries helper
+function fetchEntries($uid,$start,$end){
+    global $pdo;
+    $q = $pdo->prepare("
+      SELECT entry_date,period,content
+      FROM work_diary_entries
+      WHERE user_id=:u AND entry_date BETWEEN :s AND :e
+    ");
+    $q->execute([':u'=>$uid,':s'=>$start,':e'=>$end]);
+    return $q->fetchAll();
 }
 
-// Xuất header Excel
-header('Content-Type: application/vnd.ms-excel; charset=UTF-8');
-header('Content-Disposition: attachment; filename="thong_ke_to_'.$orgId.'_'. $month .'_'. $year .'.xls"');
-echo "<meta http-equiv='Content-Type' content='text/html; charset=UTF-8' />";
-
-// Hàm in bảng
-function renderTable($title,$members,$year,$month,$days,$holidays,$mode) {
-    echo "<table border='1' cellpadding='3' cellspacing='0'>";
-    echo "<tr><th colspan='".($days+1)."' style='background:#ddd;font-weight:bold;'>$title</th></tr>";
-    echo "<tr><th>Thành viên</th>";
-    for($d=1;$d<=$days;$d++){
-        echo "<th>".sprintf('%02d',$d)."</th>";
+// build holiday map
+$holidays = [];
+foreach($members as $m){
+  foreach(fetchEntries($m['id'],$startDate,$endDate) as $r){
+    $d = (new DateTime($r['entry_date']))->format('Y-m-d');
+    if (preg_match('/^(Ngày lễ|Nghỉ lễ)\b/iu',trim($r['content']))) {
+      $holidays[$d] = true;
     }
-    echo "</tr>";
-    foreach($members as $m){
-        echo "<tr><td>".htmlspecialchars($m['full_name'])."</td>";
-        $ents = fetchEntries($m['id'],sprintf('%04d-%02d-01',$year,$month),date('Y-m-t',strtotime("$year-$month-01")));
-        $workPeriods = [];
-        foreach($ents as $r){
-            $dt=(new DateTime($r['entry_date']))->format('Y-m-d');
-            $c = trim($r['content']);
-            if (preg_match('/^(Ngày lễ|Nghỉ lễ)\b/iu',$c)) {
-                $workPeriods[$dt]['holiday']=true;
-            } elseif ($mode==='prod' && !preg_match('/^\s*Nghỉ\b/iu',$c)) {
-                $workPeriods[$dt][]=$r['period'];
-            } elseif ($mode==='evening' && stripos($c,'evening')!==false) {
-                $workPeriods[$dt][]='evening';
-            }
-        }
-        for($d=1;$d<=$days;$d++){
-            $date=sprintf('%04d-%02d-%02d',$year,$month,$d);
-            $val='';
-            if($mode==='prod'){
-                if(!empty($workPeriods[$date]['holiday'])){
-                    $val='';
-                } else {
-                    $w=(int)date('N',strtotime($date));
-                    $p=$workPeriods[$date]??[];
-                    if($w===6){
-                        $val=in_array('morning',$p,true)?'K/2':'';
-                    } elseif($w===7){
-                        $val='';
-                    } else {
-                        $morn=in_array('morning',$p,true);
-                        $aft =in_array('afternoon',$p,true);
-                        $val=$morn&&$aft?'K':($morn||$aft?'K/2':'');
-                    }
-                }
-            } else {
-                if(!empty($workPeriods[$date]['holiday']) || in_array('evening',$workPeriods[$date]??[],true)){
-                    $val='K/2';
-                }
-            }
-            echo "<td>$val</td>";
-        }
-        echo "</tr>";
-    }
-    echo "</table><br/>";
+  }
 }
 
-// In hai bảng
-renderTable('Sản phẩm (T2–T7)',$members,$year,$month,$daysInMonth,$orgHolidayDates,'prod');
-renderTable('Buổi tối (T2–CN)',$members,$year,$month,$daysInMonth,$orgHolidayDates,'evening');
+// prepare headers for download
+header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8');
+header('Content-Disposition: attachment;filename="thong_ke_to_'.$orgId.'_'.$month.'_'.$year.'.xlsx"');
+echo '<?xml version="1.0"?>' . "\n";
+echo '<?mso-application progid="Excel.Sheet"?>' . "\n";
+?>
+<Workbook 
+  xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+  xmlns:o="urn:schemas-microsoft-com:office:office"
+  xmlns:x="urn:schemas-microsoft-com:office:excel"
+  xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
+>
+  <DocumentProperties xmlns="urn:schemas-microsoft-com:office:office">
+    <Author><?= htmlspecialchars($_SESSION['user']['email'] ?? '') ?></Author>
+    <Created><?= date('c') ?></Created>
+  </DocumentProperties>
+  <ExcelWorkbook xmlns="urn:schemas-microsoft-com:office:excel">
+    <WindowHeight>9000</WindowHeight>
+    <WindowWidth>15000</WindowWidth>
+    <ProtectStructure>False</ProtectStructure>
+    <ProtectWindows>False</ProtectWindows>
+  </ExcelWorkbook>
 
-exit;
+  <!-- Styles -->
+  <Styles>
+    <Style ss:ID="hdr">
+      <Font ss:Bold="1" ss:Size="12"/>
+      <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+      <Interior ss:Color="#DDD" ss:Pattern="Solid"/>
+    </Style>
+    <Style ss:ID="c">
+      <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+    </Style>
+  </Styles>
+
+  <!-- Sheet1: Sản phẩm -->
+  <Worksheet ss:Name="Sản phẩm (T2–T7)">
+    <Table>
+      <!-- Header row -->
+      <Row ss:StyleID="hdr">
+        <Cell><Data ss:Type="String">Thành viên</Data></Cell>
+<?php for($d=1;$d<=$daysInMonth;$d++): ?>
+        <Cell ss:StyleID="c"><Data ss:Type="String"><?= sprintf('%02d',$d) ?></Data></Cell>
+<?php endfor; ?>
+      </Row>
+<?php foreach($members as $m): 
+    $ents = fetchEntries($m['id'],$startDate,$endDate);
+    $work=[]; 
+    foreach($ents as $r){
+      $dt = (new DateTime($r['entry_date']))->format('Y-m-d');
+      $c  = trim($r['content']);
+      if (!preg_match('/^\s*Nghỉ\b/iu',$c) && !preg_match('/^(Ngày lễ|Nghỉ lễ)\b/iu',$c)) {
+        $work[$dt][] = $r['period'];
+      }
+    }
+?>
+      <Row>
+        <Cell><Data ss:Type="String"><?= htmlspecialchars($m['full_name']) ?></Data></Cell>
+<?php for($d=1;$d<=$daysInMonth;$d++):
+    $date = sprintf('%04d-%02d-%02d',$year,$month,$d);
+    $wd   = (int)date('N',strtotime($date));
+    if (!empty($holidays[$date])) {
+      $val = '';
+    } elseif ($wd===6) {
+      $val = in_array('morning',$work[$date]??[],true)?'K/2':'';
+    } elseif ($wd===7) {
+      $val = '';
+    } else {
+      $morn = in_array('morning',$work[$date]??[],true);
+      $aft  = in_array('afternoon',$work[$date]??[],true);
+      $val  = $morn&&$aft?'K':($morn||$aft?'K/2':'');
+    }
+?>
+        <Cell ss:StyleID="c"><Data ss:Type="String"><?= $val ?></Data></Cell>
+<?php endfor; ?>
+      </Row>
+<?php endforeach; ?>
+    </Table>
+  </Worksheet>
+
+  <!-- Sheet2: Buổi tối & Cuối tuần -->
+  <Worksheet ss:Name="Buổi tối & Cuối tuần">
+    <Table>
+      <!-- Buổi tối header -->
+      <Row ss:StyleID="hdr">
+        <Cell><Data ss:Type="String">Thành viên</Data></Cell>
+<?php for($d=1;$d<=$daysInMonth;$d++): ?>
+        <Cell ss:StyleID="c"><Data ss:Type="String"><?= sprintf('%02d',$d) ?></Data></Cell>
+<?php endfor; ?>
+      </Row>
+<?php foreach($members as $m):
+    $ents = fetchEntries($m['id'],$startDate,$endDate);
+    $ev=[]; 
+    foreach($ents as $r){
+      $dt=(new DateTime($r['entry_date']))->format('Y-m-d');
+      if(stripos($r['content'],'evening')!==false || !empty($holidays[$dt])){
+        $ev[$dt]=true;
+      }
+    }
+?>
+      <Row>
+        <Cell><Data ss:Type="String"><?= htmlspecialchars($m['full_name']) ?></Data></Cell>
+<?php for($d=1;$d<=$daysInMonth;$d++):
+    $date = sprintf('%04d-%02d-%02d',$year,$month,$d);
+    $val  = !empty($ev[$date])?'K/2':''; 
+?>
+        <Cell ss:StyleID="c"><Data ss:Type="String"><?= $val ?></Data></Cell>
+<?php endfor; ?>
+      </Row>
+<?php endforeach; ?>
+
+      <!-- blank row -->
+      <Row/><Row/>
+
+      <!-- Chiều Thứ7, CN & Lễ header -->
+      <Row ss:StyleID="hdr">
+        <Cell><Data ss:Type="String">Thành viên</Data></Cell>
+<?php for($d=1;$d<=$daysInMonth;$d++): ?>
+        <Cell ss:StyleID="c"><Data ss:Type="String"><?= sprintf('%02d',$d) ?></Data></Cell>
+<?php endfor; ?>
+      </Row>
+<?php foreach($members as $m):
+    $ents = fetchEntries($m['id'],$startDate,$endDate);
+    $wk=[]; 
+    foreach($ents as $r){
+      $dt=(new DateTime($r['entry_date']))->format('Y-m-d');
+      if (!preg_match('/^\s*Nghỉ\b/iu',$r['content'])) {
+        $wk[$dt][] = $r['period'];
+      }
+    }
+?>
+      <Row>
+        <Cell><Data ss:Type="String"><?= htmlspecialchars($m['full_name']) ?></Data></Cell>
+<?php for($d=1;$d<=$daysInMonth;$d++):
+    $date = sprintf('%04d-%02d-%02d',$year,$month,$d);
+    $wd   = (int)date('N',strtotime($date));
+    $val  = '';
+    if (!empty($holidays[$date])) {
+      $morn = in_array('morning',$wk[$date]??[],true);
+      $aft  = in_array('afternoon',$wk[$date]??[],true);
+      $val  = $morn&&$aft?'K':($morn||$aft?'K/2':'');
+    } elseif ($wd===6) {
+      $val = in_array('afternoon',$wk[$date]??[],true)?'K/2':'';
+    } elseif ($wd===7) {
+      $morn = in_array('morning',$wk[$date]??[],true);
+      $aft  = in_array('afternoon',$wk[$date]??[],true);
+      $val  = ($morn&&$aft)?'CN':($morn||$aft?'CN/2':'');
+    }
+?>
+        <Cell ss:StyleID="c"><Data ss:Type="String"><?= $val ?></Data></Cell>
+<?php endfor; ?>
+      </Row>
+<?php endforeach; ?>
+
+    </Table>
+  </Worksheet>
+
+</Workbook>
