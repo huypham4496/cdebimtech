@@ -29,7 +29,7 @@ if (!$orgId) {
         SELECT id FROM organizations WHERE created_by = :uid
         UNION
         SELECT organization_id FROM organization_members 
-         WHERE user_id = :uid AND role = 'admin'
+         WHERE user_id = :uid 
         LIMIT 1
     ");
     $q->execute([':uid' => $userId]);
