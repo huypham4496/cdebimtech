@@ -223,9 +223,12 @@ include dirname(__DIR__) . '/includes/header.php';
       </tbody>
     </table>
 
-    <!-- Button to detail report -->
-    <div class="detail-button">
-      <a href="stats_days_off_detail.php?uid=<?= $viewUser ?>&month=<?= $month ?>&year=<?= $year ?>" class="btn-detail">
-        <i class="fas fa-chart-line"></i> Xem chi tiết
-      </a>
-    </div>
+<!-- Button to detail report -->
+<div class="detail-button">
+  <a 
+    href="stats_detail.php?uid=<?= htmlspecialchars($viewUser) ?>&month=<?= htmlspecialchars($month) ?>&year=<?= htmlspecialchars($year) ?>" 
+    class="btn-detail"
+  >
+    <i class="fas fa-chart-line"></i> Xem chi tiết
+  </a>
+</div>
