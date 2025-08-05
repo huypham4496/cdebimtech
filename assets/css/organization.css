@@ -367,3 +367,73 @@ h1, h2 {
   text-align: center;
   font-family: var(--font-base);
 }
+/* Enhanced filter form and button styling */
+/* Enhanced, more compact filter-form */
+.filter-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  background: #fff;
+  padding: 1rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  align-items: center;           /* center items vertically */
+}
+
+/* Make labels and selects inline to save vertical space */
+.filter-form label {
+  display: flex;
+  align-items: center;           /* keep text and select on one line */
+  gap: 0.5rem;                   /* space between label text and select */
+  font-size: 0.95rem;
+  color: #333F4B;
+  white-space: nowrap;           /* prevent label text wrapping */
+}
+
+/* Streamline select styling */
+.filter-form select {
+  padding: 0.4rem 0.6rem;         /* slightly reduced padding */
+  border: 1px solid #D1D9E0;
+  border-radius: 6px;
+  background: #F9FBFD;
+  font-family: inherit;
+  font-size: 0.95rem;
+  transition: border-color 0.25s;
+  margin: 0;                     /* override any top/bottom margin */
+}
+
+/* Focus state */
+.filter-form select:focus {
+  border-color: #fca415;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(74,144,226,0.2);
+}
+
+/* Compact View Summary button */
+.btn-summary {
+  margin-left: auto;
+  background: #fca415;
+  color: #fff;
+  padding: 0.5rem 1rem;           /* reduced padding */
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  transition: background 0.3s, transform 0.2s;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.btn-summary:hover {
+  background: #fc9c03ff;
+  transform: translateY(-1px);
+}
+
+.btn-summary:active {
+  background: #fca415;
+  transform: translateY(1px);
+}
