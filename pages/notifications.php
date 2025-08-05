@@ -63,13 +63,18 @@ include dirname(__DIR__) . '/includes/header.php';
         ?>
           <li class="<?= $cls ?>">
             <strong><?= htmlspecialchars("$n[first_name] $n[last_name]", ENT_QUOTES) ?></strong>
-            gửi nhật ký công việc ngày
-            <em><?= date('d/m/Y', strtotime($n['entry_date'])) ?></em>
+            gửi nhật ký công việc tháng
+            <em><?= date('m/Y', strtotime($n['entry_date'])) ?></em>
             lúc <?= date('H:i d/m/Y', strtotime($n['created_at'])) ?>.
             <!-- chuyển sang stats_days_off.php với sender_id -->
-            <a href="stats_days_off.php?uid=<?= $n['sender_id'] ?>">
-              Xem thống kê
-            </a>
+          <!-- chuyển sang stats_days_off.php với sender_id -->
+          <?php 
+            $repMonth = date('n',  strtotime($n['entry_date']));
+            $repYear  = date('Y',  strtotime($n['entry_date']));
+          ?>
+          <a href="stats_days_off.php?uid=<?= $n['sender_id'] ?>&month=<?= $repMonth ?>&year=<?= $repYear ?>"class="btn-detail">
+            Xem thống kê
+          </a>
           </li>
         <?php endforeach; ?>
       </ul>
