@@ -49,9 +49,6 @@ if ($userId) {
       <li class="<?= $current=== 'projects.php' ? 'active' : '' ?>">
         <a href="projects.php"><i class="fas fa-project-diagram"></i> Projects</a>
       </li>
-      <li class="<?= $current=== 'members.php' ? 'active' : '' ?>">
-        <a href="members.php"><i class="fas fa-users"></i> Members</a>
-      </li>
       <li class="<?= $current=== 'meetings.php' ? 'active' : '' ?>">
         <a href="meetings.php"><i class="fas fa-file-alt"></i> Meetings</a>
       </li>
@@ -61,8 +58,8 @@ if ($userId) {
       <li class="<?= $current=== 'subscriptions.php' ? 'active' : '' ?>">
         <a href="subscriptions.php"><i class="fas fa-file-contract"></i> Subscriptions</a>
       </li>
-       <li><a href="organization_manage.php"><i class="fas fa-building"></i> Quản lý Tổ chức</a></li>
-  <li><a href="organization_members.php"><i class="fas fa-users"></i> Thành viên Tổ chức</a></li>
+       <li><a href="organization_manage.php"><i class="fas fa-building"></i> Organization</a></li>
+  <li><a href="organization_members.php"><i class="fas fa-users"></i> Organization Members</a></li>
 
     </ul>
   </nav>
