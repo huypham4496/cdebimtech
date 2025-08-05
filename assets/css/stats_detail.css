@@ -1,0 +1,185 @@
+/* assets/css/stats_detail.css */
+
+/* 1. Base Font */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap');
+
+/* 2. Color Palette & Variables */
+:root {
+  --primary: #4A90E2;       /* Calm Blue */
+  --secondary: #50E3C2;     /* Soft Teal */
+  --highlight: #F5A623;     /* Warm Amber */
+  --bg-light: #F0F4F8;      /* Light Mist */
+  --card-bg: #FFFFFF;       /* White */
+  --text: #333F4B;          /* Dark Slate */
+  --muted: #7F8E98;         /* Medium Gray */
+  --disabled-bg: #E2E8F0;   /* Pale Gray */
+  --sunday-bg: #FFECEC;     /* Pale Rose */
+  --holiday-bg: #FFF9E5;    /* Pale Gold */
+  --divider: #D1D9E0;       /* Soft Divider */
+  --shadow: rgba(0, 0, 0, 0.08);
+  --radius: 12px;
+  --font-base: 'Poppins', sans-serif;
+  --transition: 0.3s;
+}
+
+/* 3. Reset & Layout */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+body {
+  font-family: var(--font-base);
+  background: var(--bg-light);
+  color: var(--text);
+  display: flex;
+  min-height: 100vh;
+}
+.main-content {
+  flex: 1;
+  margin-left: 260px;
+  padding: 2rem;
+}
+
+/* 4. Headings */
+h1, h2, h3 {
+  color: var(--primary);
+  margin-bottom: 1rem;
+  font-weight: 500;
+}
+h2 { font-size: 1.4rem; }
+h3 { font-size: 1.1rem; margin-top: 1.5rem; }
+
+/* 5. Card Container */
+.card {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  box-shadow: 0 4px 12px var(--shadow);
+  padding: 1.8rem;
+  margin-bottom: 2rem;
+  transition: transform var(--transition), box-shadow var(--transition);
+}
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px var(--shadow);
+}
+
+/* 6. Table Base */
+.stats-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: 0 2px 6px var(--shadow);
+}
+
+/* 7. Table Header */
+.stats-table thead th {
+  background: var(--secondary);
+  color: #fff;
+  font-weight: 500;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  padding: 0.75rem 0.5rem;
+  border-bottom: 2px solid var(--divider);
+  transition: background var(--transition);
+}
+.stats-table thead th:last-child {
+  border-right: none;
+}
+.stats-table th.disabled {
+  background: var(--disabled-bg) !important;
+  color: var(--muted) !important;
+}
+.stats-table th.sun:not(.disabled) {
+  background: var(--sunday-bg) !important;
+  color: var(--highlight) !important;
+}
+.stats-table th.holiday:not(.disabled) {
+  background: var(--holiday-bg) !important;
+  color: var(--primary) !important;
+}
+
+/* 8. Table Body Rows */
+.stats-table tbody tr {
+  transition: background var(--transition);
+}
+.stats-table tbody tr:nth-child(even) {
+  background: #fff;
+}
+.stats-table tbody tr:nth-child(odd) {
+  background: #F9FBFD;
+}
+.stats-table tbody tr:hover {
+  background: rgba(74,144,226,0.1);
+}
+
+/* 9. Table Cells */
+.stats-table td {
+  padding: 0.75rem 0.5rem;
+  font-size: 0.95rem;
+  text-align: center;
+  border-right: 1px solid var(--divider);
+  border-bottom: 1px solid var(--divider);
+  transition: background var(--transition), color var(--transition);
+}
+.stats-table td:last-child {
+  border-right: none;
+}
+.stats-table td.disabled {
+  background: var(--disabled-bg);
+  color: var(--muted);
+}
+.stats-table td.sun:not(.disabled) {
+  background: var(--sunday-bg);
+  color: var(--highlight);
+}
+.stats-table td.holiday:not(.disabled) {
+  background: var(--holiday-bg);
+  color: var(--primary);
+}
+
+/* 10. Vertical Dividers */
+.stats-table th,
+.stats-table td {
+  border-right: 1px solid var(--bg-light);
+}
+.stats-table th:last-child,
+.stats-table td:last-child {
+  border-right: none;
+}
+
+/* 11. Responsive */
+@media (max-width: 768px) {
+  .stats-table {
+    display: block;
+    overflow-x: auto;
+  }
+  .stats-table thead,
+  .stats-table tbody,
+  .stats-table th,
+  .stats-table td,
+  .stats-table tr {
+    display: block;
+  }
+  .stats-table thead {
+    display: none;
+  }
+  .stats-table tr {
+    margin-bottom: 1rem;
+  }
+  .stats-table td {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.75rem;
+    border: none;
+    border-bottom: 1px solid var(--divider);
+  }
+  .stats-table td::before {
+    content: attr(data-label);
+    font-weight: 500;
+    color: var(--muted);
+    margin-right: 0.75rem;
+  }
+}
