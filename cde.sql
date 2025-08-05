@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Aug 04, 2025 at 04:47 PM
+-- Generation Time: Aug 05, 2025 at 12:21 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -52,13 +52,7 @@ CREATE TABLE `notifications` (
 --
 
 INSERT INTO `notifications` (`id`, `sender_id`, `receiver_id`, `entry_date`, `created_at`, `is_read`) VALUES
-(5, 4, 1, '2025-08-01', '2025-08-03 11:07:53', 1),
-(6, 4, 1, '2025-08-01', '2025-08-03 11:21:46', 1),
-(7, 4, 1, '2025-08-03', '2025-08-03 11:22:42', 1),
-(8, 1, 4, '2025-07-01', '2025-08-04 02:00:12', 1),
-(9, 4, 1, '2025-08-04', '2025-08-04 03:03:47', 1),
-(10, 1, 4, '2025-08-04', '2025-08-04 11:27:08', 1),
-(11, 1, 4, '2025-08-04', '2025-08-04 11:27:11', 1);
+(12, 1, 4, '2025-07-31', '2025-08-05 03:25:07', 1);
 
 -- --------------------------------------------------------
 
@@ -81,7 +75,7 @@ CREATE TABLE `organizations` (
 --
 
 INSERT INTO `organizations` (`id`, `name`, `abbreviation`, `address`, `department`, `created_by`, `created_at`) VALUES
-(1, 'Công ty cổ phần Tư vấn miền Bắc', 'NCC', 'Tổ 5, khu 1, Phường Bãi Cháy, Tỉnh Quảng Ninh', 'Phòng thiết kế', 1, '2025-08-04 14:06:12');
+(1, 'CÔNG TY CỔ PHẦN TƯ VẤN MIỀN BẮC', 'NCC', 'Tổ 5, khu 1, Phường Bãi Cháy, Tỉnh Quảng Ninh', 'PHÒNG THIẾT KẾ', 1, '2025-08-04 14:06:12');
 
 -- --------------------------------------------------------
 
@@ -104,7 +98,7 @@ CREATE TABLE `organization_invitations` (
 --
 
 INSERT INTO `organization_invitations` (`id`, `organization_id`, `invited_user_email`, `token`, `status`, `sent_at`, `responded_at`) VALUES
-(6, 1, '', '934a83d3d54625fc9b6f004cc130edcd', 'accepted', '2025-08-04 14:29:08', '2025-08-04 14:43:48');
+(7, 1, '', '7ccbdb357e36873612651c88fedf3c08', 'pending', '2025-08-05 01:31:50', NULL);
 
 -- --------------------------------------------------------
 
@@ -127,7 +121,8 @@ CREATE TABLE `organization_members` (
 
 INSERT INTO `organization_members` (`id`, `organization_id`, `user_id`, `role`, `subscribed_id`, `joined_at`) VALUES
 (1, 1, 4, 'member', 1, '2025-08-04 14:29:26'),
-(2, 1, 5, 'member', 1, '2025-08-04 14:43:48');
+(2, 1, 5, 'member', 1, '2025-08-04 14:43:48'),
+(3, 1, 1, 'admin', 1, '2025-08-05 01:18:50');
 
 -- --------------------------------------------------------
 
@@ -153,7 +148,8 @@ CREATE TABLE `organization_member_profiles` (
 
 INSERT INTO `organization_member_profiles` (`member_id`, `full_name`, `expertise`, `position`, `dob`, `hometown`, `residence`, `phone`, `monthly_performance`) VALUES
 (1, 'Hoàng Văn Đoàn', 'Kỹ sư Kỹ thuật GT', 'NVTK', '2001-10-22', 'Ba Chẽ - Quảng Ninh', 'Phường Bãi Cháy', '0329.112.707', 1.10),
-(2, 'Nguyễn Tiến Thành', 'ThS. Quản lý xây dựng', 'Phó GĐ, TPTK', '1986-06-24', 'Khoái Châu - Hưng Yên', 'Phường Bãi Cháy', '0988.848.065', 1.18);
+(2, 'Nguyễn Tiến Thành', 'ThS. Quản lý xây dựng', 'Phó GĐ, TPTK', '1986-06-24', 'Khoái Châu - Hưng Yên', 'Phường Bãi Cháy', '0988.848.065', 1.18),
+(3, 'Phạm Mạnh Huy', 'ThS. Xây dựng đường ô tô', 'NVTK', '1996-04-04', 'Hải Phòng', 'Phường Hạ Long', '0888121496', 1.20);
 
 -- --------------------------------------------------------
 
@@ -406,9 +402,9 @@ INSERT INTO `work_diary_entries` (`user_id`, `entry_date`, `period`, `content`, 
 (1, '2025-07-30', 'morning', 'Sửa CDE nội bộ đã viết theo chuẩn mới', NULL, '2025-08-04 02:30:51', '2025-08-04 02:30:51'),
 (1, '2025-07-30', 'afternoon', 'Sửa CDE nội bộ đã viết theo chuẩn mới', NULL, '2025-08-04 02:30:51', '2025-08-04 02:30:51'),
 (1, '2025-07-30', 'evening', 'Nghỉ', NULL, '2025-08-04 02:30:51', '2025-08-04 02:30:51'),
-(1, '2025-07-31', 'morning', 'Nghỉ lễ', NULL, '2025-08-04 02:30:53', '2025-08-04 03:44:54'),
-(1, '2025-07-31', 'afternoon', 'Nghỉ lễ : Viết báo cáo giải trình thẩm định Làng Lốc', NULL, '2025-08-04 02:30:53', '2025-08-04 03:52:34'),
-(1, '2025-07-31', 'evening', 'Nghỉ', NULL, '2025-08-04 02:30:53', '2025-08-04 02:30:53'),
+(1, '2025-07-31', 'morning', 'Sửa CDE nội bộ đã viết theo chuẩn mới', NULL, '2025-08-05 03:24:58', '2025-08-05 03:24:58'),
+(1, '2025-07-31', 'afternoon', 'Viết báo cáo giải trình thẩm định Làng Lốc', NULL, '2025-08-05 03:24:58', '2025-08-05 03:24:58'),
+(1, '2025-07-31', 'evening', '17:00-19:30: Nghỉ', NULL, '2025-08-05 03:24:58', '2025-08-05 03:24:58'),
 (1, '2025-08-01', 'morning', 'Quy trình bảo trì cầu Làng Lốc, Khe Pụt', NULL, '2025-08-04 10:08:37', '2025-08-04 10:08:37'),
 (1, '2025-08-01', 'afternoon', 'Quy trình bảo trì cầu Làng Lốc, Khe Pụt', NULL, '2025-08-04 10:08:37', '2025-08-04 10:08:37'),
 (1, '2025-08-01', 'evening', 'Nghỉ', NULL, '2025-08-04 10:08:37', '2025-08-04 10:08:37'),
@@ -421,6 +417,9 @@ INSERT INTO `work_diary_entries` (`user_id`, `entry_date`, `period`, `content`, 
 (1, '2025-08-04', 'morning', 'Cập nhật tính năng thống kê Nhật ký công việc\r\nViết giải trình thẩm định Khe Pụt', NULL, '2025-08-04 10:09:35', '2025-08-04 10:09:35'),
 (1, '2025-08-04', 'afternoon', 'Cập nhật tính năng thống kê Nhật ký công việc', NULL, '2025-08-04 10:09:35', '2025-08-04 10:09:35'),
 (1, '2025-08-04', 'evening', '17:00-19:30: Nghỉ', NULL, '2025-08-04 10:09:36', '2025-08-04 10:09:36'),
+(1, '2025-08-05', 'morning', 'Hoàn thiện tính năng thống kê nhật ký công việc theo cá nhân\r\nHoàn thiện tính năng quản lý thông tin thành viên trong phòng', NULL, '2025-08-05 03:35:32', '2025-08-05 03:35:32'),
+(1, '2025-08-05', 'afternoon', 'Phát triển tính năng thống kê nhật ký công việc toàn bộ thành viên và xuất excel', NULL, '2025-08-05 03:35:32', '2025-08-05 03:35:32'),
+(1, '2025-08-05', 'evening', 'Nghỉ', NULL, '2025-08-05 03:35:32', '2025-08-05 03:35:32'),
 (4, '2025-08-01', 'morning', 'Sửa QTBT cầu Làng Lốc, Khe Pụt', NULL, '2025-08-04 03:02:42', '2025-08-04 03:02:42'),
 (4, '2025-08-01', 'afternoon', 'Sửa QTBT cầu Làng Lốc, Khe Pụt', NULL, '2025-08-04 03:02:42', '2025-08-04 03:02:42'),
 (4, '2025-08-01', 'evening', 'Nghỉ', NULL, '2025-08-04 03:02:42', '2025-08-04 03:02:42'),
@@ -535,7 +534,7 @@ ALTER TABLE `companies`
 -- AUTO_INCREMENT for table `notifications`
 --
 ALTER TABLE `notifications`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT for table `organizations`
@@ -547,13 +546,13 @@ ALTER TABLE `organizations`
 -- AUTO_INCREMENT for table `organization_invitations`
 --
 ALTER TABLE `organization_invitations`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `organization_members`
 --
 ALTER TABLE `organization_members`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `subscriptions`
