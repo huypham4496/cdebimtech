@@ -446,6 +446,242 @@ $sh2->getStyle('A8')
     ->getFont()
     ->setSize(11)
     ->setBold(true);
+ // --- Bắt đầu từ hàng 9: lấy dữ liệu user cho Buổi tối (T2–CN) ---
+$dataStartRow = 9;
+$daysInMonth  = (int)date('t', strtotime($startDate));
+
+foreach ($members as $i => $m) {
+    $row = $dataStartRow + $i;
+
+    // STT, Họ và tên, Chức vụ
+    $sh2->setCellValue("A{$row}", $i + 1);
+    $sh2->setCellValue("B{$row}", $m['full_name']);
+    $sh2->setCellValue("C{$row}", $m['position']);
+
+    // Fetch entries và lọc Buổi tối
+    $ents    = fetchEntries($m['id'], $startDate, $endDate);
+    $evening = [];
+    foreach ($ents as $e) {
+        if ($e['period'] === 'evening') {
+            $dStr = (new DateTime($e['entry_date']))->format('Y-m-d');
+            $evening[$dStr] = 'K/2';
+        }
+    }
+
+    // Điền vào cột D→AH (ngày 1→$daysInMonth)
+    for ($d = 1; $d <= $daysInMonth; $d++) {
+        $col   = Coordinate::stringFromColumnIndex(3 + $d);  // D=4 => d=1→col=4
+        $date  = sprintf('%04d-%02d-%02d', $year, $month, $d);
+        $sh2->setCellValue("{$col}{$row}", $evening[$date] ?? '');
+    }
+}
+// 1) Dòng “Tổng cộng:” ngay dưới cùng của dữ liệu buổi tối
+$totalRow = $lastDataRow + 1;
+$sh2->setCellValue("B{$totalRow}", 'Tổng cộng:');
+$sh2->getStyle("B{$totalRow}")
+    ->getFont()
+    ->setBold(true);
+
+// Công thức tổng cho cột D→AH (ngày 1→$daysInMonth)
+for ($d = 1; $d <= $daysInMonth; $d++) {
+    $col = Coordinate::stringFromColumnIndex(3 + $d);
+    $sh2->setCellValue("{$col}{$totalRow}", 
+        sprintf('=SUM(%s%d:%s%d)',
+            $col, $dataStartRow,
+            $col, $lastDataRow
+        )
+    );
+}
+
+// --- 2) Dòng sau đó: merge A→AN, ghi “Chiều thứ 7 + Chủ Nhật + Ngày lễ” ---
+$labelRow = $totalRow + 1;
+$sh2->mergeCells("A{$labelRow}:AN{$labelRow}")
+    ->setCellValue("A{$labelRow}", 'Chiều thứ 7 + Chủ Nhật + Ngày lễ');
+
+// Canh giữa ngang & dọc, font size 11, bold
+$sh2->getStyle("A{$labelRow}")
+    ->getAlignment()
+        ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+        ->setVertical(Alignment::VERTICAL_CENTER);
+$sh2->getStyle("A{$labelRow}")
+    ->getFont()
+        ->setSize(11)
+        ->setBold(true);
+
+// --- 3) Đổ dữ liệu phần “Chiều T7, CN & Ngày lễ” ---
+$weekendDataStart   = $labelRow + 1;
+$weekendLastDataRow = $weekendDataStart + count($members) - 1;
+
+foreach ($members as $i => $m) {
+    $r = $weekendDataStart + $i;
+    // STT, Họ tên, Chức vụ
+    $sh2->setCellValue("A{$r}", $i + 1);
+    $sh2->setCellValue("B{$r}", $m['full_name']);
+    $sh2->setCellValue("C{$r}", $m['position']);
+
+    // Lấy entries & lọc chiều cuối tuần
+    $ents    = fetchEntries($m['id'], $startDate, $endDate);
+    $weekend = [];
+    foreach ($ents as $e) {
+        $wd = (int) date('N', strtotime($e['entry_date']));
+        if ($e['period'] === 'afternoon' && ($wd === 6 || $wd === 7)) {
+            $dStr = (new DateTime($e['entry_date']))->format('Y-m-d');
+            $weekend[$dStr] = 'K/2';
+        }
+    }
+    // Ghi vào D→AH
+    for ($d = 1; $d <= $daysInMonth; $d++) {
+        $col  = Coordinate::stringFromColumnIndex(3 + $d);
+        $date = sprintf('%04d-%02d-%02d', $year, $month, $d);
+        $sh2->setCellValue("{$col}{$r}", $weekend[$date] ?? '');
+    }
+}
+
+// --- 4) Dòng “Tổng cộng” cho phần chiều cuối tuần ---
+$weekendTotalRow = $weekendLastDataRow + 1;
+$sh2->setCellValue("B{$weekendTotalRow}", 'Tổng cộng:');
+$sh2->getStyle("B{$weekendTotalRow}")
+    ->getFont()
+        ->setBold(true);
+// Xác định lastRow tương ứng với dòng “Tổng cộng” cuối cùng
+$lastRow = $weekendTotalRow;
+// 1) Định nghĩa $endRow dựa trên dòng Tổng cộng
+$endRow = $weekendTotalRow;
+// 1) Đặt cỡ chữ 10 cho tất cả nội dung giữa header và tổng cộng
+$startContentRow = 9;
+$endContentRow   = $endRow - 1;  // trước dòng Tổng cộng
+$sh2->getStyle("A{$startContentRow}:AN{$endContentRow}")
+    ->getFont()->setSize(10);
+
+// 2) Căn giữa toàn bộ dòng “Tổng cộng” (hàng $endRow)
+$sh2->getStyle("A{$endRow}:AN{$endRow}")
+    ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+// 2) Wrap text cho toàn bộ vùng A5:AN{$endRow}
+$sh2->getStyle("A5:AN{$endRow}")
+    ->getAlignment()
+        ->setWrapText(true);
+
+// 3) Cột A (A5→A{$endRow}): căn giữa & đậm
+$sh2->getStyle("A5:A{$endRow}")
+    ->getAlignment()
+        ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+        ->setVertical(Alignment::VERTICAL_CENTER);
+$sh2->getStyle("A5:A{$endRow}")
+    ->getFont()
+        ->setBold(true);
+// 4) Cột B (B5→B{$endRow}): in đậm
+$sh2->getStyle("B5:B{$endRow}")
+    ->getFont()
+        ->setBold(true);
+// 1) Thiết lập các dòng comment giống Sheet 1
+$commentRow1 = $lastRow + 2;
+$commentRow2 = $lastRow + 3;
+// Dòng merge trống
+$commentRow3 = $lastRow + 6;
+// Dòng “Ký hiệu chấm công:”
+$codeRow     = $commentRow3 + 1;
+
+// Dòng 1: tiêu đề ký duyệt (chuyển sang $sh2)
+$sh2->setCellValue("B{$commentRow1}", 'Người chấm công');
+$sh2->mergeCells("R{$commentRow1}:W{$commentRow1}")
+    ->setCellValue("R{$commentRow1}", 'Phụ trách bộ phận');
+$sh2->mergeCells("AK{$commentRow1}:AN{$commentRow1}")
+    ->setCellValue("AK{$commentRow1}", 'Người duyệt');
+$sh2->getStyle("B{$commentRow1}:AN{$commentRow1}")->getFont()->setBold(true);
+$sh2->getStyle("B{$commentRow1}:AN{$commentRow1}")->getAlignment()
+    ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+    ->setVertical(Alignment::VERTICAL_CENTER);
+
+// Dòng 2: ký tên (nghiêng)
+$sh2->setCellValue("B{$commentRow2}", '(Ký, họ tên)');
+$sh2->mergeCells("R{$commentRow2}:W{$commentRow2}")
+    ->setCellValue("R{$commentRow2}", '(Ký, họ tên)');
+$sh2->mergeCells("AK{$commentRow2}:AN{$commentRow2}")
+    ->setCellValue("AK{$commentRow2}", '(Ký, họ tên)');
+$sh2->getStyle("B{$commentRow2}:AN{$commentRow2}")->getFont()->setItalic(true);
+$sh2->getStyle("B{$commentRow2}:AN{$commentRow2}")->getAlignment()
+    ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+    ->setVertical(Alignment::VERTICAL_CENTER);
+
+// Dòng 3: merge R–W & AK–AN, giữ đậm, center
+$sh2->mergeCells("R{$commentRow3}:W{$commentRow3}");
+$sh2->mergeCells("AK{$commentRow3}:AN{$commentRow3}");
+$sh2->getStyle("R{$commentRow3}:AN{$commentRow3}")->getFont()->setBold(true);
+$sh2->getStyle("R{$commentRow3}:AN{$commentRow3}")->getAlignment()
+    ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+    ->setVertical(Alignment::VERTICAL_CENTER);
+
+// Dòng 4: merge B–K, left, đậm, ghi 'Ký hiệu chấm công:'
+$sh2->mergeCells("B{$codeRow}:K{$codeRow}")
+    ->setCellValue("B{$codeRow}", 'Ký hiệu chấm công:');
+$sh2->getStyle("B{$codeRow}:K{$codeRow}")->getFont()->setBold(true);
+$sh2->getStyle("B{$codeRow}:K{$codeRow}")->getAlignment()
+    ->setHorizontal(Alignment::HORIZONTAL_LEFT)
+    ->setVertical(Alignment::VERTICAL_CENTER);
+
+// Dòng tiếp theo: liệt kê các mục ở cột B và C
+$itemsB = [
+    'Lương SP:', 'Lương thời gian:', 'Ốm, điều dưỡng:',
+    'Con ốm:', 'Thai sản:', 'Tai nạn:'
+];
+$itemsC = ['SP:', '+', 'Ô', 'Cô', 'TS', 'T'];
+$startItemRow = $codeRow + 1;
+foreach ($itemsB as $i => $text) {
+    $sh2->setCellValue("B" . ($startItemRow + $i), $text);
+}
+foreach ($itemsC as $i => $text) {
+    $sh2->setCellValue("C" . ($startItemRow + $i), $text);
+}
+
+// Dòng tiếp theo: liệt kê các mục nghỉ ở E–K
+$negItems = [
+    'Nghỉ phép:', 'Hội nghị, học tập:', 'Nghỉ bù:',
+    'Nghỉ không lương:', 'Ngừng việc:', 'Lao động nghĩa vụ:'
+];
+foreach ($negItems as $i => $text) {
+    $r = $startItemRow + $i;
+    $sh2->mergeCells("E{$r}:K{$r}")
+        ->setCellValue("E{$r}", $text);
+    $sh2->getStyle("E{$r}:K{$r}")->getAlignment()
+        ->setHorizontal(Alignment::HORIZONTAL_LEFT)
+        ->setVertical(Alignment::VERTICAL_CENTER);
+}
+
+// Dòng tiếp theo: liệt kê các mã ở cột L
+$codes = ['P', 'H', 'NB', 'KL', 'N', 'LĐ'];
+foreach ($codes as $i => $text) {
+    $sh2->setCellValue("L" . ($startItemRow + $i), $text);
+}
+// Công thức SUM cho D→AH
+for ($d = 1; $d <= $daysInMonth; $d++) {
+    $col = Coordinate::stringFromColumnIndex(3 + $d);
+    $sh2->setCellValue(
+        "{$col}{$weekendTotalRow}",
+        sprintf('=SUM(%s%d:%s%d)',
+            $col, $weekendDataStart,
+            $col, $weekendLastDataRow
+        )
+    );
+}
+// 5) Đóng border toàn bộ vùng từ A5 đến AN (dòng Tổng cộng cuối cùng)
+$endRow   = $weekendTotalRow;
+$range    = "A5:AN{$endRow}";
+$borderStyle = [
+    'borders' => [
+        'allBorders' => [
+            'borderStyle' => Border::BORDER_THIN,
+            'color' => ['argb' => '000000'],
+        ],
+    ],
+];
+
+$sh2->getStyle($range)->applyFromArray($borderStyle);
+// --- Wrap text cho toàn bộ vùng từ A5 đến AN dòng Tổng cộng ---
+$endRow = $weekendTotalRow;  // biến đã xác định ở bước trước
+$wrapRange = "A5:AN{$endRow}";
+$sh2->getStyle($wrapRange)
+    ->getAlignment()
+        ->setWrapText(true);
 // 8) Quay lại Sheet1
 $ss->setActiveSheetIndex(0);
 $month = date('m');
