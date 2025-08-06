@@ -41,7 +41,7 @@ $orgName = strtoupper($org['name'] ?? '');
 $dept    = strtoupper($org['department'] ?? '');
 
 $stmt = $pdo->prepare(
-    "SELECT u.id, COALESCE(p.full_name,u.email) AS full_name
+    "SELECT u.id, COALESCE(p.full_name,u.email) AS full_name, p.position AS position
      FROM organization_members m
        JOIN users u ON u.id = m.user_id
        LEFT JOIN organization_member_profiles p ON p.member_id=m.id
@@ -70,7 +70,7 @@ $daysInMonth = (int)date('t', strtotime($startDate));
 $ss = new Spreadsheet();
 $ss->getDefaultStyle()->getFont()->setName('Times New Roman');
 $ss->getProperties()
-   ->setTitle('Bảng chấm công')
+   ->setTitle('BẢNG CHẤM CÔNG SN PHẨM')
    ->setCreator($_SESSION['user']['email'] ?? '')
    ->setCreated(time());
 
@@ -124,7 +124,7 @@ function initSheet($ss, $index, $title) {
     $sh->mergeCells('L2:AH2')->setCellValue('L2', $title);
     $s = $sh->getStyle('L2');
     $s->getFont()->setSize(22)->setBold(true);
-    $s->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+    $s->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
 
     $sh->mergeCells('AI2:AN2')->setCellValue('AI2', 'Mẫu số: 01a - LĐTL (QĐ 48/2006/QĐ-BTC 14/9/2006)');
     $s = $sh->getStyle('AI2');
@@ -137,9 +137,9 @@ function initSheet($ss, $index, $title) {
     $s->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
     // Table header rows 5-6
-    $sh->mergeCells('A5:A6')->setCellValue('A5','STT');
+    $sh->mergeCells('A5:A6')->setCellValue('A5','TT');
     $sh->mergeCells('B5:B6')->setCellValue('B5','Họ và tên');
-    $sh->mergeCells('C5:C6')->setCellValue('C5','Ngạch, bậc');
+    $sh->mergeCells('C5:C6')->setCellValue('C5','Ngạch, bậc lương hoặc cấp bậc chức vụ');
     // Căn giữa cả ô A5, B5, C5
     $sh->getStyle('A5:C5')->getAlignment()
         ->setHorizontal(Alignment::HORIZONTAL_CENTER)
@@ -161,7 +161,7 @@ function initSheet($ss, $index, $title) {
     // Quy ra công header
     $sh->mergeCells('AI5:AN5')->setCellValue('AI5','Quy ra công');
     $sh->getStyle('AI5')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-    $labels = ['SP','SP CN','TG','Nghỉ100%','Nghỉ…%','BHXH'];
+    $labels = ['Số công hưởng lương sản phẩm','Số công hưởng thời gian','Số công nghỉ việc, ngừng việc hưởng 100% lương','Số công nghỉ việc, ngừng việc hưởng ...... lương','Số công hưởng BHXH','Hệ số thành tích tháng'];
     foreach ($labels as $k => $v) {
         $c = Coordinate::stringFromColumnIndex(35 + $k);
         $sh->setCellValue("{$c}6", $v);
@@ -171,13 +171,13 @@ function initSheet($ss, $index, $title) {
 }
 
 // Sheet1
-$sh1 = initSheet($ss, 0, 'Bảng chấm công sản phẩm');
+$sh1 = initSheet($ss, 0, 'BẢNG CHẤM CÔNG SẢN PHẨM');
 $row = 8;
 foreach ($members as $idx => $m) {
     $sh1->setCellValue("A{$row}", $idx + 1);
     $sh1->setCellValue("B{$row}", $m['full_name']);
-    $sh1->setCellValue("C{$row}", '');
-
+    // Ngạch, bậc lương hoặc cấp bậc chức vụ (cột C)
+    $sh1->setCellValue("C{$row}", $m['position']);
     $ents = fetchEntries($m['id'], $startDate, $endDate);
     $work = []; $even = [];
     foreach ($ents as $r) {
@@ -229,13 +229,53 @@ foreach ($members as $idx => $m) {
     }
     $row++;
 }
+// Thêm dòng Tổng
+$totalRow = $row;
+$sh1->setCellValue("B{$totalRow}", "TỔNG CỘNG");
+// Style cho chữ Tổng: cỡ 11, đậm, căn giữa cả ngang & dọc
+$styleTotal = $sh1->getStyle("B{$totalRow}");
+$styleTotal->getFont()->setSize(11)->setBold(true);
+$styleTotal->getAlignment()
+    ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+    ->setVertical(Alignment::VERTICAL_CENTER);
+// Xác định hàng dữ liệu đầu và cuối
+$dataStartRow = 5;
+$dataEndRow   = $totalRow - 1;
 
+// Ghi công thức SUM cho các cột AI→AM trên hàng Tổng
+foreach (['AI', 'AJ', 'AK', 'AL', 'AM'] as $col) {
+    // Ví dụ: =SUM(AI5:AI12) nếu $dataEndRow là 12
+    $sh1->setCellValue(
+        "{$col}{$totalRow}",
+        "=SUM({$col}{$dataStartRow}:{$col}{$dataEndRow})"
+    );
+    // In đậm kết quả
+    $sh1->getStyle("{$col}{$totalRow}")
+        ->getFont()->setBold(true);
+}
+// Cập nhật lại lastRow để bao gồm cả dòng Tổng
 /// Đóng border và set font size cho bảng
-$lastRow = $row - 1;
+$lastRow = $totalRow;
+// --- Chèn 1 dòng trống ngay dưới dòng Tổng ---
+$row++;
 $range = "A5:AN{$lastRow}";
 $sh1->getStyle($range)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
 $sh1->getStyle("A7:AN{$lastRow}")->getFont()->setSize(10);
 $sh1->getStyle($range)->getAlignment()->setWrapText(true);
+// Tính hàng bắt đầu và kết thúc của dữ liệu TT
+$firstDataRow = 7;
+$lastDataRow  = $row - 1;  // $row đã đếm xong, nên row-1 là dòng cuối
+
+// In đậm & căn giữa cột A từ hàng 7 tới hàng cuối dữ liệu
+$sh1->getStyle("A{$firstDataRow}:A{$lastDataRow}")
+    ->getFont()->setBold(true);
+$sh1->getStyle("A{$firstDataRow}:A{$lastDataRow}")
+    ->getAlignment()
+        ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+        ->setVertical(Alignment::VERTICAL_CENTER);
+// --- TIẾP THEO: Bold cột Họ và tên (B) ---
+$sh1->getStyle("B{$firstDataRow}:B{$lastDataRow}")
+    ->getFont()->setBold(true);
 // Thêm ký duyệt và các mục dưới bảng
 $commentRow1 = $lastRow + 2;
 $commentRow2 = $lastRow + 3;
@@ -313,13 +353,13 @@ $negItems = [
 foreach ($negItems as $i => $text) {
     $r = $startItemRow + $i; 
     // cùng phạm vi với Lương SP items
-    $sh1->mergeCells("E{$r}:J{$r}")->setCellValue("E{$r}", $text);
-    $sh1->getStyle("E{$r}:J{$r}")
+    $sh1->mergeCells("E{$r}:K{$r}")->setCellValue("E{$r}", $text);
+    $sh1->getStyle("E{$r}:K{$r}")
         ->getAlignment()
             ->setHorizontal(Alignment::HORIZONTAL_LEFT)
             ->setVertical(Alignment::VERTICAL_CENTER);
 }
-        // Dòng tiếp theo: liệt kê các mục ở cột C
+        // Dòng tiếp theo: liệt kê các mục ở cột L
 $items = [
     'P',
     'H',
@@ -330,15 +370,89 @@ $items = [
 ];
 $startItemRow = $codeRow + 1;
 foreach ($items as $i => $text) {
-    $sh1->setCellValue("K" . ($startItemRow + $i), $text);
+    $sh1->setCellValue("L" . ($startItemRow + $i), $text);
 }
-// Sheet2
-$sh2 = initSheet($ss, 1, 'BẢNG CHẤM CÔNG LÀM THÊM GIỜ');
-// TODO: tương tự cho sheet2
+// --- Khởi tạo Sheet 2 ---
+// --- Khởi tạo Sheet 2 và copy A1:AN6 như đã hướng dẫn ---
+$sh2 = initSheet($ss, 1, 'LÀM THÊM CUỐI TUẦN');
+$src = $ss->getSheet(0);
+// (Copy column widths, row heights, merges, styles cho A1:AN6 – code như trước đây)
 
+// --- Điều chỉnh nhãn AI5–AN6 ---
+$sh2->mergeCells('AI5:AN5')
+    ->setCellValue('AI5', 'Quy ra công');
+$sh2->getStyle('AI5')
+    ->getAlignment()
+    ->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+$labels2 = [
+    'Số công hưởng lương sản phẩm',
+    'Số công hưởng lương sản phẩm CN',
+    'Số công hưởng thời gian',
+    'Số công nghỉ việc hưởng 100% lương',
+    'Số công nghỉ việc,  hưởng ...... lương',
+    'Số công hưởng BHXH',
+];
+$startColIdx = Coordinate::columnIndexFromString('AI');
+foreach ($labels2 as $i => $text) {
+    $col  = Coordinate::stringFromColumnIndex($startColIdx + $i);
+    $cell = $col . '6';
+    $sh2->setCellValue($cell, $text);
+    $sh2->getStyle($cell)
+        ->getAlignment()
+        ->setHorizontal(Alignment::HORIZONTAL_CENTER);
+}
+
+// --- Row 7: tiêu đề khung dữ liệu ---
+// A7, B7, C7 lần lượt là 'A', 'B', 'C'
+$sh2->setCellValue('A7', 'A');
+$sh2->setCellValue('B7', 'B');
+$sh2->setCellValue('C7', 'C');
+
+// D7→AH7: ghi thứ trong tuần tương ứng với mỗi ngày
+$daysInMonth = (int)date('t', strtotime($startDate));
+$dowMap = [
+    1 => 'T2', 2 => 'T3', 3 => 'T4', 4 => 'T5',
+    5 => 'T6', 6 => 'T7', 7 => 'CN',
+];
+for ($d = 1; $d <= $daysInMonth; $d++) {
+    $dateStr = sprintf('%04d-%02d-%02d', $year, $month, $d);
+    $weekday = (int)date('N', strtotime($dateStr)); // 1=Mon...7=Sun
+    $label   = $dowMap[$weekday];
+    $col     = Coordinate::stringFromColumnIndex(3 + $d); // D is 4 => d=1→col=4
+    $sh2->setCellValue("{$col}7", $label);
+}
+
+// AI7→AN7: ghi lần lượt 'D', 'E', 'F', 'G', 'H', 'I'
+$extraLabels = ['D','E','F','G','H','I'];
+$startExtra   = Coordinate::columnIndexFromString('AI');
+foreach ($extraLabels as $i => $lbl) {
+    $col = Coordinate::stringFromColumnIndex($startExtra + $i);
+    $sh2->setCellValue("{$col}7", $lbl);
+}
+$range = 'A7:AN7';
+$sh2->getStyle($range)
+    ->getAlignment()
+    ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+    ->setVertical(Alignment::VERTICAL_CENTER);
+// --- Row 8: Merge A8:AN8, center, font size 11, bold, text "Làm tối" ---
+$sh2->mergeCells('A8:AN8')
+    ->setCellValue('A8', 'Làm tối');
+$sh2->getStyle('A8')
+    ->getAlignment()
+    ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+    ->setVertical(Alignment::VERTICAL_CENTER);
+$sh2->getStyle('A8')
+    ->getFont()
+    ->setSize(11)
+    ->setBold(true);
+// 8) Quay lại Sheet1
+$ss->setActiveSheetIndex(0);
+$month = date('m');
+$year  = date('Y');
 // Xuất file
 header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-header('Content-Disposition: attachment;filename="thong_ke_to_{$orgId}_{$month}_{$year}.xlsx"');
+header('Content-Disposition: attachment;filename="Bảng chấm công tháng ' . $month . ' năm ' . $year . '.xlsx"');
 header('Cache-Control: max-age=0');
 $writer = new Xlsx($ss);
 $writer->save('php://output');
