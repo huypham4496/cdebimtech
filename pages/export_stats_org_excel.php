@@ -181,34 +181,54 @@ foreach ($members as $idx => $m) {
     $sh1->setCellValue("B{$row}", $m['full_name']);
     // Ngạch, bậc lương hoặc cấp bậc chức vụ (cột C)
     $sh1->setCellValue("C{$row}", $m['position']);
-    $ents = fetchEntries($m['id'], $startDate, $endDate);
-    $work = []; $even = [];
-    foreach ($ents as $r) {
-        $d = (new DateTime($r['entry_date']))->format('Y-m-d');
-        $c = trim($r['content']);
-        if (stripos($c, 'evening') !== false) {
-            $even[$d] = 'K/2';
-        } elseif (preg_match('/^(Ngày lễ|Nghỉ lễ)\b/iu', $c)) {
-            $work[$d] = [];
-        } else {
-            $work[$d][] = $r['period'];
-        }
+$ents = fetchEntries($m['id'], $startDate, $endDate);
+$work = [];
+$mixedHoliday = [];  // dùng cho “Nghỉ lễ:” có nội dung vẫn tính làm
+
+foreach ($ents as $r) {
+    $date = (new DateTime($r['entry_date']))->format('Y-m-d');
+    $c     = trim($r['content']);
+    // 1) Bỏ phiên evening khỏi Sheet 1 (để Sheet 2 xử lý)
+    if ($r['period'] === 'evening') {
+        continue;
     }
+    // 2) Nếu đúng “Nghỉ” (chính xác) thì bỏ qua
+    if (preg_match('/^\s*Nghỉ\s*$/iu', $c)) {
+        continue;
+    }
+    // 3) Nếu là “Nghỉ lễ:” có nội dung phía sau thì coi như đi làm
+    if (preg_match('/^\s*(Nghỉ lễ)[\s:]+/iu', $c)) {
+        $mixedHoliday[$date][] = $r['period'];
+        continue;
+    }
+    // 4) Bình thường – ghi morning/afternoon vào $work
+    $work[$date][] = $r['period'];
+}
     for ($i = 1; $i <= $daysInMonth; $i++) {
         $date = sprintf('%04d-%02d-%02d', $year, $month, $i);
         $wd = (int)date('N', strtotime($date));
         $val = '';
-        if (isset($even[$date])) {
-            $val = $even[$date];
-        } elseif (isset($work[$date])) {
-            $morn = in_array('morning', $work[$date], true);
-            $aft  = in_array('afternoon', $work[$date], true);
-            if ($wd === 6) {
-                $val = $morn ? 'K/2' : '';
-            } elseif ($wd !== 7) {
-                $val = $morn && $aft ? 'K' : ($morn || $aft ? 'K/2' : '');
-            }
-        }
+$val = '';
+// chỉ xét từ Thứ 2 (1) đến Thứ 7 (6)
+$val = '';
+if ($wd >= 1 && $wd <= 5) {
+    // Thứ 2–Thứ 6: tính cả morning & afternoon
+    $hasM = (isset($work[$date]) && in_array('morning',   $work[$date], true))
+          || (empty($work[$date]) && isset($mixedHoliday[$date]) && in_array('morning',   $mixedHoliday[$date], true));
+    $hasA = (isset($work[$date]) && in_array('afternoon', $work[$date], true))
+          || (empty($work[$date]) && isset($mixedHoliday[$date]) && in_array('afternoon', $mixedHoliday[$date], true));
+    if ($hasM || $hasA) {
+        $val = ($hasM && $hasA) ? 'SP' : 'SP/2';
+    }
+}
+elseif ($wd === 6) {
+    // Thứ 7: chỉ xét buổi sáng
+    $hasM = (isset($work[$date]) && in_array('morning', $work[$date], true))
+          || (empty($work[$date]) && isset($mixedHoliday[$date]) && in_array('morning', $mixedHoliday[$date], true));
+    if ($hasM) {
+        $val = 'SP/2';
+    }
+}
         $col = Coordinate::stringFromColumnIndex(3 + $i);
         $sh1->setCellValue("{$col}{$row}", $val);
         // Công thức tính tổng công cho mỗi dòng
@@ -593,12 +613,19 @@ foreach ($members as $i => $m) {
     // Fetch entries và lọc Buổi tối
     $ents    = fetchEntries($m['id'], $startDate, $endDate);
     $evening = [];
-    foreach ($ents as $e) {
-        if ($e['period'] === 'evening') {
-            $dStr = (new DateTime($e['entry_date']))->format('Y-m-d');
-            $evening[$dStr] = 'K/2';
-        }
+$evening = [];
+foreach ($ents as $e) {
+    $date = (new DateTime($e['entry_date']))->format('Y-m-d');
+    $c    = trim($e['content']);
+    // bỏ “Nghỉ” chính xác
+    if (preg_match('/^\s*Nghỉ\s*$/iu', $c)) {
+        continue;
     }
+    // mọi phiên evening (kể cả “Nghỉ lễ:” có nội dung) tính SP/2
+    if ($e['period'] === 'evening') {
+        $evening[$date] = 'SP/2';
+    }
+}
 
     // Điền vào cột D→AH (ngày 1→$daysInMonth)
     for ($d = 1; $d <= $daysInMonth; $d++) {
@@ -650,19 +677,41 @@ foreach ($members as $i => $m) {
     // Lấy entries & lọc chiều cuối tuần
     $ents    = fetchEntries($m['id'], $startDate, $endDate);
     $weekend = [];
-    foreach ($ents as $e) {
-        $wd = (int) date('N', strtotime($e['entry_date']));
-        if ($e['period'] === 'afternoon' && ($wd === 6 || $wd === 7)) {
-            $dStr = (new DateTime($e['entry_date']))->format('Y-m-d');
-            $weekend[$dStr] = 'K/2';
+$weekendWork = [];
+foreach ($ents as $e) {
+    $date = (new DateTime($e['entry_date']))->format('Y-m-d');
+    $c    = trim($e['content']);
+    // bỏ “Nghỉ” chính xác
+    if (preg_match('/^\s*Nghỉ\s*$/iu', $c)) {
+        continue;
+    }
+    $wd = (int) date('N', strtotime($e['entry_date']));
+    if ($wd === 6 || $wd === 7) {
+        // lưu session morning/afternoon trên weekend
+        $weekendWork[$date][] = $e['period'];
+    }
+}
+    // Ghi vào D→AH
+for ($d = 1; $d <= $daysInMonth; $d++) {
+    $col     = Coordinate::stringFromColumnIndex(3 + $d);
+    $dateStr = sprintf('%04d-%02d-%02d', $year, $month, $d);
+    $wd      = (int) date('N', strtotime($dateStr));
+    $val     = '';
+    if ($wd === 6) {
+        // Thứ 7 chỉ xét buổi chiều
+        if (isset($weekendWork[$dateStr]) && in_array('afternoon', $weekendWork[$dateStr], true)) {
+            $val = 'SP/2';
+        }
+    } elseif ($wd === 7) {
+        // Chủ Nhật xét cả sáng + chiều
+        if (isset($weekendWork[$dateStr])) {
+            $hasM = in_array('morning',   $weekendWork[$dateStr], true);
+            $hasA = in_array('afternoon', $weekendWork[$dateStr], true);
+            $val  = ($hasM && $hasA) ? 'SP' : 'SP/2';
         }
     }
-    // Ghi vào D→AH
-    for ($d = 1; $d <= $daysInMonth; $d++) {
-        $col  = Coordinate::stringFromColumnIndex(3 + $d);
-        $date = sprintf('%04d-%02d-%02d', $year, $month, $d);
-        $sh2->setCellValue("{$col}{$r}", $weekend[$date] ?? '');
-    }
+    $sh2->setCellValue("{$col}{$r}", $val);
+}
 }
 for ($d = 1; $d <= $daysInMonth; $d++) {
     $dateStr = sprintf('%04d-%02d-%02d', $year, $month, $d);
