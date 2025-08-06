@@ -231,7 +231,7 @@ foreach ($members as $idx => $m) {
 }
 // Thêm dòng Tổng
 $totalRow = $row;
-$sh1->setCellValue("B{$totalRow}", "TỔNG CỘNG");
+$sh1->setCellValue("B{$totalRow}", "TỔNG CỘNG:");
 // Style cho chữ Tổng: cỡ 11, đậm, căn giữa cả ngang & dọc
 $styleTotal = $sh1->getStyle("B{$totalRow}");
 $styleTotal->getFont()->setSize(11)->setBold(true);
@@ -477,7 +477,7 @@ foreach ($members as $i => $m) {
 }
 // 1) Dòng “Tổng cộng:” ngay dưới cùng của dữ liệu buổi tối
 $totalRow = $lastDataRow + 1;
-$sh2->setCellValue("B{$totalRow}", 'Tổng cộng:');
+$sh2->setCellValue("B{$totalRow}", 'TỔNG CỘNG:');
 $sh2->getStyle("B{$totalRow}")
     ->getFont()
     ->setBold(true);
@@ -539,7 +539,7 @@ foreach ($members as $i => $m) {
 
 // --- 4) Dòng “Tổng cộng” cho phần chiều cuối tuần ---
 $weekendTotalRow = $weekendLastDataRow + 1;
-$sh2->setCellValue("B{$weekendTotalRow}", 'Tổng cộng:');
+$sh2->setCellValue("B{$weekendTotalRow}", 'TỔNG CỘNG:');
 $sh2->getStyle("B{$weekendTotalRow}")
     ->getFont()
         ->setBold(true);
