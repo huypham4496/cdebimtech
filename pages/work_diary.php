@@ -284,6 +284,7 @@ include $root . '/includes/header.php';
 ?>
 <link rel="stylesheet" href="../assets/css/sidebar.css?v=<?= $vS ?>" />
 <link rel="stylesheet" href="../assets/css/work_diary.css?v=<?= $vD ?>" />
+<link rel="stylesheet" href="../assets/css/dashboard.css?v=<?php echo filemtime(__DIR__ . '/../assets/css/dashboard.css'); ?>">
 <link rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.2/css/all.min.css"
       crossorigin="anonymous"
