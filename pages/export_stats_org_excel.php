@@ -1028,14 +1028,21 @@ $b->getBottom()->setBorderStyle(Border::BORDER_THIN);
 $b->getVertical()->setBorderStyle(Border::BORDER_THIN);
 $b->getHorizontal()->setBorderStyle(Border::BORDER_THIN);
 
-// 8) Quay lại Sheet1
-$ss->setActiveSheetIndex(0);
-$month = date('m');
-$year  = date('Y');
-// Xuất file
+// Chuẩn bị tên file: in nguyên tháng và năm
+$filenameMonth = (int) $month;  // nếu $month = 7 thì sẽ in “7”
+$filenameYear  = (int) $year;
+
 header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-header('Content-Disposition: attachment;filename="Bảng chấm công tháng ' . $month . ' năm ' . $year . '.xlsx"');
+header(
+    'Content-Disposition: attachment;'
+  . 'filename="Bảng chấm công tháng '
+  . $filenameMonth
+  . ' năm '
+  . $filenameYear
+  . '.xlsx"'
+);
 header('Cache-Control: max-age=0');
+
 $writer = new Xlsx($ss);
 $writer->save('php://output');
 exit;
