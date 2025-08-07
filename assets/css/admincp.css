@@ -108,3 +108,90 @@
   background: #f0f0f0;
   font-weight: 600;
 }
+/* ===== Style cho nút Edit và Delete trên bảng user ===== */
+.admin-table .btn-edit,
+.admin-table .btn-delete {
+  font-size: 0.9rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  text-decoration: none;
+  transition: background 0.2s, transform 0.1s;
+  cursor: pointer;
+}
+
+/* nút Edit */
+.admin-table .btn-edit {
+  background: #4A90E2;
+  color: #fff;
+  border: none;
+}
+.admin-table .btn-edit:hover {
+  background: #3a78c2;
+  transform: translateY(-1px);
+}
+
+/* nút Delete */
+.admin-table .btn-delete {
+  background: #e74c3c;
+  color: #fff;
+  border: none;
+}
+.admin-table .btn-delete:hover {
+  background: #c0392b;
+  transform: translateY(-1px);
+}
+/* ===== Excel Actions Buttons ===== */
+.excel-actions {
+  margin: 1.5rem 0;
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+/* Base button */
+.excel-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.2rem;
+  font-size: 0.95rem;
+  border-radius: 4px;
+  text-decoration: none;
+  transition: background 0.2s, transform 0.1s;
+  cursor: pointer;
+}
+
+/* Export button */
+.excel-actions .btn-primary {
+  background: #4A90E2;
+  color: #fff;
+  border: none;
+}
+.excel-actions .btn-primary:hover {
+  background: #3a78c2;
+  transform: translateY(-1px);
+}
+
+/* Import button */
+.excel-actions .btn-secondary {
+  background: #6c757d;
+  color: #fff;
+  border: none;
+}
+.excel-actions .btn-secondary:hover {
+  background: #5a6268;
+  transform: translateY(-1px);
+}
+
+/* File-input label override (nếu dùng label tùy chỉnh) */
+.excel-actions form label.btn-secondary {
+  display: inline-flex;
+}
+
+/* Ẩn input file gốc */
+.excel-actions form input[type="file"] {
+  display: none;
+}
