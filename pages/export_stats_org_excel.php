@@ -769,14 +769,15 @@ for ($d = 1; $d <= $daysInMonth; $d++) {
             $val = 'SP/2';
         }
     }
-    elseif ($wd === 7) {
-        // Chủ Nhật: CN hoặc CN/2
-        if (!empty($weekendWork[$dateStr])) {
-            $hasM = in_array('morning',   $weekendWork[$dateStr], true);
-            $hasA = in_array('afternoon', $weekendWork[$dateStr], true);
-            $val  = ($hasM && $hasA) ? 'CN' : 'CN/2';
-        }
+elseif ($wd === 7) {
+    // Chủ Nhật: chỉ xét sáng và chiều, bỏ qua tối
+    $hasM = isset($weekendWork[$dateStr]) && in_array('morning',   $weekendWork[$dateStr], true);
+    $hasA = isset($weekendWork[$dateStr]) && in_array('afternoon', $weekendWork[$dateStr], true);
+    if ($hasM || $hasA) {
+        $val = ($hasM && $hasA) ? 'CN' : 'CN/2';
     }
+    // nếu chỉ có evening/night thì $val vẫn '' (không ghi CN/2)
+}
 
     $sh2->setCellValue("{$col}{$r}", $val);
 }
