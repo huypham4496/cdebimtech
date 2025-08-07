@@ -70,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
   <div class=\"invite-container\">
     <div class=\"invite-card\">
       <p>{$message}</p>
-      <a href=\"dashboard.php\">Go to Dashboard</a>
+      <a href=\"home.php\">Go to Home</a>
     </div>
   </div>
 </body>
