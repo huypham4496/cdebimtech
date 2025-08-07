@@ -49,9 +49,6 @@ if ($userId) {
       <li class="<?= $current=== 'projects.php' ? 'active' : '' ?>">
         <a href="projects.php"><i class="fas fa-project-diagram"></i> Projects</a>
       </li>
-      <li class="<?= $current=== 'meetings.php' ? 'active' : '' ?>">
-        <a href="meetings.php"><i class="fas fa-file-alt"></i> Meetings</a>
-      </li>
       <li class="<?= $current=== 'work_diary.php' ? 'active' : '' ?>">
         <a href="work_diary.php"><i class="fas fa-book"></i> Work Diary</a>
       </li>
