@@ -31,14 +31,14 @@ document.addEventListener('DOMContentLoaded', function() {
         timeInputs.forEach(i => i.disabled = false);
 
         if (on) {
-          const prefix = 'Nghỉ lễ: ';
+          const prefix = 'Nghỉ lễ ';
           if (!textarea.value.startsWith(prefix)) {
             textarea.value = prefix + textarea.value;
           }
           textarea.focus();
           textarea.setSelectionRange(textarea.value.length, textarea.value.length);
         } else {
-          textarea.value = textarea.value.replace(/^Nghỉ lễ:\s*/, '');
+          textarea.value = textarea.value.replace(/^Nghỉ lễ\s*/, '');
         }
       });
     });
