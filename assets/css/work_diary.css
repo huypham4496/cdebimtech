@@ -522,7 +522,7 @@ fieldset.entry-wrapper[disabled] input {
 /* Lock notification banner */
 .alert-abs.lock-message,
 .alert-abs { /* nếu dùng chung class alert-abs */
-  background-color: #e53e3e !important; /* đỏ tươi */
+  background-color: #3e94e5 !important; /* đỏ tươi */
   color: #fff !important;
   border: none !important;
 }
