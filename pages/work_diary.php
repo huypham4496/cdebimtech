@@ -16,6 +16,19 @@ if (!$userId) {
     header('Location: login.php');
     exit;
 }
+$autoload = __DIR__ . '/../vendor/autoload.php';
+if (!file_exists($autoload)) {
+    die('<p>Chưa cài PhpSpreadsheet. Vui lòng chạy <code>composer require phpoffice/phpspreadsheet</code></p>');
+}
+require_once $autoload;
+
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Worksheet\PageSetup;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
 $stmt = $pdo->prepare("SELECT first_name, last_name, company FROM users WHERE id = ?");
 $stmt->execute([$userId]);
 $user = $stmt->fetch();
@@ -52,7 +65,6 @@ $locked = (bool)$stmtLock->fetchColumn();
 // — Handle POST —
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-    // === Export Excel (HTML → .xls) ===
     if (isset($_POST['export_excel'])) {
         // 1) Fetch entries
         $stmt = $pdo->prepare(
@@ -72,105 +84,180 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $grouped[$r['entry_date']][$r['period']] = $r['content'];
         }
 
-        // 3) Send headers
-        header("Content-Type: application/vnd.ms-excel; charset=UTF-8");
-        header("Content-Disposition: attachment; filename=\"work_diary_{$month}_{$year}.xls\"");
+        // === Thuộc tính Excel ===
+    // 3) Send headers for .xlsx
+    header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    header("Content-Disposition: attachment; filename=\"Nhật ký công việc tháng_{$month}_{$year}.xlsx\"");
 
-        // 4) Output HTML → Excel
-        echo '<html xmlns:o="urn:schemas-microsoft-com:office:office" '
-           . 'xmlns:x="urn:schemas-microsoft-com:office:excel" '
-           . 'xmlns="http://www.w3.org/TR/REC-html40"><head>'
-           . '<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>'
-           . '<style>'
-           . 'body, table, th, td { font-family:"Times New Roman"; }'
-           . '@page{size:A4;margin:0.5in 0.25in 0.25in 0.75in;}'
-           . 'tr.title-row td{border:none;height:40px;vertical-align:middle;'
-             . 'font-size:13pt;font-weight:bold;text-align:center;}'
-           . 'table.data{width:100%;border-collapse:collapse;border:3px double #000;}'
-           . 'table.data tr.header-row th, table.data tr.data-row td{'
-           .   'border-top:thin dashed #000;'
-           .   'border-bottom:thin dashed #000;'
-           .   'border-left:thin solid #000;'
-           .   'border-right:thin solid #000;'
-           . '}'
-           . 'table.data tr.header-row th{'
-           .   'font-size:11pt;'
-           .   'font-weight:bold;'
-           .   'text-align:center;'
-           .   'height:40px;'
-           . '}'
-           . 'table.data tr.data-row td{'
-           .   'font-size:10pt;'
-           .   'white-space:normal;'
-           .   'word-wrap:break-word;'
-           . '}'
-           . '.signature{font-size:10pt;}'
-           . '.signature.bold{font-weight:bold;font-size:11pt;}'
-           . '.signature-block-table, .signature-block-table td{border:none;}'
-           . '</style>'
-           . '<!--[if gte mso 9]><xml>'
-           . '<x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet>'
-           . '<x:Name>Sheet1</x:Name><x:WorksheetOptions>'
-           . '<x:Print><x:FitWidth>1</x:FitWidth></x:Print>'
-           . '<x:FreezePanes/><x:FrozenNoSplit/><x:SplitHorizontal>2</x:SplitHorizontal>'
-           . '<x:TopRowBottomPane>2</x:TopRowBottomPane>'
-           . '</x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets>'
-           . '</x:ExcelWorkbook></xml><![endif]-->'
-           . '</head><body>';
+    // 4) Create spreadsheet
+    $spreadsheet = new Spreadsheet();
+    $sheet = $spreadsheet->getActiveSheet();
 
-        // Title
-        echo '<table><tr class="title-row"><td colspan="4">'
-           . "NHẬT KÝ CÔNG VIỆC THÁNG {$month}/{$year}"
-           . '</td></tr></table>';
+    // A4 portrait + repeat header rows 1–2 when printing
+    $ps = $sheet->getPageSetup();
+    $ps->setOrientation(PageSetup::ORIENTATION_PORTRAIT)
+       ->setPaperSize(PageSetup::PAPERSIZE_A4)
+       ->setRowsToRepeatAtTopByStartAndEnd(1, 2);
 
-        // Data table
-        echo '<table class="data">';
-        echo '<colgroup><col/><col style="width:110px;"/><col style="width:340px;"/><col style="width:150px;"/></colgroup>';
-        echo '<tr class="header-row"><th>STT</th><th>NGÀY LÀM VIỆC</th><th>TASK</th><th>GHI CHÚ</th></tr>';
-        $weekday = ['Chủ Nhật','Thứ Hai','Thứ Ba','Thứ Tư','Thứ Năm','Thứ Sáu','Thứ Bảy'];
-        $i = 0;
-        foreach ($grouped as $day => $periods) {
-            $i++;
-            $w = date('w', strtotime($day));
-            $dstr = $weekday[$w] . ', ' . date('d/m', strtotime($day));
-            echo '<tr class="data-row">'
-               . '<td style="font-weight:bold;font-style:italic;border-top:thin solid #000;">' . $i . '</td>'
-               . '<td style="font-weight:bold;font-style:italic;border-top:thin solid #000;">' . $dstr . '</td>'
-               . '<td style="border-top:thin solid #000;"></td><td style="border-top:thin solid #000;"></td>'
-               . '</tr>';
-            $subs = ['morning'=>'Buổi sáng','afternoon'=>'Buổi trưa','evening'=>'Buổi tối'];
-            foreach ($subs as $key => $label) {
-                if (!empty($periods[$key])) {
-                    echo '<tr class="data-row">'
-                       . '<td></td>'
-                       . '<td>' . $label . '</td>'
-                       . '<td>' . nl2br(htmlspecialchars($periods[$key], ENT_QUOTES)) . '</td>'
-                       . '<td></td>'
-                       . '</tr>';
-                }
-            }
-        }
-        echo '</table>';
+    // Default font for body
+    $spreadsheet->getDefaultStyle()
+                ->getFont()
+                ->setName('Times New Roman')
+                ->setSize(10);
 
-        // Spacer
-        echo '<table style="border:none;"><tr><td colspan="4" style="height:20px;"></td></tr></table>';
+    // Title (A1:E1)
+    $title = mb_strtoupper("Nhật ký làm việc tháng {$month} năm {$year}", 'UTF-8');
+    $sheet->mergeCells('A1:E1');
+    $sheet->setCellValue('A1', $title);
+    $sheet->getRowDimension(1)->setRowHeight(30);
+    $sheet->getStyle('A1')->applyFromArray([
+        'font' => ['bold' => true, 'name' => 'Times New Roman', 'size' => 12],
+        'alignment' => [
+            'horizontal' => Alignment::HORIZONTAL_CENTER,
+            'vertical'   => Alignment::VERTICAL_CENTER,
+        ],
+    ]);
 
-        // Signature block
-        echo '<table class="signature-block-table" style="border:none;"><tr>'
-           . '<td class="signature bold" colspan="2" style="text-align:center;font-weight:bold;">Người lập bảng</td>'
-           . '<td></td><td class="signature bold" style="text-align:center;font-weight:bold;">Phòng thiết kế</td>'
-           . '</tr>'
-           . '<tr><td colspan="4" style="height:15px;"></td></tr>'
-           . '<tr><td colspan="4" style="height:15px;"></td></tr>'
-           . '<tr><td colspan="4" style="height:15px;"></td></tr>'
-           . '<tr>'
-           . '<td class="signature bold" colspan="2" style="text-align:center;font-weight:bold;">' . $userName . '</td>'
-           . '<td></td><td></td>'
-           . '</tr>'
-           . '</table>';
-        echo '</body></html>';
-        exit;
+    // Header row (A2:E2)
+    $headers = [
+        'A2' => 'TUẦN',
+        'B2' => 'STT',
+        'C2' => 'NGÀY LÀM VIỆC',
+        'D2' => 'NỘI DUNG CÔNG VIỆC',
+        'E2' => 'GHI CHÚ',
+    ];
+    foreach ($headers as $cell => $text) {
+        $sheet->setCellValue($cell, $text);
     }
+    $sheet->getStyle('A2:E2')->applyFromArray([
+        'font' => ['bold' => true, 'size' => 11, 'name' => 'Times New Roman'],
+        'alignment' => [
+            'horizontal' => Alignment::HORIZONTAL_CENTER,
+            'vertical'   => Alignment::VERTICAL_CENTER,
+            'wrapText'   => true,
+        ],
+    ]);
+
+    // 5) Column widths for A4 layout
+    $sheet->getColumnDimension('A')->setWidth(8.5);
+    $sheet->getColumnDimension('B')->setWidth(5.5);
+    $sheet->getColumnDimension('C')->setWidth(16);
+    $sheet->getColumnDimension('D')->setWidth(45);
+    $sheet->getColumnDimension('E')->setWidth(20.5);
+
+    // 6) Fill data in 4-row clusters per date
+    $row            = 3;
+    $currentIsoWeek = null;
+    $weekIndex      = 0;
+    $weekStart      = $row;
+    $weekdayLabels  = [
+        '0' => 'Chủ Nhật','1' => 'Thứ Hai','2' => 'Thứ Ba','3' => 'Thứ Tư',
+        '4' => 'Thứ Năm','5' => 'Thứ Sáu','6' => 'Thứ Bảy',
+    ];
+
+    foreach ($grouped as $date => $periods) {
+        $dt      = new DateTime($date);
+        $isoWeek = $dt->format('W');
+
+        // new week?
+        if ($currentIsoWeek !== $isoWeek) {
+            if ($currentIsoWeek !== null) {
+                // merge & label previous week
+                $sheet->mergeCells("A{$weekStart}:A" . ($row - 1));
+                $sheet->getStyle("A{$weekStart}:A" . ($row - 1))
+                      ->getAlignment()
+                      ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+                      ->setVertical(Alignment::VERTICAL_CENTER);
+                $sheet->setCellValue("A{$weekStart}", "Tuần {$weekIndex}");
+            }
+            $currentIsoWeek = $isoWeek;
+            $weekIndex++;
+            $weekStart = $row;
+        }
+
+        // --- Row 1: date ---
+        $wk        = $weekdayLabels[$dt->format('w')];
+        $dateLabel = "{$wk} " . $dt->format('d/m');
+        $sheet->setCellValue("B{$row}", $dt->format('j'));
+        $sheet->setCellValue("C{$row}", $dateLabel);
+        // bold STT & date
+        $sheet->getStyle("B{$row}:C{$row}")
+              ->getFont()->setBold(true);
+        $row++;
+
+        // --- Rows 2–4: morning, afternoon, evening ---
+        $parts = ['morning' => 'Buổi Sáng', 'afternoon' => 'Buổi Chiều', 'evening' => 'Buổi Tối'];
+        $i     = 1;
+        foreach ($parts as $key => $label) {
+            $sheet->setCellValue("B{$row}", "{$dt->format('j')}.{$i}");
+            $sheet->setCellValue("C{$row}", $label);
+            $sheet->setCellValue("D{$row}", $periods[$key] ?? '');
+            // dashed between sessions, solid after evening
+            $style = ($i < 3);
+            $sheet->getStyle("A{$row}:E{$row}");
+            $row++; $i++;
+        }
+    }
+
+    // merge & label last week
+    $sheet->mergeCells("A{$weekStart}:A" . ($row - 1));
+    $sheet->getStyle("A{$weekStart}:A" . ($row - 1))
+          ->getAlignment()
+          ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+          ->setVertical(Alignment::VERTICAL_CENTER);
+    $sheet->setCellValue("A{$weekStart}", "Tuần {$weekIndex}");
+
+    // 7) Table borders: outside double, inside thin
+    $endRow = $row - 1;
+    $sheet->getStyle("A1:E{$endRow}")->applyFromArray([
+        'borders' => [
+            'outline' => ['borderStyle' => Border::BORDER_DOUBLE],
+            'inside' => ['borderStyle' => Border::BORDER_THIN],
+        ],
+    ]);
+$sheet->getStyle("B2:C{$endRow}")
+      ->getAlignment()
+          ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+          ->setVertical(Alignment::VERTICAL_CENTER);
+    // 8) Wrap text for all cells A2:E{endRow}
+    $sheet->getStyle("A2:E{$endRow}")
+          ->getAlignment()->setWrapText(true);
+// 11) In đậm cột A
+$sheet->getStyle("A2:A{$endRow}")
+      ->getFont()
+          ->setBold(true);
+    // 9) Footer: 1 row gap after table
+    $footerRow = $endRow + 2;
+    $sheet->setCellValue("C{$footerRow}", 'Người lập');
+    $sheet->setCellValue("E{$footerRow}", 'Phòng thiết kế');
+    $sheet->getStyle("C{$footerRow}:E{$footerRow}")->applyFromArray([
+        'font' => ['bold' => true, 'size' => 10, 'name' => 'Times New Roman'],
+        'alignment' => [
+            'horizontal' => Alignment::HORIZONTAL_CENTER,
+            'vertical'   => Alignment::VERTICAL_CENTER,
+        ],
+    ]);
+
+    // 10) Signature: 3 rows below footer, in C
+    $sigRow = $footerRow + 4;
+    $sheet->setCellValue("C{$sigRow}", $userName);
+    $sheet->getStyle("C{$sigRow}")->applyFromArray([
+        'font' => ['bold' => true, 'size' => 10, 'name' => 'Times New Roman'],
+        'alignment' => [
+            'horizontal' => Alignment::HORIZONTAL_CENTER,
+            'vertical'   => Alignment::VERTICAL_CENTER,
+        ],
+    ]);
+
+    // 11) Print area covers through signature
+    $ps->setPrintArea("A1:E{$sigRow}");
+
+    // 12) Export file
+    $writer = new Xlsx($spreadsheet);
+    $writer->save('php://output');
+    exit;
+}
+// === Hết Thuộc tính Excel ===
 
     // === Send Report & Notifications ===
     if (isset($_POST['send_report'])) {
@@ -178,13 +265,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $nq = $pdo->prepare(
               "INSERT INTO notifications (sender_id, receiver_id, entry_date) VALUES (?, ?, ?)"
             );
-            foreach ($_POST['notify_users'] as $rid) {
-                $nq->execute([$userId, (int)$rid, $date]);
-            }
+            $reportDate = $startMonth; 
+        foreach ($_POST['notify_users'] as $rid) {
+            $nq->execute([$userId, (int)$rid, $reportDate]);
         }
-        $notifyMsg = "Report sent and notifications queued.";
     }
-
+    $notifyMsg = "Report sent and notifications queued.";
+}
     // === Save Diary Entries ===
     if (isset($_POST['save_diary'])) {
         $up = $pdo->prepare(
