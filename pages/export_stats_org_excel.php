@@ -177,81 +177,117 @@ $style->getAlignment()
 $sh1 = initSheet($ss, 0, 'BẢNG CHẤM CÔNG SẢN PHẨM');
 $row = 8;
 foreach ($members as $idx => $m) {
+    // STT, Họ tên, Chức vụ
     $sh1->setCellValue("A{$row}", $idx + 1);
     $sh1->setCellValue("B{$row}", $m['full_name']);
-    // Ngạch, bậc lương hoặc cấp bậc chức vụ (cột C)
     $sh1->setCellValue("C{$row}", $m['position']);
-$ents = fetchEntries($m['id'], $startDate, $endDate);
-$work = [];
-$mixedHoliday = [];  // dùng cho “Nghỉ lễ:” có nội dung vẫn tính làm
 
-foreach ($ents as $r) {
-    $date = (new DateTime($r['entry_date']))->format('Y-m-d');
-    $c     = trim($r['content']);
-    // 1) Bỏ phiên evening khỏi Sheet 1 (để Sheet 2 xử lý)
-    if ($r['period'] === 'evening') {
-        continue;
+    // Lấy entries từ SQL
+    $ents = fetchEntries($m['id'], $startDate, $endDate);
+    $work         = [];  // làm bình thường
+    $mixedHoliday = [];  // Nghỉ lễ có nội dung → tính là làm lễ
+
+    // Gom dữ liệu
+    foreach ($ents as $r) {
+        $d   = (new DateTime($r['entry_date']))->format('Y-m-d');
+        $txt = trim($r['content']);
+
+        // 1) Nếu đúng “Nghỉ lễ” (kèm : hoặc không) và KHÔNG có gì theo sau → skip
+        if (preg_match('/^\s*Nghỉ lễ\s*:?\s*$/iu', $txt)) {
+            continue;
+        }
+        // 2) Nếu “Nghỉ lễ” rồi có nội dung → tính là làm lễ
+        if (preg_match('/^\s*Nghỉ lễ\s*:?\s*\S+/iu', $txt)) {
+            $mixedHoliday[$d][] = $r['period'];
+            continue;
+        }
+        // 3) Mọi nội dung còn lại có “Nghỉ” (nghỉ mát, nghỉ khám…) → skip
+        if (preg_match('/\bNghỉ\b/iu', $txt)) {
+            continue;
+        }
+        // 4) Bỏ buổi tối (Sheet1 chỉ quan tâm sáng/chiều)
+        if ($r['period'] === 'evening') {
+            continue;
+        }
+        // 5) Bình thường: gom morning/afternoon
+        $work[$d][] = $r['period'];
     }
-    // 2) Nếu đúng “Nghỉ” (chính xác) thì bỏ qua
-    if (preg_match('/^\s*Nghỉ\s*$/iu', $c)) {
-        continue;
-    }
-    // 3) Nếu là “Nghỉ lễ:” có nội dung phía sau thì coi như đi làm
-    if (preg_match('/^\s*(Nghỉ lễ)[\s:]+/iu', $c)) {
-        $mixedHoliday[$date][] = $r['period'];
-        continue;
-    }
-    // 4) Bình thường – ghi morning/afternoon vào $work
-    $work[$date][] = $r['period'];
-}
+
+    // Ghi ngày vào cột D→AH
     for ($i = 1; $i <= $daysInMonth; $i++) {
-        $date = sprintf('%04d-%02d-%02d', $year, $month, $i);
-        $wd = (int)date('N', strtotime($date));
-        $val = '';
-$val = '';
-// chỉ xét từ Thứ 2 (1) đến Thứ 7 (6)
-$val = '';
-if ($wd >= 1 && $wd <= 5) {
-    // Thứ 2–Thứ 6: tính cả morning & afternoon
-    $hasM = (isset($work[$date]) && in_array('morning',   $work[$date], true))
-          || (empty($work[$date]) && isset($mixedHoliday[$date]) && in_array('morning',   $mixedHoliday[$date], true));
-    $hasA = (isset($work[$date]) && in_array('afternoon', $work[$date], true))
-          || (empty($work[$date]) && isset($mixedHoliday[$date]) && in_array('afternoon', $mixedHoliday[$date], true));
-    if ($hasM || $hasA) {
-        $val = ($hasM && $hasA) ? 'SP' : 'SP/2';
-    }
-}
-elseif ($wd === 6) {
-    // Thứ 7: chỉ xét buổi sáng
-    $hasM = (isset($work[$date]) && in_array('morning', $work[$date], true))
-          || (empty($work[$date]) && isset($mixedHoliday[$date]) && in_array('morning', $mixedHoliday[$date], true));
-    if ($hasM) {
-        $val = 'SP/2';
-    }
-}
-        $col = Coordinate::stringFromColumnIndex(3 + $i);
+        $col     = Coordinate::stringFromColumnIndex(3 + $i);
+        $dateStr = sprintf('%04d-%02d-%02d', $year, $month, $i);
+        $wd      = (int) date('N', strtotime($dateStr));
+        $val     = '';
+
+        // Thứ 2–Thứ 6: xét cả morning & afternoon
+        if ($wd >= 1 && $wd <= 5) {
+            $hW = $work[$dateStr]        ?? [];
+            $hH = $mixedHoliday[$dateStr] ?? [];
+            if (!empty($hH)) {
+                // Làm lễ: L hoặc L/2
+                $m = in_array('morning',   $hH, true);
+                $a = in_array('afternoon', $hH, true);
+                $val = ($m && $a) ? 'L' : ($m || $a ? 'L/2' : '');
+            } else {
+                // Làm thường: SP hoặc SP/2
+                $m = in_array('morning',   $hW, true);
+                $a = in_array('afternoon', $hW, true);
+                $val = ($m && $a) ? 'SP' : ($m || $a ? 'SP/2' : '');
+            }
+        }
+        // Thứ 7: chỉ xét buổi sáng
+        elseif ($wd === 6) {
+            $hW = $work[$dateStr]        ?? [];
+            $hH = $mixedHoliday[$dateStr] ?? [];
+            if (!empty($hH) && in_array('morning', $hH, true)) {
+                $val = 'L/2';
+            } elseif (in_array('morning', $hW, true)) {
+                $val = 'SP/2';
+            }
+        }
+        // Chủ nhật không ghi vào Sheet1
+
         $sh1->setCellValue("{$col}{$row}", $val);
-        // Công thức tính tổng công cho mỗi dòng
-        $sh1->setCellValue("AI{$row}", "=COUNTIF(D{$row}:AH{$row},\"K\") + COUNTIF(D{$row}:AH{$row},\"K/2\")/2");
-        // In đậm và định dạng nếu 0 hiển thị '-'
-        $styleAI = $sh1->getStyle("AI{$row}");
-        $styleAI->getFont()->setBold(true);
-        $styleAI->getNumberFormat()->setFormatCode('[=0]"-";General');
-        // Công thức tính số ký hiệu + và L cho cột AJ
-        $sh1->setCellValue("AJ{$row}", "=COUNTIF(D{$row}:AH{$row},\"+\") + COUNTIF(D{$row}:AH{$row},\"L\")");
-        // In đậm và định dạng nếu 0 hiển thị '-'
-        $styleAJ = $sh1->getStyle("AJ{$row}");
-        $styleAJ->getFont()->setBold(true);
-        $styleAJ->getNumberFormat()->setFormatCode('[=0]"-";General');
-        // Công thức tính ký hiệu P cho cột AM
-        $sh1->setCellValue("AM{$row}", "=COUNTIF(D{$row}:AH{$row},\"P\")");
-        // In đậm và định dạng nếu 0 hiển thị '-'
-        $styleAM = $sh1->getStyle("AM{$row}");
-        $styleAM->getFont()->setBold(true);
-        $styleAM->getNumberFormat()->setFormatCode('[=0]"-";General');
     }
+
+    // Công thức tính tổng SP/SP/2 cho mỗi dòng (cột AI)
+    $sh1->setCellValue(
+        "AI{$row}",
+        '=COUNTIF(D'.$row.':AH'.$row.',"SP") + COUNTIF(D'.$row.':AH'.$row.',"SP/2")/2'
+    );
+    $styleAI = $sh1->getStyle("AI{$row}");
+    $styleAI->getFont()->setBold(true);
+    $styleAI->getNumberFormat()
+            ->setFormatCode('General;General;"-";@');
+
+    // Công thức giữ nguyên đếm "+" và "L" cho cột AJ
+    $sh1->setCellValue(
+        "AJ{$row}",
+        '=COUNTIF(D'.$row.':AH'.$row.',"L") + COUNTIF(D'.$row.':AH'.$row.',"L/2")/2'
+    );
+    $styleAJ = $sh1->getStyle("AJ{$row}");
+    $styleAJ->getFont()->setBold(true);
+    $styleAJ->getNumberFormat()
+            ->setFormatCode('General;General;"-";@');
+
+    // Công thức đếm "P" cho cột AM
+    $sh1->setCellValue(
+        "AM{$row}",
+        '=COUNTIF(D'.$row.':AH'.$row.',"P")'
+    );
+    $styleAM = $sh1->getStyle("AM{$row}");
+    $styleAM->getFont()->setBold(true);
+    $styleAM->getNumberFormat()
+            ->setFormatCode('General;General;"-";@');
+
     $row++;
 }
+
+// A7, B7, C7 lần lượt là 'A', 'B', 'C'
+$sh1->setCellValue('A7', 'A');
+$sh1->setCellValue('B7', 'B');
+$sh1->setCellValue('C7', 'C');
 
 // — GHI THỨ TRONG TUẦN CHO CÁC NGÀY D7→AH7 —
 $daysInMonth = (int) date('t', strtotime($startDate));
@@ -315,6 +351,13 @@ $sh1->setCellValue("B{$totalRow}", "TỔNG CỘNG:");
 $sh1->getStyle("A{$totalRow}:AN{$totalRow}")
     ->getAlignment()
         ->setVertical(Alignment::VERTICAL_CENTER);
+// --- Merge từ D→AH trên dòng Tổng cộng ---
+$sh1->mergeCells("D{$totalRow}:AH{$totalRow}");
+
+// (Tuỳ chọn) Canh giữa nội dung trong vùng merge
+$sh1->getStyle("D{$totalRow}:AH{$totalRow}")
+    ->getAlignment()
+    ->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
 // — ÁP DỤNG CHIỀU CAO DÒNG 22 CHO TỪ 7 → Tổng cộng —
 $ss->setActiveSheetIndex(0);
 $sh1 = $ss->getActiveSheet();
@@ -342,6 +385,16 @@ foreach (['AI', 'AJ', 'AK', 'AL', 'AM'] as $col) {
     $sh1->getStyle("{$col}{$totalRow}")
         ->getFont()->setBold(true);
 }
+// ── Định dạng: nếu giá trị = 0 hiển thị "-" cho toàn bộ AI→AM của dòng Tổng cộng
+$rangeTotal = "AI{$totalRow}:AM{$totalRow}";
+$styleTotal = $sh1->getStyle($rangeTotal);
+// Giữ bold nếu cần
+$styleTotal->getFont()->setBold(true);
+// Số dương/âm bình thường, zero thành "-"
+$styleTotal
+    ->getNumberFormat()
+    ->setFormatCode('General;General;"-";@');
+    
 // Cập nhật lại lastRow để bao gồm cả dòng Tổng
 $lastRow = $totalRow;
 // --- Chèn 1 dòng trống ngay dưới dòng Tổng ---
@@ -379,15 +432,17 @@ $sh1->getStyle("A{$totalRow}:AN{$totalRow}")
     ->getAllBorders()
     ->setBorderStyle(Border::BORDER_THIN);
 
-// Giữ font-size chung cho A7→AN{lastRow}
-$sh1->getStyle("A7:AN{$lastRow}")
+// 1) Font-size 10 cho các dòng chi tiết (A7 → AN{lastRow-1})
+$detailLast = $lastRow - 1;
+$sh1->getStyle("A7:AN{$detailLast}")
     ->getFont()
     ->setSize(10);
 
-// Giữ font-size cho toàn vùng từ A7→AN{lastRow}
-$sh1->getStyle("A7:AN{$lastRow}")
+// 2) Font-size 11 cho dòng Tổng cộng
+$sh1->getStyle("A{$totalRow}:AN{$totalRow}")
     ->getFont()
-    ->setSize(10);
+    ->setSize(11);
+
 // Tính hàng bắt đầu và kết thúc của dữ liệu TT
 $firstDataRow = 7;
 $lastDataRow  = $row - 1;  // $row đã đếm xong, nên row-1 là dòng cuối
@@ -444,7 +499,7 @@ $sh1->getStyle("B{$codeRow}:K{$codeRow}")->getAlignment()
 // Dòng tiếp theo: liệt kê các mục ở cột B
 $items = [
     'Lương SP:',
-    'Lương thời gian:',
+    'Lương làm ngày lễ:',
     'Ốm, điều dưỡng:',
     'Con ốm:',
     'Thai sản:',
@@ -457,7 +512,7 @@ foreach ($items as $i => $text) {
 // Dòng tiếp theo: liệt kê các mục ở cột C
 $items = [
     'SP',
-    '+',
+    'L',
     'Ô',
     'Cô',
     'TS',
@@ -554,7 +609,10 @@ foreach ($labels2 as $i => $text) {
         ->getAlignment()
         ->setHorizontal(Alignment::HORIZONTAL_CENTER);
 }
-
+// Wrap text cho cả header (2 dòng)
+$sh1->getStyle('A5:AN6')
+    ->getAlignment()
+    ->setWrapText(true);
 // --- Row 7: tiêu đề khung dữ liệu ---
 // A7, B7, C7 lần lượt là 'A', 'B', 'C'
 $sh2->setCellValue('A7', 'A');
@@ -588,7 +646,7 @@ $sh2->getStyle($range)
     ->setHorizontal(Alignment::HORIZONTAL_CENTER)
     ->setVertical(Alignment::VERTICAL_CENTER);
 // --- Row 8: Merge A8:AN8, center, font size 11, bold, text "Làm tối" ---
-$sh2->mergeCells('A8:AH8')
+$sh2->mergeCells('A8:AN8')
     ->setCellValue('A8', 'Làm tối');
 $sh2->getStyle('A8')
     ->getAlignment()
@@ -598,7 +656,8 @@ $sh2->getStyle('A8')
     ->getFont()
     ->setSize(11)
     ->setBold(true);
- // --- Bắt đầu từ hàng 9: lấy dữ liệu user cho Buổi tối (T2–CN) ---
+
+// --- Bắt đầu từ hàng 9: lấy dữ liệu user cho Buổi tối (T2–CN) ---
 $dataStartRow = 9;
 $daysInMonth  = (int)date('t', strtotime($startDate));
 
@@ -613,33 +672,40 @@ foreach ($members as $i => $m) {
     // Fetch entries và lọc Buổi tối
     $ents    = fetchEntries($m['id'], $startDate, $endDate);
     $evening = [];
-$evening = [];
-foreach ($ents as $e) {
-    $date = (new DateTime($e['entry_date']))->format('Y-m-d');
-    $c    = trim($e['content']);
-    // bỏ “Nghỉ” chính xác
-    if (preg_match('/^\s*Nghỉ\s*$/iu', $c)) {
-        continue;
+    foreach ($ents as $e) {
+        $date = (new DateTime($e['entry_date']))->format('Y-m-d');
+        $c    = trim($e['content']);
+        // bỏ mọi “Nghỉ” (bao gồm Nghỉ lễ không có nội dung)
+        if (preg_match('/\bNghỉ\b/iu', $c) && !preg_match('/\bNghỉ lễ\b/iu', $c)) {
+            continue;
+        }
+        // mọi phiên evening (kể cả “Nghỉ lễ:” có nội dung) tính SP/2
+        if ($e['period'] === 'evening') {
+            $evening[$date] = 'SP/2';
+        }
     }
-    // mọi phiên evening (kể cả “Nghỉ lễ:” có nội dung) tính SP/2
-    if ($e['period'] === 'evening') {
-        $evening[$date] = 'SP/2';
-    }
-}
 
     // Điền vào cột D→AH (ngày 1→$daysInMonth)
     for ($d = 1; $d <= $daysInMonth; $d++) {
-        $col   = Coordinate::stringFromColumnIndex(3 + $d);  // D=4 => d=1→col=4
-        $date  = sprintf('%04d-%02d-%02d', $year, $month, $d);
+        $col  = Coordinate::stringFromColumnIndex(3 + $d);
+        $date = sprintf('%04d-%02d-%02d', $year, $month, $d);
         $sh2->setCellValue("{$col}{$row}", $evening[$date] ?? '');
     }
+
+    // === CỘT AI: Tổng công làm tối ===
+    $formulaAI = '=COUNTIF(D'.$row.':AH'.$row.',"SP/2")*0.5+COUNTIF(D'.$row.':AH'.$row.',"SP")';
+    $sh2->setCellValue("AI{$row}", $formulaAI);
+    $styleAI = $sh2->getStyle("AI{$row}");
+    $styleAI->getFont()->setBold(true);
+    $styleAI->getNumberFormat()
+            ->setFormatCode('General;General;"-";@');
 }
 
 
-// --- 2) Dòng sau đó: merge A→AN, ghi “Chiều thứ 7 + Chủ Nhật + Ngày lễ” ---
+// --- 2) Dòng sau đó: merge A→AN, ghi “Chiều thứ 7 + Chủ Nhật" ---
 $labelRow = $totalRow + 1;
 $sh2->mergeCells("A{$labelRow}:AH{$labelRow}")
-    ->setCellValue("A{$labelRow}", 'Chiều thứ 7 + Chủ Nhật + Ngày lễ');
+    ->setCellValue("A{$labelRow}", 'Chiều thứ 7 + Chủ Nhật');
     // --- Ghi “T7” và “CN” ở Zone 3 ---
 $sh2->setCellValue("AI{$labelRow}", "T7");
 $sh2->setCellValue("AJ{$labelRow}", "CN");
@@ -674,44 +740,62 @@ foreach ($members as $i => $m) {
     $sh2->setCellValue("B{$r}", $m['full_name']);
     $sh2->setCellValue("C{$r}", $m['position']);
 
-    // Lấy entries & lọc chiều cuối tuần
-    $ents    = fetchEntries($m['id'], $startDate, $endDate);
-    $weekend = [];
-$weekendWork = [];
-foreach ($ents as $e) {
-    $date = (new DateTime($e['entry_date']))->format('Y-m-d');
-    $c    = trim($e['content']);
-    // bỏ “Nghỉ” chính xác
-    if (preg_match('/^\s*Nghỉ\s*$/iu', $c)) {
-        continue;
+    // Lấy entries & gom weekendWork
+    $ents        = fetchEntries($m['id'], $startDate, $endDate);
+    $weekendWork = [];
+    foreach ($ents as $e) {
+        $date = (new DateTime($e['entry_date']))->format('Y-m-d');
+        $c    = trim($e['content']);
+        // bỏ mọi “Nghỉ” (ngoại trừ Nghỉ lễ có nội dung đã được gom bên trên)
+        if (preg_match('/\bNghỉ\b/iu', $c) && !preg_match('/\bNghỉ lễ\b/iu', $c)) {
+            continue;
+        }
+        $wd = (int) date('N', strtotime($e['entry_date']));
+        if ($wd === 6 || $wd === 7) {
+            $weekendWork[$date][] = $e['period'];
+        }
     }
-    $wd = (int) date('N', strtotime($e['entry_date']));
-    if ($wd === 6 || $wd === 7) {
-        // lưu session morning/afternoon trên weekend
-        $weekendWork[$date][] = $e['period'];
-    }
-}
-    // Ghi vào D→AH
+
+// Ghi vào D→AH
 for ($d = 1; $d <= $daysInMonth; $d++) {
     $col     = Coordinate::stringFromColumnIndex(3 + $d);
     $dateStr = sprintf('%04d-%02d-%02d', $year, $month, $d);
     $wd      = (int) date('N', strtotime($dateStr));
     $val     = '';
+
     if ($wd === 6) {
         // Thứ 7 chỉ xét buổi chiều
-        if (isset($weekendWork[$dateStr]) && in_array('afternoon', $weekendWork[$dateStr], true)) {
+        if (!empty($weekendWork[$dateStr]) && in_array('afternoon', $weekendWork[$dateStr], true)) {
             $val = 'SP/2';
         }
-    } elseif ($wd === 7) {
-        // Chủ Nhật xét cả sáng + chiều
-        if (isset($weekendWork[$dateStr])) {
+    }
+    elseif ($wd === 7) {
+        // Chủ Nhật: CN hoặc CN/2
+        if (!empty($weekendWork[$dateStr])) {
             $hasM = in_array('morning',   $weekendWork[$dateStr], true);
             $hasA = in_array('afternoon', $weekendWork[$dateStr], true);
-            $val  = ($hasM && $hasA) ? 'SP' : 'SP/2';
+            $val  = ($hasM && $hasA) ? 'CN' : 'CN/2';
         }
     }
+
     $sh2->setCellValue("{$col}{$r}", $val);
 }
+
+    // === TÍNH TỔNG cho Zone 3 (cột AI) ===
+    $formulaAI = '=COUNTIF(D'.$r.':AH'.$r.',"SP/2")*0.5 + COUNTIF(D'.$r.':AH'.$r.',"SP")';
+    $sh2->setCellValue("AI{$r}", $formulaAI);
+    $styleAI = $sh2->getStyle("AI{$r}");
+    $styleAI->getFont()->setBold(true);
+    $styleAI->getNumberFormat()
+            ->setFormatCode('General;General;"-";@');
+  // === TỐNG TƯƠNG TỰ cho cột AJ nhưng đếm "CN" ===
+    // (với CN/2 cho nửa ngày và CN cho cả ngày)
+    $formulaAJ = '=COUNTIF(D'.$r.':AH'.$r.',"CN/2")*0.5 + COUNTIF(D'.$r.':AH'.$r.',"CN")';
+    $sh2->setCellValue("AJ{$r}", $formulaAJ);
+    $styleAJ = $sh2->getStyle("AJ{$r}");
+    $styleAJ->getFont()->setBold(true);
+    $styleAJ->getNumberFormat()
+            ->setFormatCode('General;General;"-";@');
 }
 for ($d = 1; $d <= $daysInMonth; $d++) {
     $dateStr = sprintf('%04d-%02d-%02d', $year, $month, $d);
@@ -827,10 +911,10 @@ $sh2->getStyle("B{$codeRow}:K{$codeRow}")->getAlignment()
 
 // Dòng tiếp theo: liệt kê các mục ở cột B và C
 $itemsB = [
-    'Lương SP:', 'Lương thời gian:', 'Ốm, điều dưỡng:',
+    'Lương SP:', 'Lương làm ngày lễ:', 'Ốm, điều dưỡng:',
     'Con ốm:', 'Thai sản:', 'Tai nạn:'
 ];
-$itemsC = ['SP', '+', 'Ô', 'Cô', 'TS', 'T'];
+$itemsC = ['SP', 'L', 'Ô', 'Cô', 'TS', 'T'];
 $startItemRow = $codeRow + 1;
 foreach ($itemsB as $i => $text) {
     $sh2->setCellValue("B" . ($startItemRow + $i), $text);
@@ -917,13 +1001,21 @@ $b->getLeft()->setBorderStyle(Border::BORDER_THIN);
 $b->getRight()->setBorderStyle(Border::BORDER_THIN);
 $b->getVertical()->setBorderStyle(Border::BORDER_THIN);
 $b->getHorizontal()->setBorderStyle(Border::BORDER_DASHED);
-// --- Merge & Center ở hàng Tổng cộng ---
-$mergeRange = "D{$weekendTotalRow}:AH{$weekendTotalRow}";
+// --- Merge & Center + Style ở hàng Tổng cộng ---
+$mergeRange = "D{$weekendTotalRow}:AN{$weekendTotalRow}";
 $sh2->mergeCells($mergeRange);
-$sh2->getStyle($mergeRange)
-    ->getAlignment()
-        ->setHorizontal(Alignment::HORIZONTAL_CENTER)
-        ->setVertical(Alignment::VERTICAL_CENTER);
+// Ghi text “KSTK”
+$sh2->setCellValue("D{$weekendTotalRow}", 'KSTK');
+// Lấy style chung
+$styleTotal = $sh2->getStyle($mergeRange);
+// Canh giữa ngang & dọc
+$styleTotal->getAlignment()
+    ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+    ->setVertical(Alignment::VERTICAL_CENTER);
+// In đậm và font-size 11
+$styleTotal->getFont()
+    ->setBold(true)
+    ->setSize(11);
 // --- 8) Zone 5: A{$weekendTotalRow}:AN{$weekendTotalRow} – viền ngoài & lưới LIỀN ---
 $style = $sh2->getStyle("{$startCol}{$weekendTotalRow}:{$endCol}{$weekendTotalRow}");
 $style->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
