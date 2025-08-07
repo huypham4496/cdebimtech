@@ -1,15 +1,15 @@
-/* settings.css - final styling for Settings page matching login aesthetics */
+/* settings.css - modernized styles for Settings page */
 
 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
 
 :root {
-  --primary-color: #fca415;
+  --primary: #fca415;
   --primary-hover: #d18f0b;
-  --bg-light: #f9f9f9;
+  --bg-page: #f7f9fc;
   --card-bg: #ffffff;
-  --card-shadow: rgba(0, 0, 0, 0.05);
-  --input-border: #ccc;
-  --input-focus: var(--primary-color);
+  --card-shadow: rgba(0, 0, 0, 0.1);
+  --border-color: #e2e8f0;
+  --text-color: #334155;
 }
 
 * {
@@ -20,7 +20,9 @@
 }
 
 body {
-  background-color: var(--bg-light);
+  background-color: var(--bg-page);
+  color: var(--text-color);
+  line-height: 1.6;
 }
 
 .main {
@@ -30,44 +32,46 @@ body {
 }
 
 header h1 {
-  font-size: 1.5rem;
-  color: var(--primary-color);
+  font-size: 2rem;
+  color: var(--primary);
   margin-bottom: 1.5rem;
 }
 
 .settings-form {
-  max-width: 900px;
+  max-width: 920px;
   margin: auto;
+  display: grid;
+  gap: 2rem;
 }
 
 .section {
   background: var(--card-bg);
-  padding: 1.5rem;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px var(--card-shadow);
-  margin-bottom: 2rem;
+  padding: 2rem;
+  border-radius: 0.75rem;
+  box-shadow: 0 2px 10px var(--card-shadow);
 }
 
 .section h2 {
-  font-size: 1.25rem;
-  color: var(--primary-color);
+  font-size: 1.5rem;
+  color: var(--primary);
   margin-bottom: 1rem;
+  border-bottom: 2px solid var(--primary);
+  padding-bottom: 0.5rem;
 }
 
 .form-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.5rem;
 }
 
 .form-group {
-  flex: 1 1 calc(48% - 1rem);
   display: flex;
   flex-direction: column;
 }
 
 .form-group.full {
-  flex: 1 1 100%;
+  grid-column: 1 / -1;
 }
 
 .form-group label {
@@ -78,81 +82,115 @@ header h1 {
 .form-group input,
 .form-group select,
 .form-group input[type="file"] {
-  padding: 0.75rem;
-  border: 1px solid var(--input-border);
-  border-radius: 4px;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
   font-size: 1rem;
   transition: border-color 0.2s;
-  background-color: #fff;
 }
 
 .form-group input:focus,
 .form-group select:focus {
-  border-color: var(--input-focus);
+  border-color: var(--primary);
   outline: none;
 }
 
-.form-group input.readonly {
-  background: #f0f0f0;
+.form-group input[readonly] {
+  background: #f3f4f6;
   cursor: not-allowed;
 }
 
 .avatar-group {
-  display: flex;
+  display: grid;
+  grid-template-columns: 150px 1fr;
   align-items: center;
   gap: 1rem;
 }
 
-.avatar-previews {
+.avatar-preview {
   width: 150px;
   height: 150px;
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid var(--primary-color);
+  border: 3px solid var(--primary);
 }
 
-/* Style the file upload button */
 .avatar-group input[type="file"] {
   font: inherit;
 }
+
 .avatar-group input[type="file"]::-webkit-file-upload-button,
 .avatar-group input[type="file"]::file-selector-button {
   padding: 0.75rem 1.5rem;
-  background: var(--primary-color);
+  background: var(--primary);
   color: #fff;
   border: none;
-  border-radius: 4px;
-  font: inherit;
+  border-radius: 0.5rem;
   font-weight: 500;
   cursor: pointer;
   transition: background 0.2s;
 }
+
 .avatar-group input[type="file"]::-webkit-file-upload-button:hover,
 .avatar-group input[type="file"]::file-selector-button:hover {
   background: var(--primary-hover);
 }
 
-/* Success banner */
-.success {
-  padding: 0.75rem 1rem;
-  margin-bottom: 1.5rem;
-  border: 1px solid #b8daff;
-  border-radius: 4px;
-  background-color: #cce5ff;
-  color: #004085;
+.form-actions,
+.btn-group {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 1.5rem;
 }
 
-.btn-save {
+.btn-save,
+.btn-apply,
+.btn-change {
   padding: 0.75rem 1.5rem;
-  background: var(--primary-color);
+  background: var(--primary);
   color: #fff;
   border: none;
-  border-radius: 4px;
+  border-radius: 0.5rem;
   font-size: 1rem;
+  font-weight: 500;
   cursor: pointer;
   transition: background 0.2s;
 }
 
-.btn-save:hover {
+.btn-save:hover,
+.btn-apply:hover,
+.btn-change:hover {
   background: var(--primary-hover);
+}
+
+/* Alerts */
+.alert {
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  margin-bottom: 1.5rem;
+  font-weight: 500;
+}
+
+.alert.success {
+  background: #daf5d7;
+  color: #27632a;
+  border: 1px solid #a6d4a2;
+}
+
+.alert.error {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+/* Tăng khoảng cách giữa các form-row */
+.form-row {
+  margin-bottom: 1.5rem;
+}
+
+/* Cách nút ra khỏi form-row phía trên */
+.section .btn-save,
+.section .btn-apply,
+.section .btn-change {
+  margin-top: 1rem;
 }
