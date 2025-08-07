@@ -204,19 +204,21 @@ foreach (['morning','afternoon'] as $prd) {
     $late    = isset($_POST["{$prd}_late"]) 
                && $_POST["{$prd}_late"]    === '1';
     $txt     = trim($_POST["{$prd}_task"] ?? '');
-
-    // ==== Thay block này ====
-    if ($holiday) {
-        $up->execute([$userId, $date, $prd, 'Nghỉ lễ']);
-    } elseif ($break) {
-        $up->execute([$userId, $date, $prd, 'Nghỉ']);
-    } elseif ($late) {
-        $up->execute([$userId, $date, $prd, 'Đi muộn,']);
-    } elseif ($txt !== '') {
-        $up->execute([$userId, $date, $prd, $txt]);
-    } else {
-        $del->execute([$userId, $date, $prd]);
-    }
+// ==== Sửa lại để lưu trọn vẹn nội dung textarea ====
+// $txt đã là trim($_POST["{$prd}_task"]) – có chứa prefix + phần nhập thêm
+if ($break) {
+    // Chỉ nghỉ hoàn toàn
+    $content = 'Nghỉ';
+} elseif ($txt !== '') {
+    // Holiday và Late đều đã có prefix trong $txt, cộng thêm phần nhập thêm
+    $content = $txt;
+} else {
+    // Không có nội dung nào cả → xóa bản ghi
+    $del->execute([$userId, $date, $prd]);
+    continue;  // bỏ qua gọi $up
+}
+// Lưu hoặc cập nhật
+$up->execute([$userId, $date, $prd, $content]);
 }
 // Evening
 $holidayE = isset($_POST['evening_holiday']) 
@@ -394,14 +396,8 @@ include $root . '/includes/header.php';
     ?>
     <div class="card-block period evening" data-period="evening">
       <label>Evening</label>
-      <button type="button" class="btn-toggle holiday <?= $isEH?'active':'' ?>">Holiday</button>
       <button type="button" class="btn-toggle break   <?= $isEB?'active':'' ?>">Break</button>
-
-
-      <input type="hidden" name="evening_holiday" value="<?= $isEH?1:0 ?>">
       <input type="hidden" name="evening_break"   value="<?= $isEB?1:0 ?>">
-
-
       <input type="time" name="evening_start" class="start" value="<?= $ts ?>">
       <input type="time" name="evening_end"   class="end"   value="<?= $te ?>">
       <textarea name="evening_task" class="autoexpand"><?= htmlspecialchars($taskE, ENT_QUOTES) ?></textarea>
