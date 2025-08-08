@@ -31,7 +31,7 @@
   background: var(--bg);
   position: relative;
   z-index: 1;
-  font-family: 'Poppins', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  font-family: 'Roboto', sans-serif;
   color: var(--text);
 }
 
