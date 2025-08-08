@@ -171,10 +171,10 @@ $members = $memStmt->fetchAll();
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Organization Management</title>
-  <link rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
-        integrity="sha512-dyZ88n1lW8v+TqF1uFHtwJ0hK9iJ/ocZLSoG5Z9V1IFGpF1r2T1o2z+g0I9+Z1EUfJ/1GOUdZ1sxvJyVfqG+Eg=="
-        crossorigin="anonymous" referrerpolicy="no-referrer" />
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.2/css/all.min.css"
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"/>
   <link rel="stylesheet" href="../assets/css/sidebar.css?v=<?php echo filemtime(__DIR__.'/../assets/css/sidebar.css'); ?>">
   <link rel="stylesheet" href="../assets/css/organization.css?v=<?php echo filemtime(__DIR__.'/../assets/css/organization.css'); ?>">
 </head>
