@@ -1,18 +1,16 @@
-/* sidebar.css - styling for CDE Bimtech sidebar navigation updated per requirements */
-
 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
 
-:root {
+#cde-sidebar {
   --sidebar-width: 250px;
   --sidebar-bg: #ffffff;
-  --sidebar-active-bg: #e6f7e6; /* unused for admin nav, kept for consistency */
+  --sidebar-active-bg: #e6f7e6;
   --sidebar-hover-bg: #f0f0f0;
   --sidebar-text: #333333;
   --sidebar-active-text: #fca415;
 }
 
 /* Sidebar container */
-.sidebar {
+#cde-sidebar.sidebar {
   position: fixed;
   top: 0;
   left: 0;
@@ -28,50 +26,49 @@
 }
 
 /* Header */
-.sidebar-header {
+#cde-sidebar .sidebar-header {
   display: flex;
   align-items: center;
   padding: 1rem;
   padding-bottom: 0;
 }
 
-/* Logo and title link wrapper */
-.sidebar-logo-link {
+#cde-sidebar .sidebar-logo-link {
   display: flex;
   align-items: center;
   text-decoration: none;
 }
 
-.sidebar-logo {
+#cde-sidebar .sidebar-logo {
   width: 50px;
   height: 50px;
   margin-right: 0.75rem;
 }
 
-.sidebar-title h2 {
+#cde-sidebar .sidebar-title h2 {
   font-size: 1.1rem;
   font-weight: 700;
   margin-bottom: 0.25rem;
   color: var(--sidebar-text);
 }
 
-.sidebar-title p {
+#cde-sidebar .sidebar-title p {
   font-size: 0.8rem;
   color: #666666;
 }
 
 /* Navigation */
-.sidebar-nav ul {
+#cde-sidebar .sidebar-nav ul {
   list-style: none;
   padding: 0;
   margin-top: -28rem;
 }
 
-.sidebar-nav li {
+#cde-sidebar .sidebar-nav li {
   margin: 0.25rem 0;
 }
 
-.sidebar-nav a {
+#cde-sidebar .sidebar-nav a {
   display: flex;
   align-items: center;
   padding: 0.75rem 1rem;
@@ -81,46 +78,43 @@
   border-radius: 4px;
 }
 
-.sidebar-nav a i {
+#cde-sidebar .sidebar-nav a i {
   width: 20px;
   margin-right: 0.75rem;
   text-align: center;
 }
 
-.sidebar-nav li.active a {
+#cde-sidebar .sidebar-nav li.active a {
   background: var(--sidebar-active-text);
   color: #fff;
 }
 
-.sidebar-nav a:hover {
+#cde-sidebar .sidebar-nav a:hover {
   background: var(--sidebar-hover-bg);
   color: var(--sidebar-active-text);
 }
 
 /* Footer */
-.sidebar-footer {
+#cde-sidebar .sidebar-footer {
   padding: 1rem;
 }
 
 /* Sidebar user info */
-.user-info {
+#cde-sidebar .user-info {
   display: flex;
   align-items: center;
-  /* Thêm gap giữa avatar và chi tiết */
   gap: 0.75rem;
 }
 
-/* Avatar container */
-.user-avatar {
+#cde-sidebar .user-avatar {
   width: 40px;
   height: 40px;
   border-radius: 50%;
   overflow: hidden;
-  flex-shrink: 0; /* không co nhỏ */
+  flex-shrink: 0;
 }
 
-/* Fallback chữ cái full khung */
-.user-avatar-fallback {
+#cde-sidebar .user-avatar-fallback {
   width: 100%;
   height: 100%;
   background: var(--primary-color);
@@ -132,37 +126,33 @@
   justify-content: center;
 }
 
-/* Ảnh avatar full khung */
-.user-avatar img {
+#cde-sidebar .user-avatar img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
 }
 
-
-
-
-.user-details {
+#cde-sidebar .user-details {
   font-size: 0.9rem;
   color: var(--sidebar-text);
 }
 
-.user-name {
+#cde-sidebar .user-name {
   font-weight: 500;
 }
 
-.user-email {
+#cde-sidebar .user-email {
   font-size: 0.8rem;
   color: #666666;
 }
 
-.sidebar-actions {
+#cde-sidebar .sidebar-actions {
   display: flex;
   flex-direction: column;
 }
 
-.sidebar-actions a {
+#cde-sidebar .sidebar-actions a {
   display: flex;
   align-items: center;
   padding: 0.5rem 0;
@@ -172,28 +162,29 @@
   transition: color 0.2s;
 }
 
-.sidebar-actions a i {
+#cde-sidebar .sidebar-actions a i {
   margin-right: 0.5rem;
 }
 
-.sidebar-actions a:hover {
+#cde-sidebar .sidebar-actions a:hover {
   color: var(--sidebar-active-text);
 }
 
-.sidebar-actions .sign-out {
+#cde-sidebar .sidebar-actions .sign-out {
   margin-top: 0.75rem;
   font-weight: 500;
   color: var(--sidebar-active-text);
 }
 
-.version {
+#cde-sidebar .version {
   text-align: center;
   font-size: 0.75rem;
   margin-top: 0.5rem;
   color: #ff0000;
 }
-/* Badge thông báo */
-.notification-badge {
+
+/* Badge */
+#cde-sidebar .notification-badge {
   position: relative;
   top: -8px;
   left: -4px;
@@ -204,10 +195,11 @@
   font-size: 0.7rem;
 }
 
-/* Hiệu ứng nhấp nháy */
-.blink {
+/* Blink effect */
+#cde-sidebar .blink {
   animation: blink 1s infinite;
 }
+
 @keyframes blink {
   0%, 50%, 100% { opacity: 1; }
   25%, 75%      { opacity: 0; }
