@@ -10,7 +10,7 @@
   --shadow: rgba(0,0,0,0.08);
   --radius: 12px;
   --transition: 0.3s;
-  --font-base: 'Poppins', sans-serif;
+  --font-base: 'Roboto', sans-serif;
 }
 
 * {
