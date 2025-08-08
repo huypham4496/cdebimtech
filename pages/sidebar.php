@@ -30,6 +30,7 @@ if ($userId) {
 ?>
 <div id="cde-sidebar" class="sidebar">
   <!-- Header -->
+   
   <div class="sidebar-header">
     <a href="home.php" class="sidebar-logo-link">
       <img src="../assets/images/logo-login.png" alt="CDE Bimtech Logo" class="sidebar-logo">
