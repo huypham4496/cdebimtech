@@ -1,0 +1,86 @@
+/* --- Organization Manage: buttons + toggle styles --- */
+:root {
+  --btn-bg: #2563eb;           /* primary */
+  --btn-bg-2: #64748b;         /* secondary */
+  --btn-bg-danger: #dc2626;    /* danger */
+  --btn-text: #ffffff;
+  --btn-radius: .5rem;
+  --btn-shadow: 0 2px 8px rgba(0,0,0,.12);
+}
+
+button, .btn-action {
+  appearance: none;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  font: 500 14px/1.2 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+  padding: .6rem .9rem;
+  border-radius: var(--btn-radius);
+  box-shadow: var(--btn-shadow);
+  transition: transform .06s ease, filter .2s ease, background-color .2s ease;
+}
+
+.btn-primary {
+  background: var(--btn-bg);
+  color: var(--btn-text);
+}
+.btn-primary:hover { filter: brightness(1.05); transform: translateY(-1px); }
+.btn-primary:active { transform: translateY(0); }
+
+.btn-secondary {
+  background: var(--btn-bg-2);
+  color: var(--btn-text);
+}
+.btn-secondary:hover { filter: brightness(1.05); transform: translateY(-1px); }
+
+.btn-danger, .btn-delete {
+  background: var(--btn-bg-danger);
+  color: var(--btn-text);
+}
+.btn-danger:hover, .btn-delete:hover { filter: brightness(1.05); transform: translateY(-1px); }
+
+.btn-icon {
+  padding: .45rem .55rem;
+  border-radius: 8px;
+}
+
+.copy-btn {
+  background: #10b981; /* emerald */
+  color: #fff;
+}
+.copy-btn:hover { filter: brightness(1.05); transform: translateY(-1px); }
+
+/* Small buttons */
+.btn-sm { padding: .4rem .6rem; font-size: 12px; }
+
+/* Toggle switch (for share_subscription etc.) */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 48px;
+  height: 26px;
+  vertical-align: middle;
+}
+.switch input { display:none; }
+.slider {
+  position: absolute; cursor: pointer; inset: 0;
+  background-color: #d1d5db; border-radius: 999px; transition: .2s;
+}
+.slider:before {
+  content: ""; position: absolute; height: 22px; width: 22px; left: 2px; top: 2px;
+  background-color: white; border-radius: 999px; transition: .2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,.2);
+}
+input:checked + .slider { background-color: #22c55e; }
+input:checked + .slider:before { transform: translateX(22px); }
+.switch .label-text {
+  margin-left: .5rem; user-select:none; font-size: 14px; color: #111827;
+}
+/* End --- */
+.badge-success { padding:2px 6px; border-radius:8px; background:#e6ffed; border:1px solid #34d399; }
+
+.badge-muted { padding:2px 6px; border-radius:8px; background:#f3f4f6; border:1px solid #d1d5db; }
+
+.btn-action.btn-primary { padding:6px 10px; border:1px solid #2563eb; background:#3b82f6; color:#fff; border-radius:6px; cursor:pointer; }
