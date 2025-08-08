@@ -20,6 +20,15 @@ if (empty($_SESSION['user']['id'])) {
     header('Location: login.php');
     exit;
 }
+// — Feature gate: Organization Manage —
+$userId = $_SESSION['user']['id'] ?? null;
+if (!$userId) {
+    header('Location: login.php');
+    exit;
+}
+
+require_once __DIR__ . '/../includes/permissions.php';
+guardOrganizationMembersAccess($pdo, (int)$userId);
 $userId = $_SESSION['user']['id'];
 
 // 2. Lấy org_id từ GET hoặc mặc định tổ đầu tiên user quản lý
