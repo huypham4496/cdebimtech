@@ -141,11 +141,10 @@ function renderNoAccessPage(PDO $pdo, string $planName, string $featureLabel): v
     ?>
     <link rel="stylesheet" href="../assets/css/permissions.css?v=<?php echo filemtime(__DIR__ . '/../assets/css/permissions.css'); ?>">
     <link rel="stylesheet" href="../assets/css/sidebar.css?v=<?php echo filemtime(__DIR__ . '/../assets/css/sidebar.css'); ?>">
-    <link rel="stylesheet" href="../assets/css/dashboard.css?v=<?php echo filemtime(__DIR__ . '/../assets/css/dashboard.css'); ?>">
     <link rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.2/css/all.min.css"
-      crossorigin="anonymous"
-      referrerpolicy="no-referrer"/>
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
+        integrity="sha512-dynvDxJ5aVF6oU1i6zfoalvVYvNvKcJste/0q5u+P%2FgPm4jG3E5s3UeJ8V+RaH59RUW2YCiMzZ6pyRrg58F3CA=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
     <main class="perm-guard">
       <section class="perm-card" role="alert" aria-live="polite">
         <div class="perm-badge">403 Forbidden</div>
