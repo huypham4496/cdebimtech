@@ -1,159 +1,154 @@
-
-/**
- * organization_manage.js
- * Handles Share Plan toggles (master + per-member) with robust form-POSTs
- * Compatible with PHP form handlers that expect $_POST (no JSON payloads).
- *
- * Expected HTML hooks:
- *  - Master toggle: <input type="checkbox" id="sharePlanToggle" data-org-id="...">
- *  - Member toggle(s): <input type="checkbox" class="member-share-toggle" data-org-id="..." data-member-id="..." data-user-id="...">
- *  - Optional CSRF:
- *      <meta name="csrf-token" content="..."> OR
- *      <input type="hidden" name="csrf_token" value="..."> anywhere on the page
- *
- * PHP handlers (examples — adjust to your app):
- *  - action=toggle_share_subscription  -> toggles organizations.share_subscription
- *      required: org_id, share_subscription (0|1)
- *  - action=toggle_member_share -> toggles organization_members.is_shared
- *      required: org_id, member_id or user_id, is_shared (0|1)
+/* assets/js/org_manage.js (reload-after-success)
+ * - Nút bấm/checkbox sẽ gọi PHP qua fetch và **reload trang** ngay khi thành công.
+ * - Ngăn trang chuyển hướng sang JSON bằng preventDefault + type="button".
  */
 
 (function () {
-  const byId = (id) => document.getElementById(id);
-  const qs = (sel, root=document) => root.querySelector(sel);
-  const qsa = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+  'use strict';
 
-  function getCSRF() {
+  const ENDPOINT = '/pages/organization_manage.php';
+  const qs  = (sel, root = document) => root.querySelector(sel);
+  const qsa = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+
+  function getCSRFToken() {
     const meta = qs('meta[name="csrf-token"]');
     if (meta && meta.content) return meta.content;
-    const hidden = qs('input[name="csrf_token"]');
-    if (hidden && hidden.value) return hidden.value;
-    return '';
+    const input = qs('input[name="csrf_token"]');
+    return input ? input.value : null;
   }
 
-  function postForm(url, dataObj) {
+  async function postForm(params) {
+    const headers = {
+      'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+      'Accept': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest'
+    };
+    const csrf = getCSRFToken();
+    if (csrf && !('csrf_token' in params)) params.csrf_token = csrf;
+
     const body = new URLSearchParams();
-    Object.entries(dataObj).forEach(([k,v]) => {
+    Object.entries(params).forEach(([k,v]) => {
       if (v !== undefined && v !== null) body.append(k, String(v));
     });
-    const headers = {
-      'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
-    };
-    return fetch(url, {
+
+    const res = await fetch(ENDPOINT, {
       method: 'POST',
       headers,
-      body
-    }).then(async (res) => {
-      const txt = await res.text();
-      let json;
-      try { json = JSON.parse(txt); } catch (_) {
-        // Standardize error shape if backend returns plain text
-        json = { ok: res.ok, raw: txt };
-      }
-      return json;
+      body: body.toString(),
+      credentials: 'same-origin'
     });
+
+    const text = await res.text();
+    try {
+      const data = JSON.parse(text);
+      if (!res.ok || data?.ok === false) {
+        throw new Error(data?.msg || `HTTP ${res.status}`);
+      }
+      return data;
+    } catch (e) {
+      const msg = text && text.length < 400 ? text : 'Server returned non-JSON.';
+      throw new Error(`HTTP ${res.status} – ${msg}`);
+    }
   }
 
-  function toast(msg, type='info') {
-    // minimal toast; replace with your UI
-    console.log(`[${type.toUpperCase()}]`, msg);
+  function preventNavigate(ev) {
+    // Chặn form submit/link mặc định
+    if (ev) { ev.preventDefault(); ev.stopPropagation(); }
   }
 
-  function restoreToggle(input, prevChecked) {
-    // avoid firing the listener again when reverting
-    input.dataset._reverting = '1';
-    input.checked = prevChecked;
-    setTimeout(() => { delete input.dataset._reverting; }, 0);
+  async function onToggleOrgShareClick(ev) {
+    preventNavigate(ev);
+    const btn = ev.currentTarget;
+    // Đảm bảo không phải submit form
+    if (btn.type && btn.type.toLowerCase() === 'submit') btn.type = 'button';
+    const orgId = btn.dataset.orgId || btn.getAttribute('data-org-id');
+    if (!orgId) return;
+    btn.disabled = true;
+    try {
+      await postForm({ action: 'toggle_share', organization_id: orgId });
+      // Thành công -> reload trang để lấy dữ liệu mới
+      window.location.reload();
+    } catch (e) {
+      btn.disabled = false;
+      alert(e.message || e);
+    }
   }
 
-  // MASTER "Share Plan" toggle
-  const master = byId('sharePlanToggle');
-  if (master) {
-    master.addEventListener('change', async (e) => {
-      if (master.dataset._reverting === '1') return;
-
-      const orgId = master.getAttribute('data-org-id');
-      if (!orgId) {
-        toast('Thiếu organization_id cho nút Share Plan.', 'error');
-        restoreToggle(master, !master.checked);
-        return;
-      }
-      const shareVal = master.checked ? 1 : 0;
-      const csrf = getCSRF();
-
-      const payload = {
-        action: 'toggle_share_subscription',
-        org_id: orgId,
-        share_subscription: shareVal
-      };
-      if (csrf) payload.csrf_token = csrf;
-
-      // IMPORTANT: post to the same PHP page so $_POST is populated
-      const url = 'organization_manage.php';
-
-      const prev = !master.checked;
-      const res = await postForm(url, payload);
-      if (!res || res.ok === false) {
-        const msg = res && res.msg ? res.msg : (res && res.raw ? res.raw : 'Bad request');
-        toast(`Không thể cập nhật Share Plan: ${msg}`, 'error');
-        restoreToggle(master, prev);
-        return;
-      }
-
-      // Optionally reflect server state if returned
-      if (typeof res.share_subscription !== 'undefined') {
-        const serverState = Number(res.share_subscription) === 1;
-        if (serverState !== master.checked) restoreToggle(master, serverState);
-      }
-
-      toast(shareVal ? 'Đã bật chia sẻ gói cho tổ chức.' : 'Đã tắt chia sẻ gói cho tổ chức.', 'success');
-    });
+  async function onToggleOrgShareCheckbox(ev) {
+    preventNavigate(ev);
+    const cb = ev.currentTarget;
+    const orgId = cb.dataset.orgId;
+    const target = cb.checked ? 1 : 0;
+    cb.disabled = true;
+    try {
+      await postForm({
+        action: 'toggle_share',
+        organization_id: orgId,
+        share_subscription: target
+      });
+      window.location.reload();
+    } catch (e) {
+      cb.checked = !target;
+      cb.disabled = false;
+      alert(e.message || e);
+    }
   }
 
-  // Per-member share toggles
-  qsa('.member-share-toggle').forEach((el) => {
-    el.addEventListener('change', async () => {
-      if (el.dataset._reverting === '1') return;
+  async function onToggleMemberShare(ev) {
+    preventNavigate(ev);
+    const el = ev.currentTarget;
+    const memberId = el.dataset.memberId;
+    const orgId = el.dataset.orgId;
+    if (!orgId || !memberId) return;
+    // Nếu là button submit trong form, đổi sang button thường
+    if (el.tagName === 'BUTTON' && el.type && el.type.toLowerCase() === 'submit') el.type = 'button';
 
-      const orgId = el.getAttribute('data-org-id');
-      const memberId = el.getAttribute('data-member-id'); // preferred
-      const userId = el.getAttribute('data-user-id');     // fallback in case PHP expects user_id
-      const isShared = el.checked ? 1 : 0;
-      const csrf = getCSRF();
+    // Xác định target
+    let target;
+    if (el.tagName === 'INPUT' && el.type === 'checkbox') {
+      target = el.checked ? 1 : 0;
+    } else {
+      const now = el.getAttribute('aria-pressed') === 'true' || el.classList.contains('is-on');
+      target = now ? 0 : 1;
+    }
 
-      if (!orgId || (!memberId && !userId)) {
-        toast('Thiếu org_id hoặc member_id/user_id cho nút chia sẻ thành viên.', 'error');
-        restoreToggle(el, !el.checked);
-        return;
-      }
-
-      const payload = {
+    el.disabled = true;
+    try {
+      await postForm({
         action: 'toggle_member_share',
-        org_id: orgId,
-        is_shared: isShared
-      };
-      if (memberId) payload.member_id = memberId;
-      if (userId) payload.user_id = userId;
-      if (csrf) payload.csrf_token = csrf;
-
-      const url = 'organization_manage.php';
-      const prev = !el.checked;
-      const res = await postForm(url, payload);
-
-      if (!res || res.ok === false) {
-        const msg = res && res.msg ? res.msg : (res && res.raw ? res.raw : 'Bad request');
-        toast(`Không thể cập nhật chia sẻ cho thành viên: ${msg}`, 'error');
-        restoreToggle(el, prev);
-        return;
+        organization_id: orgId,
+        member_id: memberId,
+        is_shared: target
+      });
+      window.location.reload();
+    } catch (e) {
+      // Revert nếu là checkbox
+      if (el.tagName === 'INPUT' && el.type === 'checkbox') {
+        el.checked = !Boolean(target);
       }
+      el.disabled = false;
+      alert(e.message || e);
+    }
+  }
 
-      // if server returns the canonical row value, respect it
-      if (typeof res.is_shared !== 'undefined') {
-        const serverState = Number(res.is_shared) === 1;
-        if (serverState !== el.checked) restoreToggle(el, serverState);
-      }
+  document.addEventListener('DOMContentLoaded', () => {
+    // Button toggle org share
+    qsa('button[data-action="toggle-org-share"]').forEach(btn => {
+      // Bảo đảm là button thường, tránh submit form
+      if (!btn.type || btn.type.toLowerCase() === 'submit') btn.type = 'button';
+      btn.addEventListener('click', onToggleOrgShareClick);
+    });
 
-      toast(isShared ? 'Đã bật chia sẻ cho thành viên.' : 'Đã tắt chia sẻ cho thành viên.', 'success');
+    // Checkbox toggle org share (nếu còn)
+    qsa('input.toggle-org-share[type="checkbox"]').forEach(cb => {
+      cb.addEventListener('change', onToggleOrgShareCheckbox);
+    });
+
+    // Member share (checkbox hoặc button)
+    qsa('.toggle-member-share').forEach(el => {
+      const evt = (el.tagName === 'INPUT' ? 'change' : 'click');
+      if (el.tagName === 'BUTTON' && (!el.type || el.type.toLowerCase() === 'submit')) el.type = 'button';
+      el.addEventListener(evt, onToggleMemberShare);
     });
   });
 
