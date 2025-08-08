@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Aug 08, 2025 at 09:54 AM
+-- Generation Time: Aug 08, 2025 at 12:10 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -47,6 +47,13 @@ CREATE TABLE `notifications` (
   `is_read` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Đánh dấu đã đọc'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+--
+-- Dumping data for table `notifications`
+--
+
+INSERT INTO `notifications` (`id`, `sender_id`, `receiver_id`, `entry_date`, `created_at`, `is_read`) VALUES
+(35, 1, 12, '2025-07-01', '2025-08-08 08:00:19', 1);
+
 -- --------------------------------------------------------
 
 --
@@ -69,7 +76,7 @@ CREATE TABLE `organizations` (
 --
 
 INSERT INTO `organizations` (`id`, `name`, `abbreviation`, `address`, `department`, `created_by`, `share_subscription`, `created_at`) VALUES
-(1, 'CÔNG TY CỔ PHẦN TƯ VẤN MIỀN BẮC', 'NCC', 'Tổ 5, khu 1, Phường Bãi Cháy, Tỉnh Quảng Ninh', 'PHÒNG THIẾT KẾ', 1, 0, '2025-08-04 14:06:12');
+(1, 'CÔNG TY CỔ PHẦN TƯ VẤN MIỀN BẮC', 'NCC', 'Tổ 5, khu 1, Phường Bãi Cháy, Tỉnh Quảng Ninh', 'PHÒNG THIẾT KẾ', 1, 1, '2025-08-04 14:06:12');
 
 -- --------------------------------------------------------
 
@@ -115,16 +122,16 @@ CREATE TABLE `organization_members` (
 --
 
 INSERT INTO `organization_members` (`id`, `organization_id`, `user_id`, `is_shared`, `role`, `subscribed_id`, `joined_at`) VALUES
-(4, 1, 13, 0, 'member', 1, '2025-08-07 04:19:44'),
-(5, 1, 12, 0, 'member', 1, '2025-08-07 04:21:06'),
-(6, 1, 14, 0, 'member', 1, '2025-08-07 04:21:24'),
-(7, 1, 15, 0, 'member', 1, '2025-08-07 04:21:46'),
+(4, 1, 13, 1, 'member', 3, '2025-08-07 04:19:44'),
+(5, 1, 12, 1, 'member', 3, '2025-08-07 04:21:06'),
+(6, 1, 14, 1, 'member', 3, '2025-08-07 04:21:24'),
+(7, 1, 15, 1, 'member', 3, '2025-08-07 04:21:46'),
 (8, 1, 1, 0, 'admin', 1, '2025-08-07 04:21:59'),
-(10, 1, 16, 0, 'member', 1, '2025-08-07 09:27:18'),
-(12, 1, 17, 0, 'member', 1, '2025-08-07 10:59:50'),
-(13, 1, 18, 0, 'member', 1, '2025-08-07 11:16:53'),
-(14, 1, 19, 0, 'member', 1, '2025-08-07 11:24:22'),
-(15, 1, 20, 0, 'member', 1, '2025-08-07 11:44:44');
+(10, 1, 16, 1, 'member', 3, '2025-08-07 09:27:18'),
+(12, 1, 17, 1, 'member', 3, '2025-08-07 10:59:50'),
+(13, 1, 18, 1, 'member', 3, '2025-08-07 11:16:53'),
+(14, 1, 19, 1, 'member', 3, '2025-08-07 11:24:22'),
+(15, 1, 20, 1, 'member', 3, '2025-08-07 11:44:44');
 
 -- --------------------------------------------------------
 
@@ -1220,7 +1227,8 @@ ALTER TABLE `notifications`
 --
 ALTER TABLE `organizations`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `created_by` (`created_by`);
+  ADD KEY `created_by` (`created_by`),
+  ADD KEY `idx_share` (`share_subscription`);
 
 --
 -- Indexes for table `organization_invitations`
@@ -1236,7 +1244,9 @@ ALTER TABLE `organization_members`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `uq_org_member` (`organization_id`,`user_id`),
   ADD KEY `organization_id` (`organization_id`),
-  ADD KEY `user_id` (`user_id`);
+  ADD KEY `user_id` (`user_id`),
+  ADD KEY `idx_org_user` (`organization_id`,`user_id`),
+  ADD KEY `idx_user_shared` (`user_id`,`is_shared`);
 
 --
 -- Indexes for table `organization_member_profiles`
@@ -1271,7 +1281,8 @@ ALTER TABLE `users`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `username` (`username`),
   ADD UNIQUE KEY `email` (`email`),
-  ADD KEY `company_id` (`company_id`);
+  ADD KEY `company_id` (`company_id`),
+  ADD KEY `idx_sub` (`subscription_id`,`subscription_expires_at`);
 
 --
 -- Indexes for table `vouchers`
@@ -1301,7 +1312,7 @@ ALTER TABLE `companies`
 -- AUTO_INCREMENT for table `notifications`
 --
 ALTER TABLE `notifications`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=35;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=36;
 
 --
 -- AUTO_INCREMENT for table `organizations`
