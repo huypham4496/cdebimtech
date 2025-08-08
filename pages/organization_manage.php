@@ -164,6 +164,39 @@ $memStmt = $pdo->prepare("
 ");
 $memStmt->execute([':uid' => $userId]);
 $members = $memStmt->fetchAll();
+$membersOrgId = isset($_GET['members_org_id']) ? (int)$_GET['members_org_id'] : 0;
+
+// Nếu chưa chọn, mặc định chọn tổ chức đầu tiên (nếu có)
+if ($membersOrgId === 0 && !empty($organizations)) {
+    $membersOrgId = (int)$organizations[0]['id'];
+}
+
+// Lấy danh sách members theo tổ chức đã chọn
+$members = [];
+if ($membersOrgId > 0) {
+    try {
+        $stmt = $pdo->prepare("
+            SELECT 
+                om.id       AS member_row_id,
+                om.user_id  AS id,
+                om.role     AS role,
+                u.email     AS email,
+                CONCAT(COALESCE(u.first_name,''), ' ', COALESCE(u.last_name,'')) AS full_name
+            FROM organization_members om
+            JOIN users u ON u.id = om.user_id
+            WHERE om.organization_id = :oid
+            ORDER BY 
+                CASE WHEN om.role='admin' THEN 0 ELSE 1 END,
+                full_name, email
+        ");
+        $stmt->execute([':oid' => $membersOrgId]);
+        $members = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        // Tránh vỡ trang nếu có lỗi CSDL; ghi log để kiểm tra
+        error_log('Members query failed: ' . $e->getMessage());
+        $members = [];
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="vi">
@@ -176,7 +209,7 @@ $members = $memStmt->fetchAll();
       crossorigin="anonymous"
       referrerpolicy="no-referrer"/>
   <link rel="stylesheet" href="../assets/css/sidebar.css?v=<?php echo filemtime(__DIR__.'/../assets/css/sidebar.css'); ?>">
-  <link rel="stylesheet" href="../assets/css/organization.css?v=<?php echo filemtime(__DIR__.'/../assets/css/organization.css'); ?>">
+  <link rel="stylesheet" href="../assets/css/organization_manage.css?v=<?php echo filemtime(__DIR__.'/../assets/css/organization_manage.css'); ?>">
 </head>
 <body>
   <?php include __DIR__ . '/sidebar.php'; ?>
@@ -292,41 +325,83 @@ $members = $memStmt->fetchAll();
       </section>
 
       <!-- Members & Profiles -->
-      <section class="card">
-        <h2><i class="fas fa-users-cog"></i> Members & Profiles</h2>
-        <ul class="list-members">
-          <?php foreach ($members as $m): ?>
+<section class="card">
+  <div style="display:flex; align-items:center; justify-content:space-between; gap:.75rem; flex-wrap:wrap;">
+    <h2 style="margin:0;">
+      <i class="fas fa-users-cog"></i> Members & Profiles
+    </h2>
+
+    <!-- Bộ lọc chọn tổ chức (GET) -->
+    <form method="GET" class="inline-form" style="margin:0;">
+      <!-- Giữ lại các tham số GET khác nếu cần -->
+      <?php foreach ($_GET as $k => $v): if ($k === 'members_org_id') continue; ?>
+        <input type="hidden" name="<?= htmlspecialchars($k) ?>" value="<?= htmlspecialchars($v) ?>">
+      <?php endforeach; ?>
+
+      <label class="visually-hidden" for="members_org_id">Chọn tổ chức</label>
+      <select id="members_org_id" name="members_org_id" onchange="this.form.submit()">
+        <?php foreach ($organizations as $o): ?>
+          <option value="<?= (int)$o['id'] ?>" <?= (int)$o['id'] === (int)$membersOrgId ? 'selected' : '' ?>>
+            <?= htmlspecialchars($o['name']) ?>
+          </option>
+        <?php endforeach; ?>
+      </select>
+
+      <noscript>
+        <button type="submit" class="btn-action btn-secondary">
+          <i class="fas fa-check"></i> Lọc
+        </button>
+      </noscript>
+    </form>
+  </div>
+
+  <?php if (empty($organizations)): ?>
+    <p class="text-muted" style="margin-top:10px;">Chưa có tổ chức nào để hiển thị.</p>
+  <?php else: ?>
+    <?php if (empty($members)): ?>
+      <p class="text-muted" style="margin-top:10px;">Tổ chức này chưa có thành viên.</p>
+    <?php else: ?>
+      <ul class="list-members">
+        <?php foreach ($members as $m): ?>
           <li>
-            <select class="role-select" data-member-id="<?= $m['id'] ?>">
+            <!-- Role selector -->
+            <select class="role-select" 
+                    data-member-id="<?= (int)$m['id'] ?>" 
+                    data-org-id="<?= (int)$membersOrgId ?>">
               <option value="admin"  <?= $m['role'] === 'admin'  ? 'selected' : '' ?>>Admin</option>
               <option value="member" <?= $m['role'] === 'member' ? 'selected' : '' ?>>Member</option>
             </select>
+
+            <!-- Info -->
             <div class="member-info">
-              <p class="member-name"><i class="fas fa-user"></i>
+              <p class="member-name">
+                <i class="fas fa-user"></i>
                 <?= htmlspecialchars($m['full_name'] ?: $m['email']) ?>
               </p>
               <p class="text-muted"><?= htmlspecialchars($m['email']) ?></p>
             </div>
-            <button class="btn-action btn-edit"
-                    onclick="openProfile(
-                      <?= $m['id'] ?>,
-                      '<?= addslashes($m['full_name']) ?>',
-                      '<?= addslashes($m['expertise']) ?>',
-                      '<?= addslashes($m['position']) ?>',
-                      '<?= $m['dob'] ?>',
-                      '<?= addslashes($m['hometown']) ?>',
-                      '<?= addslashes($m['residence']) ?>',
-                      '<?= addslashes($m['phone']) ?>',
-                      '<?= $m['monthly_performance'] ?>'
-                    )">
-              <i class="fas fa-user-edit"></i> Edit Profile
-            </button>
-            <button class="btn-icon btn-delete" onclick="removeMember(<?= $m['id'] ?>)">
-              <i class="fas fa-user-minus"></i>
-            </button>
+
+            <!-- Actions -->
+            <div class="member-actions">
+              <button class="btn-action btn-edit"
+                      onclick="openProfile(
+                        '<?= (int)$m['id'] ?>',
+                        '<?= htmlspecialchars($m['full_name'] ?: '', ENT_QUOTES) ?>',
+                        '<?= htmlspecialchars($m['email'], ENT_QUOTES) ?>'
+                      )">
+                <i class="fas fa-user-edit"></i> Profile
+              </button>
+              <button class="btn-action btn-delete" onclick="removeMember(<?= (int)$m['id'] ?>)">
+                <i class="fas fa-user-minus"></i>
+              </button>
+            </div>
           </li>
-          <?php endforeach; ?>
-        </ul>
+        <?php endforeach; ?>
+      </ul>
+    <?php endif; ?>
+  <?php endif; ?>
+</section>
+
 
         <!-- Profile Edit Form -->
         <form id="profileForm" method="POST" class="card form-card" style="display:none">
