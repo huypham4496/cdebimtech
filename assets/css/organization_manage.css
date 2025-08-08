@@ -192,7 +192,6 @@ button[disabled], .btn-action[disabled] {
   color: #0f172a;
   background: #fff;
   transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
-  margin-bottom: 25px;
 }
 
 /* Focus */
