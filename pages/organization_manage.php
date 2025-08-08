@@ -127,6 +127,22 @@ if (! $denied) {
                 ON DUPLICATE KEY UPDATE " . implode(',', $sets);
             $pdo->prepare($sql)->execute($params);
             break;
+            case 'toggle_share':
+    // Bật/tắt chia sẻ gói cho 1 tổ chức
+    $orgId  = isset($_POST['organization_id']) ? (int)$_POST['organization_id'] : 0;
+    $enable = isset($_POST['enable']) ? (int)$_POST['enable'] : 0; // 1=share, 0=unshare
+
+    if ($orgId > 0) {
+        $stmt = $pdo->prepare("UPDATE organizations SET share_subscription = :enable WHERE id = :id");
+        $stmt->execute([
+            ':enable' => $enable,
+            ':id' => $orgId
+        ]);
+    }
+    // Quay lại trang để thấy trạng thái mới
+    header("Location: ".$_SERVER['REQUEST_URI']);
+    exit;
+
     }
 }
 
@@ -210,6 +226,7 @@ if ($membersOrgId > 0) {
         crossorigin="anonymous" referrerpolicy="no-referrer" />
   <link rel="stylesheet" href="../assets/css/sidebar.css?v=<?php echo filemtime(__DIR__.'/../assets/css/sidebar.css'); ?>">
   <link rel="stylesheet" href="../assets/css/organization_manage.css?v=<?php echo filemtime(__DIR__.'/../assets/css/organization_manage.css'); ?>">
+  <link rel="stylesheet" href="assets/css/org_manage.css">
 </head>
 <body>
   <?php include __DIR__ . '/sidebar.php'; ?>
@@ -225,7 +242,7 @@ if ($membersOrgId > 0) {
         <table class="org-table">
           <thead>
             <tr>
-              <th>Name</th><th>Abbr.</th><th>Address</th><th>Dept.</th><th>Actions</th>
+              <th>Name</th><th>Abbr.</th><th>Address</th><th>Dept.</th><th>Plan Sharing</th><th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -235,6 +252,22 @@ if ($membersOrgId > 0) {
               <td><?= htmlspecialchars($o['abbreviation']) ?></td>
               <td><?= htmlspecialchars($o['address']) ?></td>
               <td><?= htmlspecialchars($o['department']) ?></td>
+               <td>
+      <?php if ((int)$o['share_subscription'] === 1): ?>
+        <span class="badge badge-success">Shared</span>
+      <?php else: ?>
+        <span class="badge badge-muted">Private</span>
+      <?php endif; ?>
+
+      <form method="POST" style="display:inline; margin-left:8px;">
+        <input type="hidden" name="action" value="toggle_share">
+        <input type="hidden" name="organization_id" value="<?= (int)$o['id'] ?>">
+        <input type="hidden" name="enable" value="<?= ((int)$o['share_subscription'] === 1) ? 0 : 1 ?>">
+        <button type="submit" class="btn-action btn-primary">
+          <?= ((int)$o['share_subscription'] === 1) ? 'Unshare' : 'Share Plan' ?>
+        </button>
+      </form>
+    </td>
               <td>
                 <button class="btn-action btn-secondary"
                         onclick="openEdit(
@@ -432,69 +465,7 @@ if ($membersOrgId > 0) {
     <?php endif; ?>
   </div>
 
-  <script>
-    // Copy invite link
-    document.addEventListener('click', e => {
-      const btn = e.target.closest('.copy-btn');
-      if (btn) {
-        const inp = document.getElementById(btn.dataset.target);
-        inp.select(); document.execCommand('copy');
-        btn.innerHTML = '<i class="fas fa-check"></i>';
-        setTimeout(() => btn.innerHTML = '<i class="fas fa-copy"></i>', 1500);
-      }
-    });
-
-    // Open edit organization form
-    function openEdit(id,name,abbr,address,dept){
-      document.getElementById('orgAction').value='edit_org';
-      document.getElementById('orgId').value=id;
-      document.getElementById('name').value=name;
-      document.getElementById('abbreviation').value=abbr;
-      document.getElementById('address').value=address;
-      document.getElementById('department').value=dept;
-      document.getElementById('orgSubmit').innerHTML='<i class="fas fa-save"></i> Update Org';
-      document.getElementById('orgCancel').style.display='inline-block';
-    }
-    function resetForm(){
-      document.getElementById('orgAction').value='create_org';
-      document.getElementById('orgForm').reset();
-      document.getElementById('orgSubmit').innerHTML='<i class="fas fa-plus-circle"></i> Create Org';
-      document.getElementById('orgCancel').style.display='none';
-    }
-
-    // Change role
-    document.addEventListener('change', e => {
-      if (e.target.matches('.role-select')) {
-        const sel = e.target;
-        fetch('organization_manage.php', {
-          method:'POST',
-          headers:{'Content-Type':'application/x-www-form-urlencoded'},
-          body:`action=update_role&member_id=${sel.dataset.memberId}&role=${sel.value}`
-        }).then(()=>sel.classList.add('updated'))
-          .then(()=>setTimeout(()=>sel.classList.remove('updated'),800));
-      }
-    });
-
-    // Open profile edit
-    function openProfile(id,fn,ex,pos,dob,ht,rs,ph,mp){
-      document.getElementById('profileForm').style.display='block';
-      document.getElementById('profileMemberId').value=id;
-      ['full_name','expertise','position','dob','hometown','residence','phone','monthly_performance']
-        .forEach((f,i)=>document.getElementById(f).value=[fn,ex,pos,dob,ht,rs,ph,mp][i]);
-    }
-    function resetProfile(){
-      document.getElementById('profileForm').style.display='none';
-    }
-
-    // Remove member
-    function removeMember(id){
-      if (!confirm('Remove this member?')) return;
-      fetch('organization_manage.php', {
-        method:'POST',
-        headers:{'Content-Type':'application/x-www-form-urlencoded'},
-        body:`action=remove_member&member_id=${id}`
-      }).then(()=>location.reload());
-    }
-  </script>
+  
+  <script src="assets/js/org_manage.js" defer></script>
 </body>
 </html>
