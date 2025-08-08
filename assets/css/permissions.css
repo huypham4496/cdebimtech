@@ -1,6 +1,5 @@
 /* assets/css/permissions.css
    Modern, minimal 403 card. Scoped with .perm- to avoid conflicts. */
-
 :root {
   --perm-primary: var(--primary, #4A90E2);
   --perm-bg: var(--app-bg, #f6f8fb);
@@ -15,6 +14,7 @@
   padding: 28px;
   background: var(--perm-bg);
   min-height: calc(100vh - 60px); /* leave space for header if fixed */
+  font-family: 'Roboto', sans-serif;
 }
 
 .perm-card {
