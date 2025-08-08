@@ -24,6 +24,7 @@
   flex-direction: column;
   justify-content: space-between;
   overflow: hidden;
+  font-family: 'Roboto', sans-serif;
 }
 
 /* Header */
