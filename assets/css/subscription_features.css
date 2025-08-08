@@ -1,141 +1,217 @@
-/* assets/css/subscription_features.css */
+/* assets/css/admin_subscription_features.css
+   Style riêng cho trang Admin » Subscription Features
+   NOTE: Điều chỉnh --sidebar-w cho đúng chiều rộng sidebar của bạn (ví dụ 240/260/280px).
+*/
 
-/* ──────────────────────────────────────────
-   CSS Variables (Project Palette)
-   ────────────────────────────────────────── */
-:root {
-  --sidebar-width:   240px;        /* matches sidebar_admin.css */
-  --color-primary:   #fca415;      /* brand orange */
-  --color-bg-light:  #f9fafb;
-  --color-bg-white:  #ffffff;
-  --color-text:      #1f2937;
-  --color-muted:     #6b7280;
-  --radius-lg:       0.75rem;
-  --shadow-light:    rgba(0, 0, 0, 0.05);
+:root{
+  --sidebar-w: 260px;          /* <= chỉnh theo sidebar.css của bạn */
+  --header-h: 56px;            /* nếu header fixed, có thể tăng lên 64px */
+  --page-bg: #f6f8fb;
+  --card-bg: #ffffff;
+  --text: #111827;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  --primary: #4A90E2;
+  --primary-2: #8b5cf6;
+  --radius: 12px;
+  --shadow: 0 10px 25px rgba(16,24,40,.06);
+  --container-max: 1200px;
+  --gap: 16px;
 }
 
-/* ──────────────────────────────────────────
-   Base Reset & Typography
-   ────────────────────────────────────────── */
-* {
+/* Nền trang */
+body { background: var(--page-bg); }
+
+/* Tránh sidebar đè: đẩy content sang phải theo width sidebar */
+.sf-wrap{
+  margin-left: var(--sidebar-w);
+  padding: calc(var(--gap) + 8px) var(--gap) var(--gap);
+  min-height: 100vh;
   box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background-color: var(--color-bg-light);
-  color: var(--color-text);
-  line-height: 1.6;
 }
 
-/* ──────────────────────────────────────────
-   Main Content (push right of sidebar)
-   ────────────────────────────────────────── */
-.main-content {
-  margin-left: var(--sidebar-width);
-  padding: 2rem;
-  position: relative;
-  z-index: 1;
+/* Nếu header fixed, đệm thêm phía trên */
+.sf-wrap.header-fixed{
+  padding-top: calc(var(--header-h) + var(--gap));
 }
-.main-content h1 {
-  font-size: 1.875rem;
-  font-weight: 600;
-  margin-bottom: 1.5rem;
+
+/* Container & Card */
+.sf-card{
+  max-width: var(--container-max);
+  margin: 0 auto;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: var(--shadow);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Viền gradient trên cùng để tạo nhấn */
+.sf-card::before{
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--primary), var(--primary-2));
+}
+
+/* Tiêu đề */
+.sf-title{
   display: flex;
   align-items: center;
+  gap: 10px;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text);
+  margin: 0 0 10px;
 }
-.main-content h1 .feature-icon {
-  margin-right: 0.75rem;
-  color: var(--color-primary);
+.sf-title i{ color: var(--primary); }
+
+/* Thông báo */
+.sf-msg{
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  border: 1px solid transparent;
+}
+.sf-msg.success{ background:#ecfdf5; border-color:#a7f3d0; color:#065f46; }
+.sf-msg.error  { background:#fef2f2; border-color:#fecaca; color:#991b1b; }
+
+/* Bảng trong wrapper để cuộn ngang khi hẹp */
+.sf-table-wrapper{
+  overflow: auto;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #fff;
 }
 
-/* ──────────────────────────────────────────
-   Table: Subscription Features
-   ────────────────────────────────────────── */
-.features-table {
+/* Bảng */
+.sf-table{
   width: 100%;
+  min-width: 980px; /* tránh vỡ bố cục; cho phép scroll ngang */
   border-collapse: separate;
-  border-spacing: 0 1rem;
-}
-.features-table thead tr {
-  background-color: var(--color-primary);
-  border-radius: var(--radius-lg);
-}
-.features-table thead th {
-  padding: 1rem 1.5rem;
-  color: #fff;
-  font-weight: 500;
-  text-align: left;
-}
-.features-table thead th i {
-  margin-right: 0.5rem;
-  vertical-align: middle;
-}
-.features-table tbody tr {
-  background-color: var(--color-bg-white);
-  border-radius: var(--radius-lg);
-  box-shadow: 0 2px 8px var(--shadow-light);
-}
-.features-table td {
-  padding: 1rem 1.5rem;
-  vertical-align: middle;
-}
-.features-table input[type="number"] {
-  width: 8rem;
-  padding: 0.5rem;
-  border: 1px solid #d1d5db;
-  border-radius: var(--radius-lg);
-  font-size: 0.9rem;
-}
-.features-table input[type="number"]::placeholder {
-  color: var(--color-muted);
-  font-style: italic;
-}
-.features-table input[type="checkbox"] {
-  transform: scale(1.3);
-  margin: 0;
-  accent-color: var(--color-primary);
+  border-spacing: 0;
+  font-size: 14px;
 }
 
-/* ──────────────────────────────────────────
-   Buttons & Alerts
-   ────────────────────────────────────────── */
-.btn-save {
+/* Header sticky */
+.sf-table thead th{
+  position: sticky;
+  top: 0;
+  background: #fff;
+  z-index: 2;
+  box-shadow: inset 0 -1px 0 var(--border);
+}
+
+/* Ô & viền */
+.sf-table th, .sf-table td{
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.sf-table thead th{
+  text-align: center;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+/* Zebra + hover */
+.sf-table tbody tr:nth-child(even){ background: #fafafa; }
+.sf-table tbody tr:hover{ background:#f0f7ff; }
+
+/* ID cột nhỏ, căn giữa */
+.sf-table td:first-child{
+  text-align: center;
+  width: 72px;
+}
+
+/* Inputs số */
+.sf-table input[type="number"]{
+  width: 120px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  outline: none;
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+.sf-table input[type="number"]:focus{
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(74,144,226,.15);
+}
+
+/* Checkbox -> switch gọn gàng */
+.sf-switch{
   display: inline-flex;
   align-items: center;
-  margin-top: 1.5rem;
-  padding: 0.75rem 1.5rem;
-  background-color: var(--color-primary);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius-lg);
-  font-size: 1rem;
-  font-weight: 500;
+  justify-content: center;
+}
+.sf-switch input[type="checkbox"]{
+  appearance: none;
+  width: 42px;
+  height: 24px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: #e5e7eb;
+  position: relative;
+  outline: none;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background .2s ease, border-color .2s ease;
 }
-.btn-save i {
-  margin-right: 0.5rem;
+.sf-switch input[type="checkbox"]::after{
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  width: 18px; height: 18px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0,0,0,.15);
+  transition: transform .2s ease;
 }
-.btn-save:hover {
-  background-color: #d18e13; /* darker shade of brand orange */
+.sf-switch input[type="checkbox"]:checked{
+  background: var(--primary);
+  border-color: var(--primary);
+}
+.sf-switch input[type="checkbox"]:checked::after{
+  transform: translateX(18px);
 }
 
-.alert {
-  padding: 0.75rem 1.25rem;
-  border-radius: var(--radius-lg);
-  margin-bottom: 1.25rem;
-  font-size: 0.95rem;
-}
-.alert-success {
-  background-color: #ecfdf5;
-  color: #065f46;
-}
-
-/* ──────────────────────────────────────────
-   Utility
-   ────────────────────────────────────────── */
-.text-center {
+/* Căn giữa các ô checkbox */
+.sf-table td.switch-cell{
   text-align: center;
 }
+
+/* Hàng actions */
+.sf-actions{
+  display: flex; gap: 10px; flex-wrap: wrap;
+  margin-top: 12px;
+}
+.btn-save{
+  background: var(--primary);
+  color: #fff;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform .06s ease, filter .15s ease, box-shadow .2s ease;
+  box-shadow: 0 8px 18px rgba(74,144,226,.22);
+}
+.btn-save:hover{ filter: brightness(1.05); }
+.btn-save:active{ transform: translateY(1px); }
+
+/* Gợi ý nhãn phụ */
+.hint{ font-size: 12px; color: var(--muted); }
+
+/* Responsive: dưới 1024px bỏ margin-left để sidebar có thể overlay dạng drawer */
+@media (max-width: 1024px){
+  .sf-wrap{ margin-left: 0; padding-top: calc(var(--header-h) + var(--gap)); }
+}
+
+/* In case sidebar wider – bạn có thể override ở file chính:
+   :root { --sidebar-w: 280px; } */
