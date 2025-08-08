@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Aug 07, 2025 at 02:15 PM
+-- Generation Time: Aug 08, 2025 at 09:54 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -60,6 +60,7 @@ CREATE TABLE `organizations` (
   `address` text NOT NULL,
   `department` varchar(255) DEFAULT NULL,
   `created_by` int(11) NOT NULL,
+  `share_subscription` tinyint(1) NOT NULL DEFAULT 0,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -67,8 +68,8 @@ CREATE TABLE `organizations` (
 -- Dumping data for table `organizations`
 --
 
-INSERT INTO `organizations` (`id`, `name`, `abbreviation`, `address`, `department`, `created_by`, `created_at`) VALUES
-(1, 'CÔNG TY CỔ PHẦN TƯ VẤN MIỀN BẮC', 'NCC', 'Tổ 5, khu 1, Phường Bãi Cháy, Tỉnh Quảng Ninh', 'PHÒNG THIẾT KẾ', 1, '2025-08-04 14:06:12');
+INSERT INTO `organizations` (`id`, `name`, `abbreviation`, `address`, `department`, `created_by`, `share_subscription`, `created_at`) VALUES
+(1, 'CÔNG TY CỔ PHẦN TƯ VẤN MIỀN BẮC', 'NCC', 'Tổ 5, khu 1, Phường Bãi Cháy, Tỉnh Quảng Ninh', 'PHÒNG THIẾT KẾ', 1, 0, '2025-08-04 14:06:12');
 
 -- --------------------------------------------------------
 
@@ -103,6 +104,7 @@ CREATE TABLE `organization_members` (
   `id` int(11) NOT NULL,
   `organization_id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
+  `is_shared` tinyint(1) NOT NULL DEFAULT 0,
   `role` enum('admin','member') NOT NULL DEFAULT 'member',
   `subscribed_id` int(11) NOT NULL,
   `joined_at` timestamp NOT NULL DEFAULT current_timestamp()
@@ -112,17 +114,17 @@ CREATE TABLE `organization_members` (
 -- Dumping data for table `organization_members`
 --
 
-INSERT INTO `organization_members` (`id`, `organization_id`, `user_id`, `role`, `subscribed_id`, `joined_at`) VALUES
-(4, 1, 13, 'member', 1, '2025-08-07 04:19:44'),
-(5, 1, 12, 'member', 1, '2025-08-07 04:21:06'),
-(6, 1, 14, 'member', 1, '2025-08-07 04:21:24'),
-(7, 1, 15, 'member', 1, '2025-08-07 04:21:46'),
-(8, 1, 1, 'admin', 1, '2025-08-07 04:21:59'),
-(10, 1, 16, 'member', 1, '2025-08-07 09:27:18'),
-(12, 1, 17, 'member', 1, '2025-08-07 10:59:50'),
-(13, 1, 18, 'member', 1, '2025-08-07 11:16:53'),
-(14, 1, 19, 'member', 1, '2025-08-07 11:24:22'),
-(15, 1, 20, 'member', 1, '2025-08-07 11:44:44');
+INSERT INTO `organization_members` (`id`, `organization_id`, `user_id`, `is_shared`, `role`, `subscribed_id`, `joined_at`) VALUES
+(4, 1, 13, 0, 'member', 1, '2025-08-07 04:19:44'),
+(5, 1, 12, 0, 'member', 1, '2025-08-07 04:21:06'),
+(6, 1, 14, 0, 'member', 1, '2025-08-07 04:21:24'),
+(7, 1, 15, 0, 'member', 1, '2025-08-07 04:21:46'),
+(8, 1, 1, 0, 'admin', 1, '2025-08-07 04:21:59'),
+(10, 1, 16, 0, 'member', 1, '2025-08-07 09:27:18'),
+(12, 1, 17, 0, 'member', 1, '2025-08-07 10:59:50'),
+(13, 1, 18, 0, 'member', 1, '2025-08-07 11:16:53'),
+(14, 1, 19, 0, 'member', 1, '2025-08-07 11:24:22'),
+(15, 1, 20, 0, 'member', 1, '2025-08-07 11:44:44');
 
 -- --------------------------------------------------------
 
@@ -147,11 +149,11 @@ CREATE TABLE `organization_member_profiles` (
 --
 
 INSERT INTO `organization_member_profiles` (`member_id`, `full_name`, `expertise`, `position`, `dob`, `hometown`, `residence`, `phone`, `monthly_performance`) VALUES
-(4, 'Nguyễn Tiến Thành', 'ThS. Quản lý XD', 'Phó GĐ', '1986-06-24', 'Khoái Châu, Hưng Yên', 'P.Bãi Cháy', '0988.848.065', 0.00),
-(5, 'Nguyễn Văn Dũng', 'Kỹ sư cầu - đường', 'Phó PTK', '1989-04-07', 'Bãi Cháy, Quảng Ninh', 'P.Bãi Cháy', '0904.057.489', 0.00),
-(6, 'Vũ Mạnh Tưởng', 'Kỹ sư cầu - Hầm', 'Phó PTK', '1988-10-07', 'Gia Lộc, Hải Phòng', 'P.Trần Hưng Đạo', '0366.24.24.42', 0.00),
-(7, 'Nguyễn Quang Trường', 'Kỹ sư Kỹ thuật XD', 'NVTK', '1999-06-01', 'Cẩm Phả, Quảng Ninh', 'P.Bãi Cháy', '0365.227.188', 0.00),
-(8, 'Phạm Mạnh Huy', 'ThS. Kỹ thuật XDCTGT', 'NVTK', '1996-04-04', 'Kiến An, Hải Phòng', 'P.Hồng Hà', '0888.121.496', 0.00),
+(4, 'Nguyễn Tiến Thành', 'ThS. Quản lý XD', 'Phó GĐ', '1986-06-24', 'Khoái Châu, Hưng Yên', 'P.Bãi Cháy', '0988848065', 0.00),
+(5, 'Nguyễn Văn Dũng', 'Kỹ sư cầu - đường', 'Phó PTK', '1989-04-07', 'Bãi Cháy, Quảng Ninh', 'P.Bãi Cháy', '0904057489', 0.00),
+(6, 'Vũ Mạnh Tưởng', 'Kỹ sư cầu - Hầm', 'Phó PTK', '1988-10-07', 'Gia Lộc, Hải Phòng', 'P.Trần Hưng Đạo', '0366242442', 0.00),
+(7, 'Nguyễn Quang Trường', 'Kỹ sư Kỹ thuật XD', 'NVTK', '1999-06-01', 'Cẩm Phả, Quảng Ninh', 'P.Bãi Cháy', '0365227188', 0.00),
+(8, 'Phạm Mạnh Huy', 'ThS. Kỹ thuật XDCTGT', 'NVTK', '1996-04-04', 'Kiến An, Hải Phòng', 'P.Hồng Hà', '0888121496', 0.00),
 (10, 'Trần Thành Ninh', 'Kỹ sư Kỹ thuật GT', 'NVTK', '2001-05-27', 'Ha Long', 'P.Hồng Hà', '0355318338', 0.00),
 (12, 'Hoàng Văn Đoàn', 'Kỹ sư Kỹ thuật GT', 'NVTK', '2001-10-22', 'Ba Chẽ, Quảng Ninh', 'P.Bãi Cháy', '0329112707', 0.00),
 (13, 'La Thị Bích Hòa', 'Kỹ sư XDCTGT', 'NVTK', '2000-07-09', 'Tiên Yên, Quảng Ninh', 'P.Bãi Cháy', '0346456537', 0.00),
@@ -200,18 +202,19 @@ CREATE TABLE `subscriptions` (
   `max_projects` int(11) NOT NULL DEFAULT 0 COMMENT 'Max number of projects',
   `max_company_members` int(11) NOT NULL DEFAULT 0 COMMENT 'Max number of company members',
   `allow_organization_members` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Enable Organization Members feature',
-  `allow_work_diary` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Enable Work Diary feature'
+  `allow_work_diary` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Enable Work Diary feature',
+  `allow_organization_manage` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Allow manage org'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `subscriptions`
 --
 
-INSERT INTO `subscriptions` (`id`, `name`, `price`, `description`, `created_at`, `updated_at`, `max_storage_gb`, `max_projects`, `max_company_members`, `allow_organization_members`, `allow_work_diary`) VALUES
-(1, 'Free', 0.00, '1 GB chung toàn bộ tài khoản\r\nTối đa 1 dự án\r\nTối đa 1 thành viên\r\nServer dữ liệu tại Việt Nam', '2025-07-30 09:43:49', '2025-08-01 09:44:54', 1, 1, 1, 0, 0),
-(2, 'Personal', 1000000.00, '15 GB chung toàn bộ tài khoản\r\nTối đa 2 dự án\r\nTối đa 3 thành viên\r\nServer dữ liệu tại Việt Nam', '2025-07-30 09:43:56', '2025-08-01 09:45:02', 15, 2, 3, 0, 0),
-(3, 'Pro', 3000000.00, '150 GB chung toàn bộ tài khoản\r\nTối đa 10 dự án\r\nTối đa 12 thành viên\r\nBao gồm tính năng gói Personal\r\nThêm tính năng Organization Members', '2025-07-30 09:44:03', '2025-08-01 09:49:03', 150, 10, 12, 1, 0),
-(4, 'Bussines', 7000000.00, '1 TB chung toàn bộ tài khoản\r\nKhông giới hạn dự án\r\nKhông giới hạn thành viên\r\nBao gồm tính năng gói Pro\r\nThêm tính năng Work Diary', '2025-07-30 09:45:44', '2025-08-01 09:46:41', 1024, 0, 0, 1, 1);
+INSERT INTO `subscriptions` (`id`, `name`, `price`, `description`, `created_at`, `updated_at`, `max_storage_gb`, `max_projects`, `max_company_members`, `allow_organization_members`, `allow_work_diary`, `allow_organization_manage`) VALUES
+(1, 'Free', 0.00, '1 GB chung toàn bộ tài khoản\r\nTối đa 1 dự án\r\nTối đa 1 thành viên\r\nServer dữ liệu tại Việt Nam', '2025-07-30 09:43:49', '2025-08-01 09:44:54', 1, 1, 1, 0, 0, 0),
+(2, 'Personal', 1000000.00, '15 GB chung toàn bộ tài khoản\r\nTối đa 2 dự án\r\nTối đa 3 thành viên\r\nServer dữ liệu tại Việt Nam', '2025-07-30 09:43:56', '2025-08-01 09:45:02', 15, 2, 3, 0, 0, 0),
+(3, 'Pro', 3000000.00, '150 GB chung toàn bộ tài khoản\r\nTối đa 10 dự án\r\nTối đa 12 thành viên\r\nBao gồm tính năng gói Personal\r\nThêm tính năng Organization Members', '2025-07-30 09:44:03', '2025-08-08 02:55:31', 150, 10, 12, 1, 0, 1),
+(4, 'Bussines', 7000000.00, '1 TB chung toàn bộ tài khoản\r\nKhông giới hạn dự án\r\nKhông giới hạn thành viên\r\nBao gồm tính năng gói Pro\r\nThêm tính năng Work Diary', '2025-07-30 09:45:44', '2025-08-08 02:55:31', 1024, 0, 0, 1, 1, 1);
 
 -- --------------------------------------------------------
 
@@ -263,7 +266,7 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`id`, `username`, `first_name`, `last_name`, `dob`, `address`, `company`, `phone`, `invite_code`, `email`, `password_hash`, `role`, `avatar`, `subscription_id`, `company_id`, `subscription_expires_at`, `created_at`) VALUES
-(1, 'huypham', 'Phạm Mạnh', 'Huy', '1996-04-04', 'Hạ Long', 'NCC', '0888121496', NULL, 'phamhuy.cngt@gmail.com', '$2y$10$eWJmpFzHs1w4JSCwZ.ElWukVdOJ16hb9RPmcfdXXETZCz3gqXvlbq', 'admin', 'avatar_1.png', 4, NULL, NULL, '2025-07-30 01:18:51'),
+(1, 'huypham', 'Phạm Mạnh', 'Huy', '1996-04-04', 'Hạ Long', 'NCC', '0888121496', NULL, 'phamhuy.cngt@gmail.com', '$2y$10$eWJmpFzHs1w4JSCwZ.ElWukVdOJ16hb9RPmcfdXXETZCz3gqXvlbq', 'admin', 'avatar_1.png', 3, NULL, NULL, '2025-07-30 01:18:51'),
 (12, 'dungnguyen', 'Nguyễn Văn', 'Dũng', '1989-04-07', 'Hạ Long', 'NCC', '0904057489', NULL, 'dungtvmb@gmail.com', '$2y$10$rsk2.FqXwNO7d33vf2ll2uo8HcCM9lbjhVFRPUREU3vfjnVCUSMZq', 'user', NULL, NULL, NULL, NULL, '2025-08-07 04:08:57'),
 (13, 'thanhtvmb', 'Nguyễn Tiến', 'Thành', '1986-06-24', 'Hạ Long', 'NCC', '0988848065', NULL, 'thanhtvmb@gmail.com', '$2y$10$GSkjFC40XAYI944BTf5STuWaPFcVDYKR8m6DHYLDhTs70.xPpanve', 'user', NULL, NULL, NULL, NULL, '2025-08-07 04:08:57'),
 (14, 'tuongtvmb', 'Vũ Mạnh', 'Tưởng', '1988-10-07', 'Hạ Long', 'NCC', '0366242442', NULL, 'tuongtvmb@gmail.com', '$2y$10$YhTRsTu9ige0fLxuJZykg.266T5i6CPxLzK5xxwMTngnbzFJN7jzq', 'user', NULL, NULL, NULL, NULL, '2025-08-07 04:08:57'),
@@ -430,6 +433,9 @@ INSERT INTO `work_diary_entries` (`user_id`, `entry_date`, `period`, `content`, 
 (1, '2025-08-07', 'morning', 'Hoàn thiện tính năng xuất file nhật ký công việc và file thống kê', NULL, '2025-08-07 12:15:23', '2025-08-07 12:15:23'),
 (1, '2025-08-07', 'afternoon', 'Hoàn thiện tính năng xuất file nhật ký công việc và file thống kê', NULL, '2025-08-07 12:15:23', '2025-08-07 12:15:23'),
 (1, '2025-08-07', 'evening', '17:00-19:30: Cập nhật dữ liệu thành viên trong phòng và kiểm tra tính năng xuất thống kê nhật ký công việc', NULL, '2025-08-07 12:15:23', '2025-08-07 12:15:23'),
+(1, '2025-08-08', 'morning', 'Chỉnh sửa tính năng quan lý tổ chức và phân quyền thành viên', NULL, '2025-08-08 07:18:27', '2025-08-08 07:18:27'),
+(1, '2025-08-08', 'afternoon', 'Chỉnh sửa tính năng quan lý tổ chức và phân quyền thành viên', NULL, '2025-08-08 07:18:28', '2025-08-08 07:18:28'),
+(1, '2025-08-08', 'evening', 'Nghỉ', NULL, '2025-08-08 07:18:28', '2025-08-08 07:18:28'),
 (12, '2025-07-01', 'morning', 'làm', NULL, '2025-08-07 04:29:54', '2025-08-07 04:29:54'),
 (12, '2025-07-01', 'afternoon', 'làm', NULL, '2025-08-07 04:29:54', '2025-08-07 04:29:54'),
 (12, '2025-07-02', 'morning', 'làm', NULL, '2025-08-07 04:30:01', '2025-08-07 04:30:01'),
@@ -809,12 +815,12 @@ INSERT INTO `work_diary_entries` (`user_id`, `entry_date`, `period`, `content`, 
 (16, '2025-07-28', 'afternoon', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:35:32', '2025-08-07 09:35:32'),
 (16, '2025-07-28', 'evening', 'Nghỉ', NULL, '2025-08-07 09:35:32', '2025-08-07 09:35:32'),
 (16, '2025-07-29', 'morning', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:35:44', '2025-08-07 09:35:44'),
-(16, '2025-07-29', 'afternoon', 'Đi hiện trường', NULL, '2025-08-07 09:35:44', '2025-08-07 09:35:44'),
+(16, '2025-07-29', 'afternoon', 'Đi hiện trường', NULL, '2025-08-07 09:35:44', '2025-08-07 09:35:44');
+INSERT INTO `work_diary_entries` (`user_id`, `entry_date`, `period`, `content`, `note`, `created_at`, `updated_at`) VALUES
 (16, '2025-07-29', 'evening', 'Nghỉ', NULL, '2025-08-07 09:35:44', '2025-08-07 09:35:44'),
 (16, '2025-07-30', 'morning', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:35:58', '2025-08-07 09:35:58'),
 (16, '2025-07-30', 'afternoon', 'Đi thực địa', NULL, '2025-08-07 09:35:58', '2025-08-07 09:35:58'),
-(16, '2025-07-30', 'evening', 'Nghỉ', NULL, '2025-08-07 09:35:58', '2025-08-07 09:35:58');
-INSERT INTO `work_diary_entries` (`user_id`, `entry_date`, `period`, `content`, `note`, `created_at`, `updated_at`) VALUES
+(16, '2025-07-30', 'evening', 'Nghỉ', NULL, '2025-08-07 09:35:58', '2025-08-07 09:35:58'),
 (16, '2025-07-31', 'morning', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:36:03', '2025-08-07 09:36:03'),
 (16, '2025-07-31', 'afternoon', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:36:03', '2025-08-07 09:36:03'),
 (16, '2025-07-31', 'evening', 'Nghỉ', NULL, '2025-08-07 09:36:03', '2025-08-07 09:36:03'),
@@ -1228,6 +1234,7 @@ ALTER TABLE `organization_invitations`
 --
 ALTER TABLE `organization_members`
   ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uq_org_member` (`organization_id`,`user_id`),
   ADD KEY `organization_id` (`organization_id`),
   ADD KEY `user_id` (`user_id`);
 
@@ -1300,13 +1307,13 @@ ALTER TABLE `notifications`
 -- AUTO_INCREMENT for table `organizations`
 --
 ALTER TABLE `organizations`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `organization_invitations`
 --
 ALTER TABLE `organization_invitations`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `organization_members`
