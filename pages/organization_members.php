@@ -44,7 +44,29 @@ if (!$orgId) {
     $q->execute([':uid' => $userId]);
     $orgId = $q->fetchColumn();
 }
+// 2b. Lấy danh sách TỔ mà user sở hữu/tham gia để render vào select
+$userOrganizations = [];
+$qo = $pdo->prepare("
+    SELECT id, name FROM organizations WHERE created_by = :uid
+    UNION
+    SELECT o.id, o.name
+      FROM organizations o
+      JOIN organization_members om ON om.organization_id = o.id
+     WHERE om.user_id = :uid
+  GROUP BY id, name
+  ORDER BY name
+");
+$qo->execute([':uid' => $userId]);
+$userOrganizations = $qo->fetchAll(PDO::FETCH_ASSOC);
 
+// Nếu orgId hiện tại không nằm trong danh sách, ép về tổ đầu tiên (nếu có)
+if ($orgId && !in_array($orgId, array_column($userOrganizations, 'id'))) {
+    $orgId = (int)($userOrganizations[0]['id'] ?? $orgId);
+}
+// Nếu vẫn chưa có orgId và có danh sách tổ -> chọn phần tử đầu
+if (!$orgId && !empty($userOrganizations)) {
+    $orgId = (int)$userOrganizations[0]['id'];
+}
 // 3. Tháng, năm
 $month = isset($_GET['month']) ? (int)$_GET['month'] : (int)date('n');
 $year  = isset($_GET['year'])  ? (int)$_GET['year']  : (int)date('Y');
@@ -77,8 +99,9 @@ $members = $stmt->fetchAll();
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Members & Profiles</title>
   <!-- CSS gốc -->
-  <link rel="stylesheet" href="../assets/css/sidebar.css">
-  <link rel="stylesheet" href="../assets/css/organization.css">
+  <link rel="stylesheet" href="../assets/css/sidebar.css?v=<?php echo filemtime(__DIR__.'/../assets/css/sidebar.css'); ?>">
+  <link rel="stylesheet" href="../assets/css/organization.css?v=<?php echo filemtime(__DIR__.'/../assets/css/organization.css'); ?>">
+
   <!-- Font Awesome -->
   <link rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
@@ -90,32 +113,55 @@ $members = $stmt->fetchAll();
   <div class="main-content">
     <h1><i class="fas fa-users"></i> Members & Profiles</h1>
 
-    <form method="get" action="stats_org_detail.php" class="filter-form">
-      <input type="hidden" name="org_id" value="<?= htmlspecialchars($orgId) ?>">
-      <label>
-        Tháng
-        <select name="month">
-          <?php for ($m=1; $m<=12; $m++): ?>
-            <option value="<?= $m ?>" <?= $m===$month?'selected':'' ?>>
-              <?= sprintf('%02d',$m) ?>
-            </option>
-          <?php endfor; ?>
-        </select>
-      </label>
-      <label>
-        Năm
-        <select name="year">
-          <?php for ($y=date('Y')-1; $y<=date('Y'); $y++): ?>
-            <option value="<?= $y ?>" <?= $y===$year?'selected':'' ?>>
-              <?= $y ?>
-            </option>
-          <?php endfor; ?>
-        </select>
-      </label>
-      <button type="submit" class="btn-summary">
-        <i class="fas fa-chart-bar"></i> Xem tổng hợp
-      </button>
-    </form>
+    <form method="get" action="organization_members.php" class="filter-form">
+  <!-- Chọn TỔ mà user tham gia/sở hữu -->
+  <label>
+    Tổ chức
+    <select name="org_id" onchange="this.form.submit()">
+      <?php foreach ($userOrganizations as $org): ?>
+        <option value="<?= (int)$org['id'] ?>" <?= ((int)$org['id'] === (int)$orgId) ? 'selected' : '' ?>>
+          <?= htmlspecialchars($org['name']) ?>
+        </option>
+      <?php endforeach; ?>
+    </select>
+  </label>
+
+  <label>
+    Tháng
+    <select name="month">
+      <?php for ($m=1; $m<=12; $m++): ?>
+        <option value="<?= $m ?>" <?= $m===$month?'selected':'' ?>>
+          <?= sprintf('%02d',$m) ?>
+        </option>
+      <?php endfor; ?>
+    </select>
+  </label>
+
+  <label>
+    Năm
+    <select name="year">
+      <?php $curY = (int)date('Y'); for ($y=$curY-2; $y<=$curY+2; $y++): ?>
+        <option value="<?= $y ?>" <?= $y===$year?'selected':'' ?>>
+          <?= $y ?>
+        </option>
+      <?php endfor; ?>
+    </select>
+  </label>
+
+  <!-- Link “Xem tổng hợp” luôn build đúng org_id/tháng/năm đã chọn -->
+  <a class="btn-summary" 
+     href="stats_org_detail.php?org_id=<?= urlencode($orgId) ?>&month=<?= urlencode($month) ?>&year=<?= urlencode($year) ?>">
+    <i class="fas fa-chart-bar"></i> Xem tổng hợp
+  </a>
+
+  <!-- Dự phòng nếu tắt JS hoặc muốn lọc thủ công -->
+  <noscript>
+    <button type="submit" class="btn-summary">
+      <i class="fas fa-chart-bar"></i> Lọc / Xem tổng hợp
+    </button>
+  </noscript>
+</form>
+
 
     <table class="members-table">
       <thead>
