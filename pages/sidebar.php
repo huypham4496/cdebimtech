@@ -1,5 +1,21 @@
 <?php
 // pages/sidebar.php
+if (!isset($pdo) || !($pdo instanceof PDO)) {
+    // thử tự nạp DB nếu cần
+    $dbBoot = __DIR__ . '/../includes/db.php';
+    if (is_readable($dbBoot)) {
+        require_once $dbBoot;
+    }
+}
+
+if (!isset($pdo) || !($pdo instanceof PDO)) {
+    // Không có DB -> hiển thị sidebar rút gọn, không query
+    echo '<aside class="sidebar">
+            <div class="sidebar-section">Menu</div>
+            <!-- DB unavailable: showing minimal sidebar -->
+          </aside>';
+    return; // đừng chạy các query bên dưới nữa
+}
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
