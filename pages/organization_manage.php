@@ -128,21 +128,88 @@ if (! $denied) {
             $pdo->prepare($sql)->execute($params);
             break;
             case 'toggle_share':
-    // Bật/tắt chia sẻ gói cho 1 tổ chức
-    $orgId  = isset($_POST['organization_id']) ? (int)$_POST['organization_id'] : 0;
-    $enable = isset($_POST['enable']) ? (int)$_POST['enable'] : 0; // 1=share, 0=unshare
+case 'toggle_share':
+    // INPUT: org_id (int), share (0|1)
+    $orgId = (int)($_POST['org_id'] ?? 0);
+    $share = (int)($_POST['share'] ?? 0);
 
-    if ($orgId > 0) {
-        $stmt = $pdo->prepare("UPDATE organizations SET share_subscription = :enable WHERE id = :id");
-        $stmt->execute([
-            ':enable' => $enable,
-            ':id' => $orgId
-        ]);
+    if ($orgId <= 0 || ($share !== 0 && $share !== 1)) {
+        http_response_code(400);
+        echo json_encode(['ok' => false, 'msg' => 'Bad request']);
+        exit;
     }
-    // Quay lại trang để thấy trạng thái mới
-    header("Location: ".$_SERVER['REQUEST_URI']);
-    exit;
 
+    // Kiểm tra quyền admin của org này
+    $currentUserId = $_SESSION['user_id'];
+    $stmt = $pdo->prepare("SELECT role FROM organization_members WHERE organization_id = ? AND user_id = ?");
+    $stmt->execute([$orgId, $currentUserId]);
+    $role = $stmt->fetchColumn();
+    if ($role !== 'admin') {
+        http_response_code(403);
+        echo json_encode(['ok' => false, 'msg' => 'Forbidden']);
+        exit;
+    }
+
+    // Lấy gói đang dùng của admin (để share cho member)
+    $stmt = $pdo->prepare("SELECT subscription_id FROM users WHERE id = ?");
+    $stmt->execute([$currentUserId]);
+    $adminSubId = (int)$stmt->fetchColumn();
+
+    try {
+        $pdo->beginTransaction();
+
+        // 1) Cập nhật cờ share của tổ chức
+        $stmt = $pdo->prepare("UPDATE organizations SET share_subscription = ? WHERE id = ?");
+        $stmt->execute([$share, $orgId]);
+
+        // 2) Đồng bộ member
+        if ($share === 1) {
+            if ($adminSubId <= 0) {
+                throw new Exception("Admin chưa có gói để share.");
+            }
+            // set is_shared=1, gán subscribed_id = gói của admin cho toàn bộ member (trừ admin)
+            $stmt = $pdo->prepare("
+                UPDATE organization_members 
+                   SET is_shared = 1, subscribed_id = ?
+                 WHERE organization_id = ? AND user_id <> ?
+            ");
+            $stmt->execute([$adminSubId, $orgId, $currentUserId]);
+
+            // (Tuỳ hệ thống) Nếu logic quyền dựa vào users.subscription_id thì có thể cập nhật luôn:
+            // $pdo->prepare("
+            //     UPDATE users u 
+            //     JOIN organization_members m ON m.user_id = u.id AND m.organization_id = ?
+            //        SET u.subscription_id = ?
+            //      WHERE u.id <> ?
+            // ")->execute([$orgId, $adminSubId, $currentUserId]);
+
+        } else {
+            // Share OFF → trả về Free
+            $FREE_ID = 1;
+            $stmt = $pdo->prepare("
+                UPDATE organization_members 
+                   SET is_shared = 0, subscribed_id = ?
+                 WHERE organization_id = ? AND user_id <> ?
+            ");
+            $stmt->execute([$FREE_ID, $orgId, $currentUserId]);
+
+            // (Tuỳ hệ thống)
+            // $pdo->prepare("
+            //     UPDATE users u 
+            //     JOIN organization_members m ON m.user_id = u.id AND m.organization_id = ?
+            //        SET u.subscription_id = NULL
+            //      WHERE u.id <> ?
+            // ")->execute([$orgId, $currentUserId]);
+        }
+
+        $pdo->commit();
+        echo json_encode(['ok' => true]);
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        http_response_code(500);
+        echo json_encode(['ok' => false, 'msg' => $e->getMessage()]);
+    }
+    exit;
     }
 }
 
@@ -226,7 +293,7 @@ if ($membersOrgId > 0) {
         crossorigin="anonymous" referrerpolicy="no-referrer" />
   <link rel="stylesheet" href="../assets/css/sidebar.css?v=<?php echo filemtime(__DIR__.'/../assets/css/sidebar.css'); ?>">
   <link rel="stylesheet" href="../assets/css/organization_manage.css?v=<?php echo filemtime(__DIR__.'/../assets/css/organization_manage.css'); ?>">
-  <link rel="stylesheet" href="assets/css/org_manage.css">
+  <link rel="stylesheet" href="../assets/css/org_manage.css">
 </head>
 <body>
   <?php include __DIR__ . '/sidebar.php'; ?>
@@ -262,7 +329,7 @@ if ($membersOrgId > 0) {
       <form method="POST" style="display:inline; margin-left:8px;">
         <input type="hidden" name="action" value="toggle_share">
         <input type="hidden" name="organization_id" value="<?= (int)$o['id'] ?>">
-        <input type="hidden" name="enable" value="<?= ((int)$o['share_subscription'] === 1) ? 0 : 1 ?>">
+        <input type="hidden" name="share" value="<?= ((int)$o['share_subscription'] === 1) ? 0 : 1 ?>">
         <button type="submit" class="btn-action btn-primary">
           <?= ((int)$o['share_subscription'] === 1) ? 'Unshare' : 'Share Plan' ?>
         </button>
@@ -466,6 +533,6 @@ if ($membersOrgId > 0) {
   </div>
 
   
-  <script src="assets/js/org_manage.js" defer></script>
+  <script src="../assets/js/org_manage.js" defer></script>
 </body>
 </html>
