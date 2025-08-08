@@ -129,85 +129,88 @@ if (! $denied) {
             break;
             case 'toggle_share':
 case 'toggle_share':
-    // INPUT: org_id (int), share (0|1)
-    $orgId = (int)($_POST['org_id'] ?? 0);
-    $share = (int)($_POST['share'] ?? 0);
+    header('Content-Type: application/json; charset=utf-8');
 
-    if ($orgId <= 0 || ($share !== 0 && $share !== 1)) {
+    // Nhận cả organization_id|org_id
+    $orgId = (int)($_POST['organization_id'] ?? $_POST['org_id'] ?? 0);
+
+    // Nút bấm có thể không gửi share => cho phép mode hoặc toggle ngầm
+    $raw  = $_POST['share'] ?? ($_POST['share_subscription'] ?? null);
+    $mode = $_POST['mode'] ?? null; // 'on' | 'off' | 'toggle'
+
+    // Xác định target: 1/0 hoặc null (tức là toggle)
+    $target = null;
+    if ($raw !== null) {
+        $target = in_array($raw, ['1', 1, true, 'true', 'on'], true) ? 1 : 0;
+    } elseif ($mode === 'on') {
+        $target = 1;
+    } elseif ($mode === 'off') {
+        $target = 0;
+    } // còn lại: null => toggle
+
+    if ($orgId <= 0) {
         http_response_code(400);
-        echo json_encode(['ok' => false, 'msg' => 'Bad request']);
+        echo json_encode(['ok'=>false,'msg'=>'Bad request (orgId)']);
         exit;
     }
 
-    // Kiểm tra quyền admin của org này
-    $currentUserId = $_SESSION['user_id'];
-    $stmt = $pdo->prepare("SELECT role FROM organization_members WHERE organization_id = ? AND user_id = ?");
-    $stmt->execute([$orgId, $currentUserId]);
-    $role = $stmt->fetchColumn();
-    if ($role !== 'admin') {
+    // Kiểm tra quyền admin trong org
+    $currentUserId = (int)($_SESSION['user']['id'] ?? 0);
+    $st = $pdo->prepare("SELECT role FROM organization_members WHERE organization_id = ? AND user_id = ?");
+    $st->execute([$orgId, $currentUserId]);
+    if ($st->fetchColumn() !== 'admin') {
         http_response_code(403);
-        echo json_encode(['ok' => false, 'msg' => 'Forbidden']);
+        echo json_encode(['ok'=>false,'msg'=>'Forbidden']);
         exit;
     }
-
-    // Lấy gói đang dùng của admin (để share cho member)
-    $stmt = $pdo->prepare("SELECT subscription_id FROM users WHERE id = ?");
-    $stmt->execute([$currentUserId]);
-    $adminSubId = (int)$stmt->fetchColumn();
 
     try {
         $pdo->beginTransaction();
 
-        // 1) Cập nhật cờ share của tổ chức
-        $stmt = $pdo->prepare("UPDATE organizations SET share_subscription = ? WHERE id = ?");
-        $stmt->execute([$share, $orgId]);
+        // Nếu không truyền target => đọc hiện tại để toggle
+        if ($target === null) {
+            $st = $pdo->prepare("SELECT share_subscription FROM organizations WHERE id = ? FOR UPDATE");
+            $st->execute([$orgId]);
+            $cur = (int)$st->fetchColumn();
+            $target = $cur ? 0 : 1;
+        }
 
-        // 2) Đồng bộ member
-        if ($share === 1) {
+        // Cập nhật cờ share của tổ chức
+        $st = $pdo->prepare("UPDATE organizations SET share_subscription = ? WHERE id = ?");
+        $st->execute([$target, $orgId]);
+
+        // (Tuỳ logic hệ thống) Đồng bộ member khi bật/tắt
+        if ($target === 1) {
+            // Lấy gói của admin để share
+            $st = $pdo->prepare("SELECT subscription_id FROM users WHERE id = ?");
+            $st->execute([$currentUserId]);
+            $adminSubId = (int)$st->fetchColumn();
             if ($adminSubId <= 0) {
-                throw new Exception("Admin chưa có gói để share.");
+                throw new Exception('Admin has no subscription to share');
             }
-            // set is_shared=1, gán subscribed_id = gói của admin cho toàn bộ member (trừ admin)
-            $stmt = $pdo->prepare("
-                UPDATE organization_members 
+            $st = $pdo->prepare("
+                UPDATE organization_members
                    SET is_shared = 1, subscribed_id = ?
                  WHERE organization_id = ? AND user_id <> ?
             ");
-            $stmt->execute([$adminSubId, $orgId, $currentUserId]);
-
-            // (Tuỳ hệ thống) Nếu logic quyền dựa vào users.subscription_id thì có thể cập nhật luôn:
-            // $pdo->prepare("
-            //     UPDATE users u 
-            //     JOIN organization_members m ON m.user_id = u.id AND m.organization_id = ?
-            //        SET u.subscription_id = ?
-            //      WHERE u.id <> ?
-            // ")->execute([$orgId, $adminSubId, $currentUserId]);
-
+            $st->execute([$adminSubId, $orgId, $currentUserId]);
         } else {
-            // Share OFF → trả về Free
+            // Tắt share → đưa về gói Free (đổi FREE_ID nếu hệ thống bạn khác)
             $FREE_ID = 1;
-            $stmt = $pdo->prepare("
-                UPDATE organization_members 
+            $st = $pdo->prepare("
+                UPDATE organization_members
                    SET is_shared = 0, subscribed_id = ?
                  WHERE organization_id = ? AND user_id <> ?
             ");
-            $stmt->execute([$FREE_ID, $orgId, $currentUserId]);
-
-            // (Tuỳ hệ thống)
-            // $pdo->prepare("
-            //     UPDATE users u 
-            //     JOIN organization_members m ON m.user_id = u.id AND m.organization_id = ?
-            //        SET u.subscription_id = NULL
-            //      WHERE u.id <> ?
-            // ")->execute([$orgId, $currentUserId]);
+            $st->execute([$FREE_ID, $orgId, $currentUserId]);
         }
 
         $pdo->commit();
-        echo json_encode(['ok' => true]);
+        echo json_encode(['ok'=>true,'share_subscription'=>$target]);
     } catch (Exception $e) {
         $pdo->rollBack();
         http_response_code(500);
-        echo json_encode(['ok' => false, 'msg' => $e->getMessage()]);
+        echo json_encode(['ok'=>false,'msg'=>$e->getMessage()]);
     }
     exit;
     }
@@ -320,21 +323,20 @@ if ($membersOrgId > 0) {
               <td><?= htmlspecialchars($o['address']) ?></td>
               <td><?= htmlspecialchars($o['department']) ?></td>
                <td>
-      <?php if ((int)$o['share_subscription'] === 1): ?>
-        <span class="badge badge-success">Shared</span>
-      <?php else: ?>
-        <span class="badge badge-muted">Private</span>
-      <?php endif; ?>
+  <?php if ((int)$o['share_subscription'] === 1): ?>
+    <span class="badge badge-success">Shared</span>
+  <?php else: ?>
+    <span class="badge badge-muted">Private</span>
+  <?php endif; ?>
 
-      <form method="POST" style="display:inline; margin-left:8px;">
-        <input type="hidden" name="action" value="toggle_share">
-        <input type="hidden" name="organization_id" value="<?= (int)$o['id'] ?>">
-        <input type="hidden" name="share" value="<?= ((int)$o['share_subscription'] === 1) ? 0 : 1 ?>">
-        <button type="submit" class="btn-action btn-primary">
-          <?= ((int)$o['share_subscription'] === 1) ? 'Unshare' : 'Share Plan' ?>
-        </button>
-      </form>
-    </td>
+  <!-- Nút toggle: JS sẽ gọi POST và reload trang -->
+  <button type="button"
+          class="btn-action btn-primary"
+          data-action="toggle-org-share"
+          data-org-id="<?= (int)$o['id'] ?>">
+    <?= ((int)$o['share_subscription'] === 1) ? 'Unshare' : 'Share Plan' ?>
+  </button>
+</td>
               <td>
                 <button class="btn-action btn-secondary"
                         onclick="openEdit(
