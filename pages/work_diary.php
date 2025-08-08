@@ -16,6 +16,9 @@ if (!$userId) {
     header('Location: login.php');
     exit;
 }
+// — Feature gate: Work Diary —
+require_once __DIR__ . '/../includes/permissions.php';
+guardWorkDiaryAccess($pdo, (int)$userId);
 $autoload = __DIR__ . '/../vendor/autoload.php';
 if (!file_exists($autoload)) {
     die('<p>Chưa cài PhpSpreadsheet. Vui lòng chạy <code>composer require phpoffice/phpspreadsheet</code></p>');
