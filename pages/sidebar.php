@@ -28,7 +28,7 @@ if ($userId) {
     $unreadCount = (int)$nq->fetchColumn();
 }
 ?>
-<div class="sidebar">
+<div id="cde-sidebar" class="sidebar">
   <!-- Header -->
   <div class="sidebar-header">
     <a href="home.php" class="sidebar-logo-link">
@@ -55,9 +55,12 @@ if ($userId) {
       <li class="<?= $current=== 'subscriptions.php' ? 'active' : '' ?>">
         <a href="subscriptions.php"><i class="fas fa-file-contract"></i> Subscriptions</a>
       </li>
-       <li><a href="organization_manage.php"><i class="fas fa-building"></i> Organization</a></li>
-  <li><a href="organization_members.php"><i class="fas fa-users"></i> Organization Members</a></li>
-
+      <li class="<?= $current=== 'organization_manage.php' ? 'active' : '' ?>">
+        <a href="organization_manage.php"><i class="fas fa-file-contract"></i> Organization</a>
+      </li>
+      <li class="<?= $current=== 'organization_members.php' ? 'active' : '' ?>">
+        <a href="organization_members.php"><i class="fas fa-users"></i> Organization Members</a>
+      </li>
     </ul>
   </nav>
 
