@@ -22,6 +22,15 @@ if (empty($_SESSION['user']['id'])) {
     header('Location: login.php');
     exit;
 }
+// — Feature gate: Organization Manage —
+$userId = $_SESSION['user']['id'] ?? null;
+if (!$userId) {
+    header('Location: login.php');
+    exit;
+}
+
+require_once __DIR__ . '/../includes/permissions.php';
+guardOrganizationManageAccess($pdo, (int)$userId);
 $userId = $_SESSION['user']['id'];
 
 // --- Access Control ---
