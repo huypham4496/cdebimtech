@@ -1,0 +1,154 @@
+/* assets/css/permissions.css
+   Modern, minimal 403 card. Scoped with .perm- to avoid conflicts. */
+
+:root {
+  --perm-primary: var(--primary, #4A90E2);
+  --perm-bg: var(--app-bg, #f6f8fb);
+  --perm-card-bg: #fff;
+  --perm-text: #1f2937;
+  --perm-subtext: #6b7280;
+  --perm-border: #e5e7eb;
+  --perm-shadow: 0 10px 25px rgba(16, 24, 40, 0.08);
+}
+
+.perm-guard {
+  padding: 28px;
+  background: var(--perm-bg);
+  min-height: calc(100vh - 60px); /* leave space for header if fixed */
+}
+
+.perm-card {
+  max-width: 760px;
+  margin: 40px auto;
+  background: var(--perm-card-bg);
+  border: 1px solid var(--perm-border);
+  border-radius: 16px;
+  padding: 28px;
+  box-shadow: var(--perm-shadow);
+  position: relative;
+  overflow: hidden;
+}
+
+.perm-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--perm-primary), #8b5cf6);
+}
+
+.perm-badge {
+  display: inline-block;
+  font-size: 12px;
+  color: #9ca3af;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  padding: 6px 10px;
+}
+
+.perm-icon {
+  width: 68px;
+  height: 68px;
+  display: grid;
+  place-items: center;
+  border-radius: 20px;
+  margin-top: 16px;
+  background: radial-gradient(100% 100% at 50% 0%, rgba(74,144,226,.18) 0%, rgba(139,92,246,.14) 100%);
+  color: var(--perm-primary);
+  font-size: 28px;
+}
+
+.perm-title {
+  margin: 18px 0 6px;
+  font-size: 24px;
+  line-height: 1.25;
+  color: var(--perm-text);
+  font-weight: 700;
+}
+
+.perm-desc {
+  margin: 0 0 16px;
+  color: #6b7280;
+  font-size: 15px;
+}
+
+.perm-meta {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 14px 0 22px;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fafafa;
+  border: 1px dashed var(--perm-border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  color: #374151;
+  font-size: 14px;
+}
+
+.meta-item i {
+  color: var(--perm-primary);
+}
+
+.perm-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 38px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: transform .06s ease, box-shadow .2s ease, background .2s ease, color .2s ease;
+  cursor: pointer;
+}
+
+.btn:active { transform: translateY(1px); }
+
+.btn-primary {
+  background: var(--perm-primary);
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(74,144,226,.25);
+}
+.btn-primary:hover { filter: brightness(1.05); }
+
+.btn-ghost {
+  background: #fff;
+  color: #111827;
+  border-color: var(--perm-border);
+}
+.btn-ghost:hover { background: #f9fafb; }
+
+.perm-tip {
+  margin-top: 16px;
+  color: #9ca3af;
+  font-size: 13px;
+}
+
+.perm-tip a {
+  color: var(--perm-primary);
+  text-decoration: none;
+  border-bottom: 1px dashed rgba(74,144,226,.4);
+}
+.perm-tip a:hover { border-bottom-style: solid; }
+
+/* Responsive */
+@media (max-width: 640px) {
+  .perm-card { padding: 22px; margin: 24px auto; }
+  .perm-meta { grid-template-columns: 1fr; }
+}
