@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Aug 08, 2025 at 12:10 PM
+-- Generation Time: Aug 10, 2025 at 04:49 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -76,7 +76,7 @@ CREATE TABLE `organizations` (
 --
 
 INSERT INTO `organizations` (`id`, `name`, `abbreviation`, `address`, `department`, `created_by`, `share_subscription`, `created_at`) VALUES
-(1, 'CÔNG TY CỔ PHẦN TƯ VẤN MIỀN BẮC', 'NCC', 'Tổ 5, khu 1, Phường Bãi Cháy, Tỉnh Quảng Ninh', 'PHÒNG THIẾT KẾ', 1, 1, '2025-08-04 14:06:12');
+(1, 'CÔNG TY CỔ PHẦN TƯ VẤN MIỀN BẮC', 'NCC', 'Tổ 5, khu 1, Phường Bãi Cháy, Tỉnh Quảng Ninh', 'PHÒNG THIẾT KẾ', 1, 0, '2025-08-04 14:06:12');
 
 -- --------------------------------------------------------
 
@@ -122,16 +122,16 @@ CREATE TABLE `organization_members` (
 --
 
 INSERT INTO `organization_members` (`id`, `organization_id`, `user_id`, `is_shared`, `role`, `subscribed_id`, `joined_at`) VALUES
-(4, 1, 13, 1, 'member', 3, '2025-08-07 04:19:44'),
-(5, 1, 12, 1, 'member', 3, '2025-08-07 04:21:06'),
-(6, 1, 14, 1, 'member', 3, '2025-08-07 04:21:24'),
-(7, 1, 15, 1, 'member', 3, '2025-08-07 04:21:46'),
+(4, 1, 13, 0, 'member', 1, '2025-08-07 04:19:44'),
+(5, 1, 12, 0, 'member', 1, '2025-08-07 04:21:06'),
+(6, 1, 14, 0, 'member', 1, '2025-08-07 04:21:24'),
+(7, 1, 15, 0, 'member', 1, '2025-08-07 04:21:46'),
 (8, 1, 1, 0, 'admin', 1, '2025-08-07 04:21:59'),
-(10, 1, 16, 1, 'member', 3, '2025-08-07 09:27:18'),
-(12, 1, 17, 1, 'member', 3, '2025-08-07 10:59:50'),
-(13, 1, 18, 1, 'member', 3, '2025-08-07 11:16:53'),
-(14, 1, 19, 1, 'member', 3, '2025-08-07 11:24:22'),
-(15, 1, 20, 1, 'member', 3, '2025-08-07 11:44:44');
+(10, 1, 16, 0, 'member', 1, '2025-08-07 09:27:18'),
+(12, 1, 17, 0, 'member', 1, '2025-08-07 10:59:50'),
+(13, 1, 18, 0, 'member', 1, '2025-08-07 11:16:53'),
+(14, 1, 19, 0, 'member', 1, '2025-08-07 11:24:22'),
+(15, 1, 20, 0, 'member', 1, '2025-08-07 11:44:44');
 
 -- --------------------------------------------------------
 
@@ -220,7 +220,7 @@ CREATE TABLE `subscriptions` (
 INSERT INTO `subscriptions` (`id`, `name`, `price`, `description`, `created_at`, `updated_at`, `max_storage_gb`, `max_projects`, `max_company_members`, `allow_organization_members`, `allow_work_diary`, `allow_organization_manage`) VALUES
 (1, 'Free', 0.00, '1 GB chung toàn bộ tài khoản\r\nTối đa 1 dự án\r\nTối đa 1 thành viên\r\nServer dữ liệu tại Việt Nam', '2025-07-30 09:43:49', '2025-08-01 09:44:54', 1, 1, 1, 0, 0, 0),
 (2, 'Personal', 1000000.00, '15 GB chung toàn bộ tài khoản\r\nTối đa 2 dự án\r\nTối đa 3 thành viên\r\nServer dữ liệu tại Việt Nam', '2025-07-30 09:43:56', '2025-08-01 09:45:02', 15, 2, 3, 0, 0, 0),
-(3, 'Pro', 3000000.00, '150 GB chung toàn bộ tài khoản\r\nTối đa 10 dự án\r\nTối đa 12 thành viên\r\nBao gồm tính năng gói Personal\r\nThêm tính năng Organization Members', '2025-07-30 09:44:03', '2025-08-08 02:55:31', 150, 10, 12, 1, 0, 1),
+(3, 'Pro', 3000000.00, '150 GB chung toàn bộ tài khoản\r\nTối đa 10 dự án\r\nTối đa 12 thành viên\r\nBao gồm tính năng gói Personal\r\nThêm tính năng Organization Members', '2025-07-30 09:44:03', '2025-08-08 16:04:00', 150, 10, 12, 0, 0, 0),
 (4, 'Bussines', 7000000.00, '1 TB chung toàn bộ tài khoản\r\nKhông giới hạn dự án\r\nKhông giới hạn thành viên\r\nBao gồm tính năng gói Pro\r\nThêm tính năng Work Diary', '2025-07-30 09:45:44', '2025-08-08 02:55:31', 1024, 0, 0, 1, 1, 1);
 
 -- --------------------------------------------------------
