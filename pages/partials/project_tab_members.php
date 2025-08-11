@@ -1,12 +1,14 @@
 <?php
 /**
  * pages/partials/project_tab_members.php
- * - Uses assets/css/projects_members.css (scoped, responsive, prevents body-horizontal scroll & sidebar overlay)
+ * - Responsive auto-resize (minmax grids, no horizontal scroll)
+ * - Sidebar always above content (z-index), width respected (250px)
+ * - "Invites & Direct Add" refined layout (two-column forms + separate Links table)
  * - Group names display: MANAGER / UNCATEGORIZED (default groups are locked from deletion)
  * - English labels (Deploy / Control)
  * - Single "Update" button for Role + Group
  * - "Remove" member button
- * - "Delete Group" button for non-default, empty groups
+ * - "Delete Group" for non-default, empty groups
  * - Invite links multi-use until revoked; expired links still show Revoke
  * - All buttons use .btn .btn-primary (use your global button styles)
  */
@@ -305,14 +307,14 @@ $joinBase = $baseUrl . dirname($_SERVER['REQUEST_URI']) . '/project_view.php?id=
 <div class="tab-members">
 
   <!-- Section 1: Invites & Direct add -->
-  <div class="section" style="grid-column: span 2;">
+  <div class="section">
     <div class="title">Invites & Direct Add</div>
 
     <?php foreach ($flash['ok'] as $m): ?><div class="alert" style="background:#ecfdf5;color:#065f46;border-color:#a7f3d0"><?= htmlspecialchars($m) ?></div><?php endforeach; ?>
     <?php foreach ($flash['err'] as $m): ?><div class="alert" style="background:#fef2f2;color:#991b1b;border-color:#fecaca"><?= htmlspecialchars($m) ?></div><?php endforeach; ?>
 
     <?php if ($isManager): ?>
-    <div class="row" style="margin-bottom:10px">
+    <div class="grid-split-2" style="margin-bottom:12px">
       <form method="post" class="row">
         <input type="hidden" name="action" value="create_invite">
         <label for="ttl">Invite expiry</label>
@@ -329,7 +331,7 @@ $joinBase = $baseUrl . dirname($_SERVER['REQUEST_URI']) . '/project_view.php?id=
       <form method="post" class="row">
         <input type="hidden" name="action" value="add_direct">
         <label for="user_add">Add from your organization</label>
-        <select class="control" id="user_add" name="user_add" style="min-width:260px">
+        <select class="control" id="user_add" name="user_add" style="min-width:240px">
           <?php if (!$orgUsers): ?><option value="">No colleagues detected</option><?php endif; ?>
           <?php foreach ($orgUsers as $u): ?>
             <option value="<?= (int)$u['id'] ?>"><?= htmlspecialchars($u['name']) ?><?= !empty($u['email'])?' · '.htmlspecialchars($u['email']):'' ?></option>
@@ -342,13 +344,14 @@ $joinBase = $baseUrl . dirname($_SERVER['REQUEST_URI']) . '/project_view.php?id=
       <div class="muted">Only project managers can create invites or add members.</div>
     <?php endif; ?>
 
+    <!-- Links list -->
     <div class="table-responsive">
       <table class="table">
         <thead><tr><th>Link</th><th>Expires</th><th>Status</th><th>Action</th></tr></thead>
         <tbody>
         <?php foreach ($invites as $iv): ?>
           <?php $link = $joinBase . '&token=' . urlencode($iv['token']); ?>
-          <tr>
+          <tr class="invite-item">
             <td data-th="Link"><input class="control" value="<?= htmlspecialchars($link) ?>" readonly></td>
             <td data-th="Expires"><?= htmlspecialchars($iv['expires_at']) ?></td>
             <td data-th="Status"><?= htmlspecialchars($iv['status']) ?></td>
