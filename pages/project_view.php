@@ -52,6 +52,8 @@ $tabs = [
 ];
 $tab = $_GET['tab'] ?? 'overview';
 if (!isset($tabs[$tab])) $tab = 'overview';
+
+$statusClass = ($project['status'] ?? 'active') === 'completed' ? 'completed' : 'active';
 ?>
 <!doctype html>
 <html lang="en">
@@ -67,21 +69,52 @@ if (!isset($tabs[$tab])) $tab = 'overview';
 </head>
 <body>
 <?php if (is_file($ROOT . '/pages/sidebar.php')) require $ROOT . '/pages/sidebar.php'; ?>
-<main class="container">
-  <section class="card">
-    <div class="header">
-      <div class="h-title"><?= htmlspecialchars($project['name']) ?> <span class="badge">Code: <?= htmlspecialchars($project['code']) ?></span></div>
-      <div class="muted">Status: <strong><?= htmlspecialchars($project['status']) ?></strong></div>
+
+<main class="pv-container with-sidebar">
+  <header class="pv-header">
+    <div class="pv-title">
+      <h1><?= htmlspecialchars($project['name']) ?></h1>
+      <div class="pv-meta">
+        <span class="pv-code">Code: <strong><?= htmlspecialchars($project['code']) ?></strong></span>
+        <span class="status-badge <?= $statusClass ?>"><?= htmlspecialchars(ucfirst($project['status'])) ?></span>
+      </div>
     </div>
-    <nav class="tabs">
-      <?php foreach ($tabs as $k=>$label): ?>
-        <a class="tab <?= $tab===$k ? 'active':'' ?>" href="project_view.php?id=<?= (int)$projectId ?>&tab=<?= $k ?>"><?= $label ?></a>
-      <?php endforeach; ?>
-    </nav>
-    <div style="margin-top:12px">
-      <?php include $ROOT . '/pages/partials/project_tab_' . $tab . '.php'; ?>
+    <div class="pv-actions">
+      <!-- Actions (edit, export, etc.) -->
     </div>
+  </header>
+
+  <nav class="pv-tabs" role="tablist">
+    <?php foreach ($tabs as $k=>$label): ?>
+      <a class="pv-tab <?= $tab===$k ? 'active':'' ?>" href="project_view.php?id=<?= (int)$projectId ?>&tab=<?= $k ?>" role="tab" aria-selected="<?= $tab===$k ? 'true':'false' ?>">
+        <?= $label ?>
+      </a>
+    <?php endforeach; ?>
+    <span class="pv-tab-indicator"></span>
+  </nav>
+
+  <section class="pv-content">
+    <?php include $ROOT . '/pages/partials/project_tab_' . $tab . '.php'; ?>
   </section>
 </main>
+
+<script>
+// Move underline to active tab
+(function(){
+  const nav = document.querySelector('.pv-tabs');
+  const indicator = nav?.querySelector('.pv-tab-indicator');
+  function positionIndicator(){
+    const active = nav?.querySelector('.pv-tab.active');
+    if (!nav || !indicator || !active) return;
+    const a = active.getBoundingClientRect();
+    const n = nav.getBoundingClientRect();
+    indicator.style.width = a.width + 'px';
+    indicator.style.transform = 'translateX(' + (a.left - n.left) + 'px)';
+  }
+  positionIndicator();
+  window.addEventListener('resize', positionIndicator);
+})();
+</script>
+
 </body>
 </html>
