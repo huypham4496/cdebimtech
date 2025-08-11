@@ -9,6 +9,7 @@ require_once $ROOT . '/includes/permissions.php';
 require_once $ROOT . '/includes/helpers.php';
 require_once $ROOT . '/includes/projects.php';
 require_once $ROOT . '/includes/files.php';
+
 /** Ensure $pdo exists (fallback if config didn't set it) */
 if (!isset($pdo) || !($pdo instanceof PDO)) {
   if (function_exists('getPDO')) { $pdo = getPDO(); }
@@ -21,7 +22,7 @@ if (!isset($pdo) || !($pdo instanceof PDO)) {
   } else { http_response_code(500); echo 'DB config missing.'; exit; }
 }
 
-/** Helper: current user id (require login) */
+/** Get current user id (requires login) */
 function currentUserIdOrExit(): int {
   $cands = [
     $_SESSION['user_id'] ?? null,
@@ -34,105 +35,63 @@ function currentUserIdOrExit(): int {
   header('Location: /index.php'); exit;
 }
 
-/** Small schema helpers */
-function tableExists(PDO $pdo, string $table): bool {
-  try { $stm = $pdo->prepare("SHOW TABLES LIKE :t"); $stm->execute([':t'=>$table]); return (bool)$stm->fetchColumn(); }
-  catch (Throwable $e) { return false; }
-}
-function columnExists(PDO $pdo, string $table, string $column): bool {
-  try { $stm = $pdo->prepare("SHOW COLUMNS FROM `$table` LIKE :c"); $stm->execute([':c'=>$column]); return (bool)$stm->fetch(PDO::FETCH_ASSOC); }
-  catch (Throwable $e) { return false; }
-}
-function firstExistingColumn(PDO $pdo, string $table, array $candidates): ?string {
-  foreach ($candidates as $c) if (columnExists($pdo, $table, $c)) return $c;
-  return null;
+/** Subscription by users.subscription_id -> subscriptions.id */
+function subscriptionFromUser(PDO $pdo, int $userId): ?array {
+  try {
+    // Read users.subscription_id
+    $get = $pdo->prepare("SELECT subscription_id FROM users WHERE id=:uid LIMIT 1");
+    $get->execute([':uid'=>$userId]);
+    $sid = (int)($get->fetchColumn() ?: 0);
+    if ($sid <= 0) return null;
+
+    // Resolve to subscriptions row by id
+    $stm = $pdo->prepare("SELECT * FROM subscriptions WHERE id=:sid LIMIT 1");
+    $stm->execute([':sid'=>$sid]);
+    $row = $stm->fetch(PDO::FETCH_ASSOC);
+    return $row ?: null;
+  } catch (Throwable $e) {
+    return null;
+  }
 }
 
-/** Guess user's organizations (best effort) */
-function userOrgIds(PDO $pdo, int $userId): array {
-  $ids = [];
-  if (tableExists($pdo, 'organization_members') && columnExists($pdo, 'organization_members', 'organization_id') && columnExists($pdo, 'organization_members', 'user_id')) {
-    $stm = $pdo->prepare("SELECT organization_id FROM organization_members WHERE user_id=:uid");
+/** Enforce limit from subscription.max_projects */
+function projectLimitInfo(PDO $pdo, int $userId): array {
+  $sub = subscriptionFromUser($pdo, $userId);
+  $max = $sub && array_key_exists('max_projects', $sub) ? (int)$sub['max_projects'] : 0; // 0 = unlimited
+
+  // Count how many projects this user has created
+  $count = 0;
+  try {
+    $cnt = $pdo->prepare("SELECT COUNT(*) FROM projects WHERE created_by=:uid");
+    $cnt->execute([':uid'=>$userId]);
+    $count = (int)$cnt->fetchColumn();
+  } catch (Throwable $e) { $count = 0; }
+
+  $reached = ($max > 0 && $count >= $max);
+  return ['max'=>$max, 'count'=>$count, 'reached'=>$reached];
+}
+
+/** Resolve organization id for new project (best effort; optional in your schema) */
+function resolveOrganizationId(PDO $pdo, int $userId): int {
+  try {
+    $stm = $pdo->prepare("SELECT organization_id FROM organization_members WHERE user_id=:uid ORDER BY organization_id LIMIT 1");
     $stm->execute([':uid'=>$userId]);
-    $ids = array_map('intval', array_column($stm->fetchAll(), 'organization_id'));
-  }
-  if (!$ids && tableExists($pdo, 'users') && columnExists($pdo, 'users', 'organization_id')) {
+    $orgId = (int)($stm->fetchColumn() ?: 0);
+    if ($orgId > 0) return $orgId;
+  } catch (Throwable $e) {}
+  try {
     $stm = $pdo->prepare("SELECT organization_id FROM users WHERE id=:uid");
     $stm->execute([':uid'=>$userId]);
-    $oid = (int)($stm->fetchColumn() ?: 0);
-    if ($oid) $ids = [$oid];
-  }
-  if (!$ids && tableExists($pdo, 'organizations') && columnExists($pdo, 'organizations', 'owner_id')) {
-    $stm = $pdo->prepare("SELECT id FROM organizations WHERE owner_id=:uid");
-    $stm->execute([':uid'=>$userId]);
-    $ids = array_map('intval', array_column($stm->fetchAll(), 'id'));
-  }
-  return array_values(array_unique(array_filter($ids)));
-}
-
-/** Subscription + limit (read max_projects precisely for the plan tied to this user) */
-function subscriptionFor(PDO $pdo, int $userId): ?array {
-  if (!tableExists($pdo, 'subscriptions')) return null;
-
-  // Prefer direct user mapping
-  $userKey = firstExistingColumn($pdo, 'subscriptions', ['user_id','account_id','member_id','owner_id','customer_id']);
-  if ($userKey) {
-    $stm = $pdo->prepare("SELECT * FROM subscriptions WHERE `$userKey`=:val ORDER BY id DESC LIMIT 1");
-    $stm->execute([':val'=>$userId]);
-    $row = $stm->fetch(PDO::FETCH_ASSOC);
-    if ($row) return $row;
-  }
-
-  // Try organization-based subscriptions
-  $orgKey = firstExistingColumn($pdo, 'subscriptions', ['organization_id','org_id']);
-  if ($orgKey) {
-    $orgIds = userOrgIds($pdo, $userId);
-    if ($orgIds) {
-      $in = implode(',', array_fill(0, count($orgIds), '?'));
-      $stm = $pdo->prepare("SELECT * FROM subscriptions WHERE `$orgKey` IN ($in) ORDER BY id DESC LIMIT 1");
-      $stm->execute($orgIds);
-      $row = $stm->fetch(PDO::FETCH_ASSOC);
-      if ($row) return $row;
-    }
-  }
-
-  // Fallback: latest row (global plan)
-  $stm = $pdo->query("SELECT * FROM subscriptions ORDER BY id DESC LIMIT 1");
-  return $stm->fetch(PDO::FETCH_ASSOC) ?: null;
-}
-
-function projectLimitInfo(PDO $pdo, int $userId): array {
-  $sub = subscriptionFor($pdo, $userId);
-
-  // Find the exact column that stores the cap
-  $maxCol = null;
-  foreach (['max_projects','projects_max','project_limit','max_projects_count'] as $c) {
-    if (columnExists($pdo, 'subscriptions', $c)) { $maxCol = $c; break; }
-  }
-  $max = ($sub && $maxCol) ? (int)($sub[$maxCol] ?? 0) : 0; // 0 = unlimited
-
-  // Count only projects created by this user
-  $count = 0;
-  if (tableExists($pdo, 'projects') && columnExists($pdo, 'projects', 'created_by')) {
-    $stm = $pdo->prepare("SELECT COUNT(*) FROM projects WHERE created_by=:uid");
-    $stm->execute([':uid'=>$userId]);
-    $count = (int)$stm->fetchColumn();
-  }
-
-  return ['max'=>$max, 'count'=>$count, 'reached'=>($max>0 && $count >= $max)];
-}
-
-/** Resolve organization id for new project (best effort) */
-function resolveOrganizationId(PDO $pdo, int $userId): int {
-  $orgIds = userOrgIds($pdo, $userId);
-  if ($orgIds) return $orgIds[0];
+    $orgId = (int)($stm->fetchColumn() ?: 0);
+    if ($orgId > 0) return $orgId;
+  } catch (Throwable $e) {}
   return 1;
 }
 
 $userId = currentUserIdOrExit();
 $limit = projectLimitInfo($pdo, $userId);
 
-/** Permission to create (always on as requested) */
+/** Permission to create (always enabled per your request) */
 $canCreate = true;
 $createDisabled = (!$canCreate) || $limit['reached'];
 
@@ -142,7 +101,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action'] ?? '')==='create') 
     $errors[] = 'You have reached your project limit or lack permission to create.';
   } else {
     $name = trim($_POST['name'] ?? '');
-    $start_date = $_POST['start_date'] ?? null;
+    $start_date = $_POST['start_date'] ?? null; // Created Date
     $location = trim($_POST['location'] ?? '');
     $status = ($_POST['status'] ?? 'active') === 'completed' ? 'completed' : 'active';
     $tag = $_POST['tag'] ?? null;
@@ -189,10 +148,13 @@ $current = 'projects.php';
     <div class="header">
       <div>
         <div class="h-title"><i class="fas fa-folder-open"></i> Your Projects</div>
-        <div class="muted">Total created by you: <strong><?= (int)$limit['count'] ?></strong><?= $limit['max']>0 ? " / {$limit['max']} allowed" : " (unlimited by plan)" ?></div>
+        <div class="muted">
+          Total created by you: <strong><?= (int)$limit['count'] ?></strong>
+          <?= $limit['max']>0 ? " / {$limit['max']} allowed" : " (unlimited by plan)" ?>
+        </div>
       </div>
       <!-- Single Create button that submits the form below -->
-      <button class="btn btn-primary" type="submit" form="createForm" <?= $createDisabled ? 'disabled title="Create disabled by plan limit or permission"' : '' ?>>
+      <button class="btn btn-primary" type="submit" form="createForm" <?= $createDisabled ? 'disabled title="Create disabled: plan limit reached"' : '' ?>>
         <i class="fas fa-plus-circle"></i> Create
       </button>
     </div>
