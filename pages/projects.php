@@ -9,7 +9,6 @@ require_once $ROOT . '/includes/permissions.php';
 require_once $ROOT . '/includes/helpers.php';
 require_once $ROOT . '/includes/projects.php';
 require_once $ROOT . '/includes/files.php';
-
 /** Ensure $pdo exists (fallback if config didn't set it) */
 if (!isset($pdo) || !($pdo instanceof PDO)) {
   if (function_exists('getPDO')) { $pdo = getPDO(); }
@@ -37,18 +36,12 @@ function currentUserIdOrExit(): int {
 
 /** Small schema helpers */
 function tableExists(PDO $pdo, string $table): bool {
-  try {
-    $stm = $pdo->prepare("SHOW TABLES LIKE :t");
-    $stm->execute([':t'=>$table]);
-    return (bool)$stm->fetchColumn();
-  } catch (Throwable $e) { return false; }
+  try { $stm = $pdo->prepare("SHOW TABLES LIKE :t"); $stm->execute([':t'=>$table]); return (bool)$stm->fetchColumn(); }
+  catch (Throwable $e) { return false; }
 }
 function columnExists(PDO $pdo, string $table, string $column): bool {
-  try {
-    $stm = $pdo->prepare("SHOW COLUMNS FROM `$table` LIKE :c");
-    $stm->execute([':c'=>$column]);
-    return (bool)$stm->fetch(PDO::FETCH_ASSOC);
-  } catch (Throwable $e) { return false; }
+  try { $stm = $pdo->prepare("SHOW COLUMNS FROM `$table` LIKE :c"); $stm->execute([':c'=>$column]); return (bool)$stm->fetch(PDO::FETCH_ASSOC); }
+  catch (Throwable $e) { return false; }
 }
 function firstExistingColumn(PDO $pdo, string $table, array $candidates): ?string {
   foreach ($candidates as $c) if (columnExists($pdo, $table, $c)) return $c;
@@ -58,7 +51,7 @@ function firstExistingColumn(PDO $pdo, string $table, array $candidates): ?strin
 /** Guess user's organizations (best effort) */
 function userOrgIds(PDO $pdo, int $userId): array {
   $ids = [];
-  if (tableExists($pdo, 'organization_members') && columnExists($pdo, 'organization_members', 'organization_id')) {
+  if (tableExists($pdo, 'organization_members') && columnExists($pdo, 'organization_members', 'organization_id') && columnExists($pdo, 'organization_members', 'user_id')) {
     $stm = $pdo->prepare("SELECT organization_id FROM organization_members WHERE user_id=:uid");
     $stm->execute([':uid'=>$userId]);
     $ids = array_map('intval', array_column($stm->fetchAll(), 'organization_id'));
@@ -77,56 +70,56 @@ function userOrgIds(PDO $pdo, int $userId): array {
   return array_values(array_unique(array_filter($ids)));
 }
 
-/** Subscription + limit (dynamic column detection) */
+/** Subscription + limit (read max_projects precisely for the plan tied to this user) */
 function subscriptionFor(PDO $pdo, int $userId): ?array {
   if (!tableExists($pdo, 'subscriptions')) return null;
 
-  // pick key column
-  $keyCol = firstExistingColumn($pdo, 'subscriptions', ['user_id','account_id','member_id','owner_id','customer_id']);
-  if ($keyCol) {
-    $stm = $pdo->prepare("SELECT * FROM subscriptions WHERE `$keyCol`=:val ORDER BY id DESC LIMIT 1");
+  // Prefer direct user mapping
+  $userKey = firstExistingColumn($pdo, 'subscriptions', ['user_id','account_id','member_id','owner_id','customer_id']);
+  if ($userKey) {
+    $stm = $pdo->prepare("SELECT * FROM subscriptions WHERE `$userKey`=:val ORDER BY id DESC LIMIT 1");
     $stm->execute([':val'=>$userId]);
     $row = $stm->fetch(PDO::FETCH_ASSOC);
     if ($row) return $row;
   }
 
-  // try organization-based subscription
-  $orgCol = firstExistingColumn($pdo, 'subscriptions', ['organization_id','org_id']);
-  $orgIds = $orgCol ? userOrgIds($pdo, $userId) : [];
-  if ($orgCol && $orgIds) {
-    $in = implode(',', array_fill(0, count($orgIds), '?'));
-    $stm = $pdo->prepare("SELECT * FROM subscriptions WHERE `$orgCol` IN ($in) ORDER BY id DESC LIMIT 1");
-    $stm->execute($orgIds);
-    $row = $stm->fetch(PDO::FETCH_ASSOC);
-    if ($row) return $row;
+  // Try organization-based subscriptions
+  $orgKey = firstExistingColumn($pdo, 'subscriptions', ['organization_id','org_id']);
+  if ($orgKey) {
+    $orgIds = userOrgIds($pdo, $userId);
+    if ($orgIds) {
+      $in = implode(',', array_fill(0, count($orgIds), '?'));
+      $stm = $pdo->prepare("SELECT * FROM subscriptions WHERE `$orgKey` IN ($in) ORDER BY id DESC LIMIT 1");
+      $stm->execute($orgIds);
+      $row = $stm->fetch(PDO::FETCH_ASSOC);
+      if ($row) return $row;
+    }
   }
 
-  // fallback: latest subscription (global)
+  // Fallback: latest row (global plan)
   $stm = $pdo->query("SELECT * FROM subscriptions ORDER BY id DESC LIMIT 1");
   return $stm->fetch(PDO::FETCH_ASSOC) ?: null;
 }
 
 function projectLimitInfo(PDO $pdo, int $userId): array {
   $sub = subscriptionFor($pdo, $userId);
-  // detect max_projects column name
-  $maxCol = columnExists($pdo, 'subscriptions', 'max_projects') ? 'max_projects' : null;
-  if (!$maxCol) {
-    // try some common alternatives
-    foreach (['projects_max','project_limit','max_projects_count'] as $alt) {
-      if (columnExists($pdo, 'subscriptions', $alt)) { $maxCol = $alt; break; }
-    }
-  }
-  $max = $sub && $maxCol ? (int)($sub[$maxCol] ?? 0) : 0; // 0 = unlimited
 
-  // count created projects
-  $count = 0;
-  if (tableExists($pdo, 'projects')) {
-    $countStmt = $pdo->prepare("SELECT COUNT(*) FROM projects WHERE created_by=:uid");
-    $countStmt->execute([':uid'=>$userId]);
-    $count = (int)$countStmt->fetchColumn();
+  // Find the exact column that stores the cap
+  $maxCol = null;
+  foreach (['max_projects','projects_max','project_limit','max_projects_count'] as $c) {
+    if (columnExists($pdo, 'subscriptions', $c)) { $maxCol = $c; break; }
   }
-  $reached = $max > 0 && $count >= $max;
-  return ['max'=>$max, 'count'=>$count, 'reached'=>$reached];
+  $max = ($sub && $maxCol) ? (int)($sub[$maxCol] ?? 0) : 0; // 0 = unlimited
+
+  // Count only projects created by this user
+  $count = 0;
+  if (tableExists($pdo, 'projects') && columnExists($pdo, 'projects', 'created_by')) {
+    $stm = $pdo->prepare("SELECT COUNT(*) FROM projects WHERE created_by=:uid");
+    $stm->execute([':uid'=>$userId]);
+    $count = (int)$stm->fetchColumn();
+  }
+
+  return ['max'=>$max, 'count'=>$count, 'reached'=>($max>0 && $count >= $max)];
 }
 
 /** Resolve organization id for new project (best effort) */
@@ -196,46 +189,49 @@ $current = 'projects.php';
     <div class="header">
       <div>
         <div class="h-title"><i class="fas fa-folder-open"></i> Your Projects</div>
-        <div class="muted">Total: <strong><?= (int)$limit['count'] ?></strong><?= $limit['max']>0 ? " / {$limit['max']} max" : " (unlimited)" ?></div>
+        <div class="muted">Total created by you: <strong><?= (int)$limit['count'] ?></strong><?= $limit['max']>0 ? " / {$limit['max']} allowed" : " (unlimited by plan)" ?></div>
       </div>
-      <form method="post" style="margin:0">
-        <input type="hidden" name="action" value="create">
-        <button class="btn btn-primary" type="submit" <?= $createDisabled ? 'disabled title="Create is disabled"' : '' ?>>
-          <i class="fas fa-plus-circle"></i> Create
-        </button>
-      </form>
+      <!-- Single Create button that submits the form below -->
+      <button class="btn btn-primary" type="submit" form="createForm" <?= $createDisabled ? 'disabled title="Create disabled by plan limit or permission"' : '' ?>>
+        <i class="fas fa-plus-circle"></i> Create
+      </button>
     </div>
 
     <?php if ($limit['reached']): ?>
-      <div class="alert"><strong>Project limit reached.</strong> You have created <?= (int)$limit['count'] ?> projects, which is the maximum allowed by your subscription.</div>
+      <div class="alert"><strong>Project limit reached.</strong> You have created <?= (int)$limit['count'] ?> projects, which equals the maximum allowed by your subscription.</div>
     <?php endif; ?>
     <?php if ($errors): ?>
       <div class="alert"><strong>Could not create project.</strong> <?= htmlspecialchars(implode(' ', $errors)) ?></div>
     <?php endif; ?>
 
-    <!-- Inline create form -->
-    <form method="post" class="form" style="margin-top:8px">
+    <!-- Create form (balanced layout). Only one submit button (in header) -->
+    <form id="createForm" method="post" class="form" style="margin-top:8px">
       <input type="hidden" name="action" value="create">
+
       <div class="kv" style="grid-column:span 6;">
         <label for="name">Project Name<span style="color:#b91c1c">*</span></label>
-        <input class="control" id="name" name="name" type="text" placeholder="Tên Project" required <?= $createDisabled?'disabled':'' ?>>
+        <input class="control" id="name" name="name" type="text" placeholder="Enter project name" required <?= $createDisabled?'disabled':'' ?>>
       </div>
+
       <div class="kv" style="grid-column:span 3;">
         <label for="start_date">Created Date</label>
         <input class="control" id="start_date" name="start_date" type="date" <?= $createDisabled?'disabled':'' ?>>
       </div>
-      <div class="kv" style="grid-column:span 3;">
-        <label for="location">Location</label>
-        <input class="control" id="location" name="location" type="text" placeholder="Vị trí" <?= $createDisabled?'disabled':'' ?>>
-      </div>
+
       <div class="kv" style="grid-column:span 3;">
         <label for="status">Status</label>
         <select class="control" id="status" name="status" <?= $createDisabled?'disabled':'' ?>>
-          <option value="active">Đang hoạt động</option>
-          <option value="completed">Đã hoàn thành</option>
+          <option value="active">Active</option>
+          <option value="completed">Completed</option>
         </select>
       </div>
-      <div class="kv" style="grid-column:span 4;">
+
+      <div class="kv" style="grid-column:span 6;">
+        <label for="location">Location</label>
+        <input class="control" id="location" name="location" type="text" placeholder="City, site, etc." <?= $createDisabled?'disabled':'' ?>>
+      </div>
+
+      <div class="kv" style="grid-column:span 6;">
         <label for="tag">Tag</label>
         <select class="control" id="tag" name="tag" <?= $createDisabled?'disabled':'' ?>>
           <option>Pre-Feasibility Study</option>
@@ -245,15 +241,10 @@ $current = 'projects.php';
           <option>Construction Drawings</option>
         </select>
       </div>
+
       <div class="kv" style="grid-column:span 12;">
         <label for="description">Description</label>
-        <textarea class="control textarea" id="description" name="description" rows="4" placeholder="Mô tả" <?= $createDisabled?'disabled':'' ?>></textarea>
-      </div>
-      <div style="grid-column:span 12;display:flex;gap:8px">
-        <button class="btn btn-primary" type="submit" <?= $createDisabled ? 'disabled' : '' ?>>
-          <i class="fas fa-check"></i> Create Project
-        </button>
-        <span class="badge">Click “Create” to add a new project.</span>
+        <textarea class="control textarea" id="description" name="description" rows="4" placeholder="Describe the project..." <?= $createDisabled?'disabled':'' ?>></textarea>
       </div>
     </form>
 
