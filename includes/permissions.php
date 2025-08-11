@@ -438,3 +438,53 @@ if (!function_exists('guardOrganizationManageAccess')) {
         Permissions::guardFeatureAccess($pdo, $userId, 'allow_organization_manage', 'Organization Manage');
     }
 }
+
+
+// === PATCH: Projects permissions ===
+/**
+ * Feature gate for Projects module (uses existing guardFeatureAccess).
+ * Throws PermissionDeniedException (or your project's exception) if not allowed.
+ */
+function guardProjectsAccess(PDO $pdo, int $userId): void {
+    if (function_exists('guardFeatureAccess')) {
+        guardFeatureAccess($pdo, $userId, 'allow_projects', 'Projects');
+        return;
+    }
+    // Fallback: if no guardFeatureAccess, do nothing (or implement your own check here)
+}
+
+/**
+ * Check if user can manage a project (owner/manager).
+ */
+function canManageProject(PDO $pdo, int $userId, int $projectId): bool {
+    $sql = "SELECT 1 FROM project_members WHERE project_id = :pid AND user_id = :uid AND role IN ('owner','manager') LIMIT 1";
+    $stm = $pdo->prepare($sql);
+    $stm->execute([':pid' => $projectId, ':uid' => $userId]);
+    return (bool)$stm->fetchColumn();
+}
+
+/**
+ * Check if user can view a project:
+ *  - member of project, OR
+ *  - project visibility is not 'private' (i.e., 'org' or 'public').
+ * Extend to your org-membership rule if needed.
+ */
+function canViewProject(PDO $pdo, int $userId, int $projectId): bool {
+    $sql = "SELECT p.visibility, pm.user_id
+            FROM projects p
+            LEFT JOIN project_members pm
+                ON pm.project_id = p.id AND pm.user_id = :uid
+            WHERE p.id = :pid
+            LIMIT 1";
+    $stm = $pdo->prepare($sql);
+    $stm->execute([':pid' => $projectId, ':uid' => $userId]);
+    $row = $stm->fetch(PDO::FETCH_ASSOC);
+    if (!$row) {
+        return false;
+    }
+    if (!empty($row['user_id'])) {
+        return true;
+    }
+    return ($row['visibility'] ?? 'private') !== 'private';
+}
+
