@@ -1,11 +1,13 @@
 <?php
 /**
- * pages/partials/project_tab_members.php — robust version
- * - Dynamically detects `users` table name/email columns (name/fullname/username/display_name or first_name+last_name)
- * - Avoids referencing non-existent columns to prevent "Unknown column 'u.name'"
+ * pages/partials/project_tab_members.php — Members tab with separate CSS, English labels,
+ * uppercase display for default groups, unified "Update" button, and "Remove" member action.
  */
 
 if (!isset($pdo) || !isset($project) || !isset($userId)) { echo '<div class="alert">Context missing.</div>'; return; }
+
+// Load dedicated CSS for this tab
+echo '<link rel="stylesheet" href="../assets/css/projects_members.css">';
 
 // ---------- helpers (local) ----------
 function cde_table_exists_local(PDO $pdo, string $table): bool {
@@ -16,13 +18,8 @@ function cde_column_exists_local(PDO $pdo, string $table, string $col): bool {
   try { $stm = $pdo->prepare("SHOW COLUMNS FROM `$table` LIKE :c"); $stm->execute([':c'=>$col]); return (bool)$stm->fetch(PDO::FETCH_ASSOC); }
   catch (Throwable $e) { return false; }
 }
-
-/** Return SQL expressions for user's display name and email, with aliases.
- * Example: ["expr_name"=>"COALESCE(u.fullname, ... ) AS name", "expr_email"=>"u.email AS email"]
- */
 function users_name_email_expr(PDO $pdo): array {
   $nameExpr = null;
-  // Prefer composed first_name + last_name
   $hasFirst = cde_column_exists_local($pdo, 'users','first_name');
   $hasLast  = cde_column_exists_local($pdo, 'users','last_name');
   if ($hasFirst || $hasLast) {
@@ -30,27 +27,21 @@ function users_name_email_expr(PDO $pdo): array {
     $last  = $hasLast  ? "u.last_name"  : "''";
     $nameExpr = "NULLIF(TRIM(CONCAT($first, ' ', $last)), '')";
   }
-  // Try common single name columns
-  $cands = ['name','full_name','fullname','display_name','username'];
-  foreach ($cands as $c) {
+  foreach (['name','full_name','fullname','display_name','username'] as $c) {
     if (cde_column_exists_local($pdo, 'users', $c)) {
       $col = "u.`$c`";
       $nameExpr = $nameExpr ? "COALESCE($nameExpr, NULLIF($col,''))" : "NULLIF($col,'')";
-      // do not break; continue to build coalesce chain to be safe
     }
   }
   if (!$nameExpr) { $nameExpr = "NULL"; }
-  // Final fallback to "User #<id>"
   $nameExpr = "COALESCE($nameExpr, CONCAT('User #', u.id)) AS name";
 
-  // email column
   $emailExpr = "NULL AS email";
   foreach (['email','email_address','mail'] as $e) {
     if (cde_column_exists_local($pdo, 'users', $e)) { $emailExpr = "u.`$e` AS email"; break; }
   }
   return ['expr_name'=>$nameExpr, 'expr_email'=>$emailExpr];
 }
-
 function ensure_members_tables(PDO $pdo): void {
   if (!cde_table_exists_local($pdo, 'project_groups')) {
     $pdo->exec("CREATE TABLE IF NOT EXISTS project_groups (
@@ -135,6 +126,27 @@ function list_invites(PDO $pdo, int $projectId): array {
   $stm->execute([':pid'=>$projectId]);
   return $stm->fetchAll(PDO::FETCH_ASSOC) ?: [];
 }
+function users_name_email_expr_runtime(PDO $pdo): array {
+  $exprs = users_name_email_expr($pdo);
+  return [$exprs['expr_name'], $exprs['expr_email']];
+}
+function list_groups_with_members(PDO $pdo, int $projectId): array {
+  $stm = $pdo->prepare("SELECT pg.id as group_id, pg.name as group_name FROM project_groups pg WHERE pg.project_id=:pid ORDER BY pg.name");
+  $stm->execute([':pid'=>$projectId]);
+  $groups = $stm->fetchAll(PDO::FETCH_ASSOC) ?: [];
+  $result = [];
+  $exprs = users_name_email_expr($pdo);
+  foreach ($groups as $g) {
+    $stm2 = $pdo->prepare("SELECT pgm.user_id, pgm.role, {$exprs['expr_name']}, {$exprs['expr_email']}
+      FROM project_group_members pgm
+      LEFT JOIN users u ON u.id = pgm.user_id
+      WHERE pgm.project_id=:pid AND pgm.group_id=:gid
+      ORDER BY name");
+    $stm2->execute([':pid'=>$projectId, ':gid'=>(int)$g['group_id']]);
+    $result[] = ['group'=>$g, 'members'=>$stm2->fetchAll(PDO::FETCH_ASSOC) ?: []];
+  }
+  return $result;
+}
 function org_users_for_manager(PDO $pdo, int $managerId): array {
   $orgIds = [];
   try {
@@ -156,22 +168,11 @@ function org_users_for_manager(PDO $pdo, int $managerId): array {
     return $stm->fetchAll(PDO::FETCH_ASSOC) ?: [];
   } catch (Throwable $e) { return []; }
 }
-function list_groups_with_members(PDO $pdo, int $projectId): array {
-  $stm = $pdo->prepare("SELECT pg.id as group_id, pg.name as group_name FROM project_groups pg WHERE pg.project_id=:pid ORDER BY pg.name");
-  $stm->execute([':pid'=>$projectId]);
-  $groups = $stm->fetchAll(PDO::FETCH_ASSOC) ?: [];
-  $result = [];
-  $exprs = users_name_email_expr($pdo);
-  foreach ($groups as $g) {
-    $stm2 = $pdo->prepare("SELECT pgm.user_id, pgm.role, {$exprs['expr_name']}, {$exprs['expr_email']}
-      FROM project_group_members pgm
-      LEFT JOIN users u ON u.id = pgm.user_id
-      WHERE pgm.project_id=:pid AND pgm.group_id=:gid
-      ORDER BY name");
-    $stm2->execute([':pid'=>$projectId, ':gid'=>(int)$g['group_id']]);
-    $result[] = ['group'=>$g, 'members'=>$stm2->fetchAll(PDO::FETCH_ASSOC) ?: []];
-  }
-  return $result;
+function display_group_name(string $name): string {
+  $lower = mb_strtolower($name, 'UTF-8');
+  if ($lower === 'manager') return 'MANAGER';
+  if ($lower === 'chưa phân loại' || $lower === 'chua phan loai') return 'UNCATEGORIZED';
+  return $name;
 }
 
 // Ensure tables + default groups + owner in manager
@@ -244,46 +245,51 @@ if ($isManager) {
     catch (Throwable $e) { $flash['err'][] = 'Could not create group.'; }
   }
 
-  if ($act === 'move_member' && isset($_POST['member_uid'], $_POST['to_group'])) {
+  if ($act === 'update_member' && isset($_POST['member_uid'])) {
     try {
-      $to = (int)$_POST['to_group'];
       $mem = (int)$_POST['member_uid'];
-      add_member_to_group($pdo, (int)$project['id'], $to, $mem, 'deploy');
-      $flash['ok'][] = 'Member moved.';
-    } catch (Throwable $e) { $flash['err'][] = 'Could not move member.'; }
+      $role = ($_POST['role'] ?? '') === 'control' ? 'control' : 'deploy';
+      $toGroup = (int)($_POST['to_group'] ?? 0);
+      if ($toGroup > 0) add_member_to_group($pdo, (int)$project['id'], $toGroup, $mem, $role);
+      else {
+        $upd = $pdo->prepare("UPDATE project_group_members SET role=:r WHERE project_id=:pid AND user_id=:uid");
+        $upd->execute([':r'=>$role, ':pid'=>(int)$project['id'], ':uid'=>$mem]);
+      }
+      $flash['ok'][] = 'Member updated.';
+    } catch (Throwable $e) { $flash['err'][] = 'Could not update member.'; }
   }
 
-  if ($act === 'set_role' && isset($_POST['member_uid'], $_POST['role'])) {
-    $role = $_POST['role'] === 'control' ? 'control' : 'deploy';
+  if ($act === 'remove_member' && isset($_POST['member_uid'])) {
     try {
-      $upd = $pdo->prepare("UPDATE project_group_members SET role=:r WHERE project_id=:pid AND user_id=:uid");
-      $upd->execute([':r'=>$role, ':pid'=>(int)$project['id'], ':uid'=>(int)$_POST['member_uid']]);
-      $flash['ok'][] = 'Role updated.';
-    } catch (Throwable $e) { $flash['err'][] = 'Could not update role.'; }
+      $mem = (int)$_POST['member_uid'];
+      $del = $pdo->prepare("DELETE FROM project_group_members WHERE project_id=:pid AND user_id=:uid");
+      $del->execute([':pid'=>(int)$project['id'], ':uid'=>$mem]);
+      $flash['ok'][] = 'Member removed from project.';
+    } catch (Throwable $e) { $flash['err'][] = 'Could not remove member.'; }
   }
 }
 
 // Data for rendering
 $invites = list_invites($pdo, (int)$project['id']);
-$orgUsers = is_project_manager($pdo, (int)$project['id'], (int)$userId, $project) ? org_users_for_manager($pdo, (int)$userId) : [];
+$orgUsers = $isManager ? org_users_for_manager($pdo, (int)$userId) : [];
 $groupsList = list_groups_with_members($pdo, (int)$project['id']);
 
 // Build invite join URL pattern (same page accept)
 $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
 $joinBase = $baseUrl . dirname($_SERVER['REQUEST_URI']) . '/project_view.php?id=' . (int)$project['id'] . '&tab=members';
 ?>
-<div class="ov-grid">
+<div class="tab-members">
 
-  <!-- Section 1: Invite + Direct add -->
-  <section class="card" style="grid-column: span 2;">
-    <h3 class="card-title">Invites & Direct Add</h3>
+  <!-- Section 1: Invites & Direct add -->
+  <div class="section" style="grid-column: span 2;">
+    <div class="title">Invites & Direct Add</div>
 
     <?php foreach ($flash['ok'] as $m): ?><div class="alert" style="background:#ecfdf5;color:#065f46;border-color:#a7f3d0"><?= htmlspecialchars($m) ?></div><?php endforeach; ?>
     <?php foreach ($flash['err'] as $m): ?><div class="alert" style="background:#fef2f2;color:#991b1b;border-color:#fecaca"><?= htmlspecialchars($m) ?></div><?php endforeach; ?>
 
     <?php if ($isManager): ?>
-    <div class="form" style="margin-bottom:10px">
-      <form method="post" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+    <div class="row" style="margin-bottom:10px">
+      <form method="post" class="row">
         <input type="hidden" name="action" value="create_invite">
         <label for="ttl">Invite expiry</label>
         <select class="control" id="ttl" name="ttl" style="width:180px">
@@ -296,7 +302,7 @@ $joinBase = $baseUrl . dirname($_SERVER['REQUEST_URI']) . '/project_view.php?id=
         <button class="btn btn-primary" type="submit"><i class="fas fa-link"></i> Generate Link</button>
       </form>
 
-      <form method="post" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <form method="post" class="row">
         <input type="hidden" name="action" value="add_direct">
         <label for="user_add">Add from your organization</label>
         <select class="control" id="user_add" name="user_add" style="min-width:260px">
@@ -327,7 +333,7 @@ $joinBase = $baseUrl . dirname($_SERVER['REQUEST_URI']) . '/project_view.php?id=
               <form method="post" onsubmit="return confirm('Revoke this invite?')" style="margin:0">
                 <input type="hidden" name="action" value="revoke_invite">
                 <input type="hidden" name="invite_id" value="<?= (int)$iv['id'] ?>">
-                <button class="btn btn-ghost" type="submit"><i class="fas fa-times"></i> Revoke</button>
+                <button class="btn" type="submit"><i class="fas fa-times"></i> Revoke</button>
               </form>
               <?php else: ?>—<?php endif; ?>
             </td>
@@ -341,8 +347,8 @@ $joinBase = $baseUrl . dirname($_SERVER['REQUEST_URI']) . '/project_view.php?id=
     </div>
 
     <?php if (!empty($_GET['token'])): ?>
-      <div class="card" style="margin-top:10px">
-        <form method="post" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0">
+      <div class="section" style="margin-top:10px">
+        <form method="post" class="row" style="margin:0">
           <input type="hidden" name="action" value="accept_invite">
           <input type="hidden" name="token" value="<?= htmlspecialchars($_GET['token']) ?>">
           <span>Invite token detected.</span>
@@ -350,78 +356,92 @@ $joinBase = $baseUrl . dirname($_SERVER['REQUEST_URI']) . '/project_view.php?id=
         </form>
       </div>
     <?php endif; ?>
-  </section>
+  </div>
 
-  <!-- Section 2: Create group -->
-  <section class="card">
-    <h3 class="card-title">Create Group</h3>
-    <?php if ($isManager): ?>
-    <form method="post" class="form" style="margin:0;display:flex;gap:10px;align-items:center">
-      <input type="hidden" name="action" value="create_group">
-      <input class="control" name="group_name" type="text" placeholder="Enter group name" required>
-      <button class="btn" type="submit"><i class="fas fa-plus"></i> Create</button>
-    </form>
-    <?php else: ?>
-      <div class="muted">Only managers can create groups.</div>
-    <?php endif; ?>
-  </section>
+  <!-- Row: Create group + Members -->
+  <div class="grid-2">
 
-  <!-- Section 3: Members by group -->
-  <section class="card" style="grid-column: span 2;">
-    <h3 class="card-title">Members</h3>
-    <?php $groupsList = list_groups_with_members($pdo, (int)$project['id']); ?>
-    <?php foreach ($groupsList as $g): ?>
-      <div class="card" style="margin-bottom:10px">
-        <div class="card-title"><?= htmlspecialchars($g['group']['group_name']) ?></div>
-        <div class="table-responsive">
-          <table class="table">
-            <thead><tr><th>User</th><th>Email</th><th>Role</th><th>Move To</th></tr></thead>
-            <tbody>
-              <?php foreach ($g['members'] as $m): ?>
-                <tr>
-                  <td data-th="User"><?= htmlspecialchars($m['name']) ?> (ID #<?= (int)$m['user_id'] ?>)</td>
-                  <td data-th="Email"><?= htmlspecialchars($m['email'] ?? '—') ?></td>
-                  <td data-th="Role">
-                    <?php if ($isManager): ?>
-                      <form method="post" style="display:flex;gap:6px;align-items:center;margin:0">
-                        <input type="hidden" name="action" value="set_role">
-                        <input type="hidden" name="member_uid" value="<?= (int)$m['user_id'] ?>">
-                        <select class="control" name="role">
-                          <option value="deploy" <?= ($m['role'] ?? '')==='deploy'?'selected':'' ?>>Triển khai</option>
-                          <option value="control" <?= ($m['role'] ?? '')==='control'?'selected':'' ?>>Kiểm soát</option>
-                        </select>
-                        <button class="btn btn-ghost" type="submit">Save</button>
-                      </form>
-                    <?php else: ?>
-                      <?= ($m['role'] ?? '')==='control' ? 'Kiểm soát' : 'Triển khai' ?>
-                    <?php endif; ?>
-                  </td>
-                  <td data-th="Move To">
-                    <?php if ($isManager): ?>
-                      <form method="post" style="display:flex;gap:6px;align-items:center;margin:0">
-                        <input type="hidden" name="action" value="move_member">
-                        <input type="hidden" name="member_uid" value="<?= (int)$m['user_id'] ?>">
-                        <select class="control" name="to_group">
-                          <?php foreach ($groupsList as $gg): ?>
-                            <option value="<?= (int)$gg['group']['group_id'] ?>" <?= $gg['group']['group_id']==$g['group']['group_id']?'selected':'' ?>>
-                              <?= htmlspecialchars($gg['group']['group_name']) ?>
-                            </option>
-                          <?php endforeach; ?>
-                        </select>
-                        <button class="btn btn-ghost" type="submit">Move</button>
-                      </form>
-                    <?php else: ?>—<?php endif; ?>
-                  </td>
-                </tr>
-              <?php endforeach; ?>
-              <?php if (!$g['members']): ?>
-                <tr><td colspan="4"><em>No members in this group.</em></td></tr>
-              <?php endif; ?>
-            </tbody>
-          </table>
+    <!-- Section 2: Create group -->
+    <div class="section">
+      <div class="title">Create Group</div>
+      <?php if ($isManager): ?>
+      <form method="post" class="row" style="margin:0">
+        <input type="hidden" name="action" value="create_group">
+        <input class="control" name="group_name" type="text" placeholder="Enter group name" required>
+        <button class="btn" type="submit"><i class="fas fa-plus"></i> Create</button>
+      </form>
+      <?php else: ?>
+        <div class="muted">Only managers can create groups.</div>
+      <?php endif; ?>
+    </div>
+
+    <!-- Section 3: Members by group -->
+    <div class="section">
+      <div class="title">Members</div>
+      <?php $groupsList = list_groups_with_members($pdo, (int)$project['id']); ?>
+      <?php foreach ($groupsList as $g): ?>
+        <div class="group-block" style="margin-bottom:10px">
+          <div class="group-name"><?= htmlspecialchars(display_group_name($g['group']['group_name'])) ?></div>
+          <div class="table-responsive" style="margin-top:8px">
+            <table class="table">
+              <thead><tr><th>User</th><th>Email</th><th>Role</th><th>Group</th><th>Actions</th></tr></thead>
+              <tbody>
+                <?php foreach ($g['members'] as $m): ?>
+                  <tr>
+                    <td data-th="User"><?= htmlspecialchars($m['name']) ?> (ID #<?= (int)$m['user_id'] ?>)</td>
+                    <td data-th="Email"><?= htmlspecialchars($m['email'] ?? '—') ?></td>
+                    <td data-th="Role">
+                      <?php if ($isManager): ?>
+                        <form method="post" class="row" style="margin:0">
+                          <input type="hidden" name="member_uid" value="<?= (int)$m['user_id'] ?>">
+                          <input type="hidden" name="action" value="update_member">
+                          <select class="control" name="role">
+                            <option value="deploy" <?= ($m['role'] ?? '')==='deploy'?'selected':'' ?>>Deploy</option>
+                            <option value="control" <?= ($m['role'] ?? '')==='control'?'selected':'' ?>>Control</option>
+                          </select>
+                      <?php else: ?>
+                        <span class="badge <?= ($m['role'] ?? '')==='control' ? 'role-control':'role-deploy' ?>">
+                          <?= ($m['role'] ?? '')==='control' ? 'Control' : 'Deploy' ?>
+                        </span>
+                      <?php endif; ?>
+                    </td>
+                    <td data-th="Group">
+                      <?php if ($isManager): ?>
+                          <select class="control" name="to_group">
+                            <?php foreach ($groupsList as $gg): ?>
+                              <option value="<?= (int)$gg['group']['group_id'] ?>" <?= $gg['group']['group_id']==$g['group']['group_id']?'selected':'' ?>>
+                                <?= htmlspecialchars(display_group_name($gg['group']['group_name'])) ?>
+                              </option>
+                            <?php endforeach; ?>
+                          </select>
+                      <?php else: ?>
+                        <?= htmlspecialchars(display_group_name($g['group']['group_name'])) ?>
+                      <?php endif; ?>
+                    </td>
+                    <td data-th="Actions">
+                      <?php if ($isManager): ?>
+                          <button class="btn btn-primary" type="submit"><i class="fas fa-save"></i> Update</button>
+                        </form>
+                        <form method="post" style="display:inline" onsubmit="return confirm('Remove this member from project?')">
+                          <input type="hidden" name="action" value="remove_member">
+                          <input type="hidden" name="member_uid" value="<?= (int)$m['user_id'] ?>">
+                          <button class="btn btn-danger" type="submit"><i class="fas fa-user-minus"></i> Remove</button>
+                        </form>
+                      <?php else: ?>
+                        —
+                      <?php endif; ?>
+                    </td>
+                  </tr>
+                <?php endforeach; ?>
+                <?php if (!$g['members']): ?>
+                  <tr><td colspan="5"><em>No members in this group.</em></td></tr>
+                <?php endif; ?>
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
-    <?php endforeach; ?>
-  </section>
+      <?php endforeach; ?>
+    </div>
 
+  </div>
 </div>
