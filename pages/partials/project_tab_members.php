@@ -1,7 +1,14 @@
 <?php
 /**
- * pages/partials/project_tab_members.php — Members tab with separate CSS, English labels,
- * uppercase display for default groups, unified "Update" button, and "Remove" member action.
+ * pages/partials/project_tab_members.php
+ * - Uses assets/css/projects_members.css (scoped, responsive, prevents body-horizontal scroll & sidebar overlay)
+ * - Group names display: MANAGER / UNCATEGORIZED (default groups are locked from deletion)
+ * - English labels (Deploy / Control)
+ * - Single "Update" button for Role + Group
+ * - "Remove" member button
+ * - "Delete Group" button for non-default, empty groups
+ * - Invite links multi-use until revoked; expired links still show Revoke
+ * - All buttons use .btn .btn-primary (use your global button styles)
  */
 
 if (!isset($pdo) || !isset($project) || !isset($userId)) { echo '<div class="alert">Context missing.</div>'; return; }
@@ -121,14 +128,11 @@ function add_member_to_group(PDO $pdo, int $projectId, int $groupId, int $userId
 }
 function list_invites(PDO $pdo, int $projectId): array {
   $now = date('Y-m-d H:i:s');
+  // Mark expired (still revocable in UI)
   $pdo->prepare("UPDATE project_invites SET status='expired' WHERE status='active' AND expires_at < :now")->execute([':now'=>$now]);
   $stm = $pdo->prepare("SELECT * FROM project_invites WHERE project_id=:pid ORDER BY id DESC");
   $stm->execute([':pid'=>$projectId]);
   return $stm->fetchAll(PDO::FETCH_ASSOC) ?: [];
-}
-function users_name_email_expr_runtime(PDO $pdo): array {
-  $exprs = users_name_email_expr($pdo);
-  return [$exprs['expr_name'], $exprs['expr_email']];
 }
 function list_groups_with_members(PDO $pdo, int $projectId): array {
   $stm = $pdo->prepare("SELECT pg.id as group_id, pg.name as group_name FROM project_groups pg WHERE pg.project_id=:pid ORDER BY pg.name");
@@ -174,16 +178,20 @@ function display_group_name(string $name): string {
   if ($lower === 'chưa phân loại' || $lower === 'chua phan loai') return 'UNCATEGORIZED';
   return $name;
 }
+function is_default_group(string $name): bool {
+  $lower = mb_strtolower($name, 'UTF-8');
+  return $lower === 'manager' || $lower === 'chưa phân loại' || $lower === 'chua phan loai';
+}
 
 // Ensure tables + default groups + owner in manager
 ensure_members_tables($pdo);
 $groups = ensure_default_groups($pdo, (int)$project['id']);
-add_member_to_group($pdo, (int)$project['id'], $groups['manager'], (int)$project['created_by'], 'control'); // owner as manager
+add_member_to_group($pdo, (int)$project['id'], $groups['manager'], (int)$project['created_by'], 'control');
 
 $isManager = is_project_manager($pdo, (int)$project['id'], (int)$userId, $project);
 $flash = ['ok'=>[], 'err'=>[]];
 
-// Accept invite (any logged-in user)
+// Accept invite (multi-use until revoked; expired cannot be used)
 if (($_POST['action'] ?? '') === 'accept_invite' && isset($_POST['token'])) {
   $token = trim($_POST['token']);
   try {
@@ -191,12 +199,10 @@ if (($_POST['action'] ?? '') === 'accept_invite' && isset($_POST['token'])) {
     $stm->execute([':t'=>$token, ':pid'=>(int)$project['id']]);
     $row = $stm->fetch(PDO::FETCH_ASSOC);
     if (!$row) { $flash['err'][] = 'Invite not found.'; }
-    else if ($row['status'] !== 'active') { $flash['err'][] = 'Invite is no longer active.'; }
+    else if ($row['status'] === 'revoked') { $flash['err'][] = 'Invite has been revoked.'; }
     else if (strtotime($row['expires_at']) < time()) { $flash['err'][] = 'Invite has expired.'; }
     else {
       add_member_to_group($pdo, (int)$project['id'], $groups['uncat'], (int)$userId, 'deploy');
-      $upd = $pdo->prepare("UPDATE project_invites SET status='used', used_by=:uid, used_at=NOW() WHERE id=:id");
-      $upd->execute([':uid'=>$userId, ':id'=>(int)$row['id']]);
       $flash['ok'][] = 'You have joined this project.';
     }
   } catch (Throwable $e) { $flash['err'][] = 'Could not accept invite.'; }
@@ -267,6 +273,24 @@ if ($isManager) {
       $flash['ok'][] = 'Member removed from project.';
     } catch (Throwable $e) { $flash['err'][] = 'Could not remove member.'; }
   }
+
+  if ($act === 'delete_group' && isset($_POST['group_id'])) {
+    try {
+      // Check group and members
+      $gid = (int)$_POST['group_id'];
+      $stm = $pdo->prepare("SELECT name FROM project_groups WHERE id=:gid AND project_id=:pid");
+      $stm->execute([':gid'=>$gid, ':pid'=>(int)$project['id']]);
+      $gname = $stm->fetchColumn();
+      if (!$gname) throw new Exception('Group not found');
+      if (is_default_group($gname)) throw new Exception('Default groups cannot be deleted.');
+      $cnt = $pdo->prepare("SELECT COUNT(*) FROM project_group_members WHERE project_id=:pid AND group_id=:gid");
+      $cnt->execute([':pid'=>(int)$project['id'], ':gid'=>$gid]);
+      if ((int)$cnt->fetchColumn() > 0) throw new Exception('Group is not empty. Move members first.');
+      $del = $pdo->prepare("DELETE FROM project_groups WHERE id=:gid AND project_id=:pid");
+      $del->execute([':gid'=>$gid, ':pid'=>(int)$project['id']]);
+      $flash['ok'][] = 'Group deleted.';
+    } catch (Throwable $e) { $flash['err'][] = $e->getMessage() ?: 'Could not delete group.'; }
+  }
 }
 
 // Data for rendering
@@ -311,7 +335,7 @@ $joinBase = $baseUrl . dirname($_SERVER['REQUEST_URI']) . '/project_view.php?id=
             <option value="<?= (int)$u['id'] ?>"><?= htmlspecialchars($u['name']) ?><?= !empty($u['email'])?' · '.htmlspecialchars($u['email']):'' ?></option>
           <?php endforeach; ?>
         </select>
-        <button class="btn" type="submit"><i class="fas fa-user-plus"></i> Add</button>
+        <button class="btn btn-primary" type="submit"><i class="fas fa-user-plus"></i> Add</button>
       </form>
     </div>
     <?php else: ?>
@@ -325,15 +349,15 @@ $joinBase = $baseUrl . dirname($_SERVER['REQUEST_URI']) . '/project_view.php?id=
         <?php foreach ($invites as $iv): ?>
           <?php $link = $joinBase . '&token=' . urlencode($iv['token']); ?>
           <tr>
-            <td data-th="Link"><input class="control" style="width:100%" value="<?= htmlspecialchars($link) ?>" readonly></td>
+            <td data-th="Link"><input class="control" value="<?= htmlspecialchars($link) ?>" readonly></td>
             <td data-th="Expires"><?= htmlspecialchars($iv['expires_at']) ?></td>
             <td data-th="Status"><?= htmlspecialchars($iv['status']) ?></td>
             <td data-th="Action">
-              <?php if ($isManager && $iv['status']==='active'): ?>
-              <form method="post" onsubmit="return confirm('Revoke this invite?')" style="margin:0">
+              <?php if ($isManager && $iv['status'] !== 'revoked'): ?>
+              <form method="post" onsubmit="return confirm('Revoke this invite?')" style="margin:0; display:inline">
                 <input type="hidden" name="action" value="revoke_invite">
                 <input type="hidden" name="invite_id" value="<?= (int)$iv['id'] ?>">
-                <button class="btn" type="submit"><i class="fas fa-times"></i> Revoke</button>
+                <button class="btn btn-primary" type="submit"><i class="fas fa-times"></i> Revoke</button>
               </form>
               <?php else: ?>—<?php endif; ?>
             </td>
@@ -368,7 +392,7 @@ $joinBase = $baseUrl . dirname($_SERVER['REQUEST_URI']) . '/project_view.php?id=
       <form method="post" class="row" style="margin:0">
         <input type="hidden" name="action" value="create_group">
         <input class="control" name="group_name" type="text" placeholder="Enter group name" required>
-        <button class="btn" type="submit"><i class="fas fa-plus"></i> Create</button>
+        <button class="btn btn-primary" type="submit"><i class="fas fa-plus"></i> Create</button>
       </form>
       <?php else: ?>
         <div class="muted">Only managers can create groups.</div>
@@ -380,8 +404,18 @@ $joinBase = $baseUrl . dirname($_SERVER['REQUEST_URI']) . '/project_view.php?id=
       <div class="title">Members</div>
       <?php $groupsList = list_groups_with_members($pdo, (int)$project['id']); ?>
       <?php foreach ($groupsList as $g): ?>
+        <?php $isDefault = is_default_group($g['group']['group_name']); ?>
         <div class="group-block" style="margin-bottom:10px">
-          <div class="group-name"><?= htmlspecialchars(display_group_name($g['group']['group_name'])) ?></div>
+          <div class="group-name">
+            <span><?= htmlspecialchars(display_group_name($g['group']['group_name'])) ?></span>
+            <?php if ($isManager && !$isDefault && empty($g['members'])): ?>
+              <form method="post" style="margin:0" onsubmit="return confirm('Delete this group?')">
+                <input type="hidden" name="action" value="delete_group">
+                <input type="hidden" name="group_id" value="<?= (int)$g['group']['group_id'] ?>">
+                <button class="btn btn-primary" type="submit"><i class="fas fa-trash"></i> Delete Group</button>
+              </form>
+            <?php endif; ?>
+          </div>
           <div class="table-responsive" style="margin-top:8px">
             <table class="table">
               <thead><tr><th>User</th><th>Email</th><th>Role</th><th>Group</th><th>Actions</th></tr></thead>
@@ -400,9 +434,7 @@ $joinBase = $baseUrl . dirname($_SERVER['REQUEST_URI']) . '/project_view.php?id=
                             <option value="control" <?= ($m['role'] ?? '')==='control'?'selected':'' ?>>Control</option>
                           </select>
                       <?php else: ?>
-                        <span class="badge <?= ($m['role'] ?? '')==='control' ? 'role-control':'role-deploy' ?>">
-                          <?= ($m['role'] ?? '')==='control' ? 'Control' : 'Deploy' ?>
-                        </span>
+                        <span class="badge"><?= ($m['role'] ?? '')==='control' ? 'Control' : 'Deploy' ?></span>
                       <?php endif; ?>
                     </td>
                     <td data-th="Group">
@@ -425,7 +457,7 @@ $joinBase = $baseUrl . dirname($_SERVER['REQUEST_URI']) . '/project_view.php?id=
                         <form method="post" style="display:inline" onsubmit="return confirm('Remove this member from project?')">
                           <input type="hidden" name="action" value="remove_member">
                           <input type="hidden" name="member_uid" value="<?= (int)$m['user_id'] ?>">
-                          <button class="btn btn-danger" type="submit"><i class="fas fa-user-minus"></i> Remove</button>
+                          <button class="btn btn-primary" type="submit"><i class="fas fa-user-minus"></i> Remove</button>
                         </form>
                       <?php else: ?>
                         —
