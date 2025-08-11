@@ -1,0 +1,52 @@
+/* assets/css/members.css — styles scoped to Members tab */
+:root{
+  --brand:#fca415;
+  --text:#0f172a;
+  --muted:#64748b;
+  --border:#e5e7eb;
+  --bg:#ffffff;
+  --surface:#ffffff;
+  --shadow:0 8px 24px rgba(15,23,42,.06);
+}
+
+.tab-members{ width:100%; display:block; }
+.tab-members .section{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); padding:14px; }
+.tab-members .section + .section{ margin-top:14px; }
+
+.tab-members .title{ display:flex; align-items:center; justify-content:space-between; gap:10px;
+  margin:0 0 10px 0; font-weight:800; font-size:15px; color:var(--text);
+}
+
+.tab-members .grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+@media (max-width: 980px){ .tab-members .grid-2{ grid-template-columns:1fr; } }
+
+/* Forms */
+.tab-members .row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+.tab-members .control{ min-height:38px; padding:8px 10px; border:1px solid var(--border); border-radius:10px; outline:none; background:#fff; }
+.tab-members .control:focus{ border-color:#ffd08b; box-shadow:0 0 0 3px rgba(252,164,21,.18); }
+.tab-members .btn{ height:38px; padding:0 14px; border-radius:10px; border:1px solid var(--border); background:#fff; cursor:pointer; }
+.tab-members .btn:hover{ background:#fff7eb; }
+.tab-members .btn-primary{ background:var(--brand); border-color:var(--brand); color:#111827; font-weight:700; }
+.tab-members .btn-danger{ color:#991b1b; border-color:#fecaca; background:#fff5f5; }
+.tab-members .btn-danger:hover{ background:#fee2e2; }
+
+/* Table */
+.tab-members .table{ width:100%; border:1px solid var(--border); border-radius:12px; border-collapse:separate; border-spacing:0; overflow:hidden; }
+.tab-members .table thead th{ background:linear-gradient(180deg,#fafafa,#fff); color:#334155; padding:10px 12px; text-align:left; font-weight:700; border-bottom:1px solid var(--border); }
+.tab-members .table tbody td{ padding:10px 12px; border-bottom:1px solid var(--border); vertical-align:middle; }
+.tab-members .table tbody tr:hover{ background:#fffdf7; }
+
+/* Badges */
+.tab-members .badge{ display:inline-block; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:700; border:1px solid var(--border); color:#334155; background:#f8fafc; }
+.tab-members .role-deploy{ background:#ecfdf5; border-color:#a7f3d0; color:#065f46; }
+.tab-members .role-control{ background:#eef2ff; border-color:#c7d2fe; color:#3730a3; }
+
+/* Invite link input */
+.tab-members input[readonly]{ background:#f9fafb; }
+
+/* Group header */
+.tab-members .group-block{ border:1px solid var(--border); border-radius:12px; padding:10px; }
+.tab-members .group-name{ font-weight:800; font-size:14px; color:#0f172a; letter-spacing:.3px; }
+
+/* Alerts */
+.tab-members .alert{ border:1px solid var(--border); border-radius:10px; padding:10px 12px; }
