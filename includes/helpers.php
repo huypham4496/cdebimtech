@@ -1,6 +1,30 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Trả về user_id từ nhiều dạng session phổ biến.
+ * Nếu không có -> redirect về home.php (nếu tồn tại) hoặc index.php.
+ */
+function userIdOrRedirect(): int {
+  $cands = [
+    $_SESSION['user_id'] ?? null,
+    $_SESSION['id'] ?? null,
+    $_SESSION['user']['id'] ?? null,
+    $_SESSION['auth']['user_id'] ?? null,
+    $_SESSION['auth']['id'] ?? null,
+  ];
+  foreach ($cands as $v) {
+    if (is_numeric($v) && (int)$v > 0) return (int)$v;
+  }
+  // Redirect đích: ưu tiên /pages/home.php nếu tồn tại, ngược lại /index.php
+  $target = '/pages/home.php';
+  if (!isset($_SERVER['DOCUMENT_ROOT']) || !is_file($_SERVER['DOCUMENT_ROOT'] . $target)) {
+    $target = '/index.php';
+  }
+  header('Location: ' . $target);
+  exit;
+}
+
 function ensureProjectRoot(): string {
   $ROOT = realpath(__DIR__ . '/..');
   $dataDir = $ROOT . '/data';
@@ -21,18 +45,8 @@ function formatBytes(int $bytes): string {
 function respondJSON($data, int $code=200): void {
   http_response_code($code);
   header('Content-Type: application/json; charset=utf-8');
-  echo json_encode($data, JSON_UNESCAPED_UNICODE); exit;
-}
-function userIdOrRedirect(): int {
-  $uid = $_SESSION['user_id'] ?? 0;
-  if (!$uid) { header('Location: /index.php'); exit; }
-  return (int)$uid;
-}
-function currentUserSubscription(PDO $pdo, int $userId): ?array {
-  // CHỈNH lại query cho khớp schema thật của bạn
-  $sql = "SELECT s.* FROM subscriptions s WHERE s.user_id=:uid ORDER BY s.id DESC LIMIT 1";
-  $stm = $pdo->prepare($sql); $stm->execute([':uid'=>$userId]);
-  return $stm->fetch(PDO::FETCH_ASSOC) ?: null;
+  echo json_encode($data, JSON_UNESCAPED_UNICODE);
+  exit;
 }
 function addActivity(PDO $pdo, int $projectId, int $userId, string $action, ?string $detail=null): void {
   $stm = $pdo->prepare("INSERT INTO project_activities(project_id,user_id,action,detail) VALUES (:pid,:uid,:ac,:dt)");
