@@ -3,17 +3,38 @@ declare(strict_types=1);
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
 
 $ROOT = realpath(__DIR__ . '/..');
-$BASE = $BASE ?? '';
 
-require $ROOT . '/config.php';
-require $ROOT . '/includes/permissions.php';
-require $ROOT . '/includes/helpers.php';
-require $ROOT . '/includes/projects.php';
-require $ROOT . '/includes/files.php';
+require_once $ROOT . '/config.php';
+require_once $ROOT . '/includes/permissions.php';
+require_once $ROOT . '/includes/helpers.php';
+require_once $ROOT . '/includes/projects.php';
+require_once $ROOT . '/includes/files.php';
 
-// ---- LOGIN CHECK (giữ yêu cầu phải đăng nhập; KHÔNG chặn theo feature flag)
-$userId = $_SESSION['user_id'] ?? 0;
-if (!$userId) { header('Location: /index.php'); exit; }
+/** Ensure $pdo is available (fallback if config.php didn't assign it) */
+if (!isset($pdo) || !($pdo instanceof PDO)) {
+  if (function_exists('getPDO')) {
+    $pdo = getPDO();
+  } elseif (defined('DB_HOST') && defined('DB_NAME') && defined('DB_USER')) {
+    try {
+      $dsn = 'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=' . (defined('DB_CHARSET') ? DB_CHARSET : 'utf8mb4');
+      $pdo = new PDO($dsn, DB_USER, defined('DB_PASS') ? DB_PASS : '', [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+      ]);
+    } catch (Throwable $e) {
+      http_response_code(500);
+      echo 'DB connection failed: ' . htmlspecialchars($e->getMessage());
+      exit;
+    }
+  } else {
+    http_response_code(500);
+    echo 'DB config not found. Make sure DB_* constants are defined in config.php';
+    exit;
+  }
+}
+
+// Always-on Projects: only check login (support multiple session keys)
+$userId = userIdOrRedirect();
 
 $projectId = (int)($_GET['id'] ?? 0);
 $project = getProject($pdo, $projectId);
@@ -21,7 +42,6 @@ if (!$project || !canViewProject($pdo, $userId, $projectId)) {
   http_response_code(404); echo "Project not found or access denied."; exit;
 }
 
-// ---- Sidebar active item
 $current = 'projects.php';
 
 $tabs = [
@@ -49,9 +69,9 @@ if (!isset($tabs[$tab])) $tab = 'overview';
   <meta charset="utf-8">
   <title><?= htmlspecialchars($project['name']) ?> · Projects</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" href="../assets/css/sidebar.css">
-  <link rel="stylesheet" href="../assets/css/permissions.css">
-  <link rel="stylesheet" href="../assets/css/projects.css">
+  <link rel="stylesheet" href="../assets/css/projects.css?v=<?php echo time(); ?>">
+  <link rel="stylesheet" href="../assets/css/permissions.css?v=<?php echo time(); ?>">
+  <link rel="stylesheet" href="../assets/css/sidebar.css?v=<?php echo time(); ?>">
   <link rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
         crossorigin="anonymous" referrerpolicy="no-referrer"/>
