@@ -10,6 +10,15 @@ require_once $ROOT . '/includes/helpers.php';
 require_once $ROOT . '/includes/projects.php';
 require_once $ROOT . '/includes/files.php';
 
+
+/** Compute web base (handles app in subfolder) */
+$SCRIPT_DIR = str_replace('\\','/', dirname(isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : '/'));
+$APP_BASE   = rtrim(preg_replace('#/pages$#', '', $SCRIPT_DIR), '/');
+if ($APP_BASE === '/') $APP_BASE = '';
+if ($APP_BASE === null) $APP_BASE = '';
+function url(string $path): string { global $APP_BASE; $path = ltrim($path, '/'); return ($APP_BASE? $APP_BASE : '') . '/' . $path; }
+function asset(string $path): string { return url('assets/'.$path); }
+function vhash(string $abs): string { return is_file($abs) ? substr(md5_file($abs),0,10) : (string)time(); }
 /** Ensure $pdo is available (fallback if config.php didn't assign it) */
 if (!isset($pdo) || !($pdo instanceof PDO)) {
   if (function_exists('getPDO')) {
@@ -41,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action'] ?? '')==='create') 
   $name = trim($_POST['name'] ?? '');
   $orgId = (int)($_POST['organization_id'] ?? 0);
   if ($name === '' || $orgId <= 0) {
-    $errors[] = 'Thiếu Tên dự án hoặc Tổ chức (ID).';
+    $errors[] = 'Thiếu Tên dự án hoặc Organization ID.';
   } else {
     $pid = createProject($pdo, $userId, $orgId, [
       'name'=>$name,
@@ -60,10 +69,12 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action'] ?? '')==='create') 
 }
 
 $projects = listProjectsForUser($pdo, $userId);
+$selectedId = isset($_GET['id']) ? (int)$_GET['id'] : null;
+
 $current = 'projects.php';
 ?>
 <!doctype html>
-<html lang="vi">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <title>Projects</title>
@@ -84,17 +95,17 @@ $current = 'projects.php';
       <form method="post" style="margin:0;">
         <input type="hidden" name="action" value="create">
         <div class="inline-form">
-          <input type="text" name="name" placeholder="Tên Project" required>
-          <input type="number" name="organization_id" placeholder="Tổ chức (ID)" required min="1">
-          <input type="text" name="location" placeholder="Vị trí">
+          <input type="text" name="name" placeholder="Project name" required>
+          <input type="number" name="organization_id" placeholder="Organization ID" required min="1">
+          <input type="text" name="location" placeholder="Location">
           <select name="status">
-            <option value="active">Đang hoạt động</option>
-            <option value="completed">Đã hoàn thành</option>
+            <option value="active">Active</option>
+            <option value="completed">Completed</option>
           </select>
           <select name="visibility">
-            <option value="org">Trong tổ chức</option>
-            <option value="private">Riêng tư</option>
-            <option value="public">Công khai</option>
+            <option value="org">Organization</option>
+            <option value="private">Private</option>
+            <option value="public">Public</option>
           </select>
           <input type="text" name="tags" placeholder="Tag (VD: Feasibility Study)">
           <button class="btn btn-primary" type="submit">
@@ -110,13 +121,14 @@ $current = 'projects.php';
 
     <table class="org-table" style="margin-top:12px;">
       <thead>
-        <tr>
-          <th>Mã</th><th>Tên</th><th>Trạng thái</th><th>Vị trí</th><th>Tags</th><th>Tạo bởi</th><th>Hành động</th>
+        <tr class="<?= $isSel ? 'active':'' ?>">
+          <th>Mã</th><th>Tên</th><th>Trạng thái</th><th>Location</th><th>Tags</th><th>Tạo bởi</th><th>Hành động</th>
         </tr>
       </thead>
       <tbody>
         <?php foreach ($projects as $p): ?>
-          <tr>
+                <?php $isSel = ((int)$p['id'] === (int)($selectedId ?? 0)); ?>
+          <tr class="<?= $isSel ? 'active':'' ?>">
             <td><?= htmlspecialchars($p['code']) ?></td>
             <td><?= htmlspecialchars($p['name']) ?></td>
             <td><?= htmlspecialchars($p['status']) ?></td>
@@ -125,13 +137,13 @@ $current = 'projects.php';
             <td>#<?= (int)$p['created_by'] ?></td>
             <td>
               <a class="btn btn-sm" href="project_view.php?id=<?= (int)$p['id'] ?>">
-                <i class="fas fa-eye"></i> Quản lý
+                <i class="fas fa-eye"></i> Manage
               </a>
             </td>
           </tr>
         <?php endforeach; ?>
         <?php if (!$projects): ?>
-          <tr><td colspan="7"><em>Chưa có project.</em></td></tr>
+          <tr class="<?= $isSel ? 'active':'' ?>"><td colspan="7"><em>No projects yet.</em></td></tr>
         <?php endif; ?>
       </tbody>
     </table>
