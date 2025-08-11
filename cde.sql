@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Aug 10, 2025 at 04:49 PM
+-- Generation Time: Aug 11, 2025 at 10:35 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -31,6 +31,22 @@ CREATE TABLE `companies` (
   `id` int(11) UNSIGNED NOT NULL,
   `name` varchar(255) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `file_versions`
+--
+
+CREATE TABLE `file_versions` (
+  `id` int(11) NOT NULL,
+  `file_id` int(11) NOT NULL,
+  `version` int(11) NOT NULL,
+  `storage_path` varchar(500) NOT NULL,
+  `size_bytes` bigint(20) NOT NULL DEFAULT 0,
+  `uploaded_by` int(11) NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -195,6 +211,200 @@ INSERT INTO `payment_settings` (`id`, `account_name`, `bank_name`, `account_numb
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `projects`
+--
+
+CREATE TABLE `projects` (
+  `id` int(11) NOT NULL,
+  `organization_id` int(11) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `code` varchar(32) NOT NULL,
+  `status` enum('active','completed','onhold','archived') NOT NULL DEFAULT 'active',
+  `start_date` date DEFAULT NULL,
+  `end_date` date DEFAULT NULL,
+  `manager_id` int(11) DEFAULT NULL,
+  `visibility` enum('private','org','public') NOT NULL DEFAULT 'org',
+  `location` varchar(255) DEFAULT NULL,
+  `tags` varchar(255) DEFAULT NULL,
+  `description` text DEFAULT NULL,
+  `created_by` int(11) NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `projects`
+--
+
+INSERT INTO `projects` (`id`, `organization_id`, `name`, `code`, `status`, `start_date`, `end_date`, `manager_id`, `visibility`, `location`, `tags`, `description`, `created_by`, `created_at`, `updated_at`) VALUES
+(4, 1, 'Dự án Đường tỉnh 330', 'PRJ000001', 'active', '2025-04-04', NULL, 1, 'org', 'Ba Chẽ2', 'Pre-Feasibility Study', 'sàdgdfgcxvb', 1, '2025-08-11 10:20:58', '2025-08-11 10:20:58');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `project_activities`
+--
+
+CREATE TABLE `project_activities` (
+  `id` int(11) NOT NULL,
+  `project_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `action` varchar(100) NOT NULL,
+  `detail` varchar(500) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `project_activities`
+--
+
+INSERT INTO `project_activities` (`id`, `project_id`, `user_id`, `action`, `detail`, `created_at`) VALUES
+(1, 1, 1, 'project.create', 'Dự án Đường tỉnh 330', '2025-08-11 09:51:11'),
+(2, 2, 1, 'project.create', 'Dự án Đường tỉnh 330', '2025-08-11 10:17:16'),
+(3, 3, 1, 'project.create', 'Dự án Đường tỉnh 331', '2025-08-11 10:18:26'),
+(4, 4, 1, 'project.create', 'Dự án Đường tỉnh 330', '2025-08-11 10:20:58'),
+(5, 4, 1, 'folder.create', 'PRJ000001', '2025-08-11 10:24:56');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `project_files`
+--
+
+CREATE TABLE `project_files` (
+  `id` int(11) NOT NULL,
+  `project_id` int(11) NOT NULL,
+  `folder_id` int(11) NOT NULL,
+  `filename` varchar(255) NOT NULL,
+  `tag` enum('WIP','Shared','Published','Archived') NOT NULL DEFAULT 'WIP',
+  `is_important` tinyint(1) NOT NULL DEFAULT 0,
+  `is_deleted` tinyint(1) NOT NULL DEFAULT 0,
+  `created_by` int(11) NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `project_folders`
+--
+
+CREATE TABLE `project_folders` (
+  `id` int(11) NOT NULL,
+  `project_id` int(11) NOT NULL,
+  `parent_id` int(11) DEFAULT NULL,
+  `name` varchar(255) NOT NULL,
+  `created_by` int(11) NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `project_folders`
+--
+
+INSERT INTO `project_folders` (`id`, `project_id`, `parent_id`, `name`, `created_by`, `created_at`) VALUES
+(1, 4, NULL, 'PRJ000001', 1, '2025-08-11 10:24:56');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `project_groups`
+--
+
+CREATE TABLE `project_groups` (
+  `id` int(11) NOT NULL,
+  `project_id` int(11) NOT NULL,
+  `name` varchar(191) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `project_groups`
+--
+
+INSERT INTO `project_groups` (`id`, `project_id`, `name`, `created_at`) VALUES
+(1, 4, 'manager', '2025-08-11 04:28:50'),
+(2, 4, 'chưa phân loại', '2025-08-11 04:28:50');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `project_group_members`
+--
+
+CREATE TABLE `project_group_members` (
+  `id` int(11) NOT NULL,
+  `project_id` int(11) NOT NULL,
+  `group_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `role` enum('deploy','control') DEFAULT 'deploy',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `project_group_members`
+--
+
+INSERT INTO `project_group_members` (`id`, `project_id`, `group_id`, `user_id`, `role`, `created_at`) VALUES
+(1, 4, 1, 1, 'control', '2025-08-11 04:28:50'),
+(2, 4, 1, 14, 'deploy', '2025-08-11 04:32:40');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `project_invites`
+--
+
+CREATE TABLE `project_invites` (
+  `id` int(11) NOT NULL,
+  `project_id` int(11) NOT NULL,
+  `token` varchar(64) NOT NULL,
+  `expires_at` datetime NOT NULL,
+  `status` enum('active','revoked','used','expired') DEFAULT 'active',
+  `created_by` int(11) NOT NULL,
+  `used_by` int(11) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `used_at` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `project_kmz`
+--
+
+CREATE TABLE `project_kmz` (
+  `project_id` int(11) NOT NULL,
+  `embed_html` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `project_members`
+--
+
+CREATE TABLE `project_members` (
+  `project_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `role` enum('owner','manager','contributor','viewer') NOT NULL DEFAULT 'viewer',
+  `added_at` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `project_members`
+--
+
+INSERT INTO `project_members` (`project_id`, `user_id`, `role`, `added_at`) VALUES
+(1, 1, 'owner', '2025-08-11 09:51:11'),
+(2, 1, 'owner', '2025-08-11 10:17:16'),
+(3, 1, 'owner', '2025-08-11 10:18:26'),
+(4, 1, 'owner', '2025-08-11 10:20:58');
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `subscriptions`
 --
 
@@ -220,7 +430,7 @@ CREATE TABLE `subscriptions` (
 INSERT INTO `subscriptions` (`id`, `name`, `price`, `description`, `created_at`, `updated_at`, `max_storage_gb`, `max_projects`, `max_company_members`, `allow_organization_members`, `allow_work_diary`, `allow_organization_manage`) VALUES
 (1, 'Free', 0.00, '1 GB chung toàn bộ tài khoản\r\nTối đa 1 dự án\r\nTối đa 1 thành viên\r\nServer dữ liệu tại Việt Nam', '2025-07-30 09:43:49', '2025-08-01 09:44:54', 1, 1, 1, 0, 0, 0),
 (2, 'Personal', 1000000.00, '15 GB chung toàn bộ tài khoản\r\nTối đa 2 dự án\r\nTối đa 3 thành viên\r\nServer dữ liệu tại Việt Nam', '2025-07-30 09:43:56', '2025-08-01 09:45:02', 15, 2, 3, 0, 0, 0),
-(3, 'Pro', 3000000.00, '150 GB chung toàn bộ tài khoản\r\nTối đa 10 dự án\r\nTối đa 12 thành viên\r\nBao gồm tính năng gói Personal\r\nThêm tính năng Organization Members', '2025-07-30 09:44:03', '2025-08-08 16:04:00', 150, 10, 12, 0, 0, 0),
+(3, 'Pro', 3000000.00, '150 GB chung toàn bộ tài khoản\r\nTối đa 10 dự án\r\nTối đa 12 thành viên\r\nBao gồm tính năng gói Personal\r\nThêm tính năng Organization Members', '2025-07-30 09:44:03', '2025-08-11 03:25:53', 150, 1, 12, 1, 1, 1),
 (4, 'Bussines', 7000000.00, '1 TB chung toàn bộ tài khoản\r\nKhông giới hạn dự án\r\nKhông giới hạn thành viên\r\nBao gồm tính năng gói Pro\r\nThêm tính năng Work Diary', '2025-07-30 09:45:44', '2025-08-08 02:55:31', 1024, 0, 0, 1, 1, 1);
 
 -- --------------------------------------------------------
@@ -282,7 +492,8 @@ INSERT INTO `users` (`id`, `username`, `first_name`, `last_name`, `dob`, `addres
 (17, 'doantvmb', 'Hoàng Văn', 'Đoàn', '2001-10-22', 'Hạ Long', 'NCC', '0329112707', NULL, 'doantvmb2625@gmail.com', '$2y$10$Uo4MkPdJ7i7lRGv/vRH7QeVcDjC6UkH7t7/NG85.BFSReT86U2eOG', 'user', NULL, NULL, NULL, NULL, '2025-08-07 10:43:16'),
 (18, 'hoatvmb', 'La Thị Bích', 'Hòa', '2000-07-09', 'Hạ Long', 'NCC', '0346456537', NULL, 'lathibichhoa12sinh@gmail.com', '$2y$10$ghHAswrEF017sc3jpkU3H.dQQc.gwFxJFV4n5rUbgpv7bzNfnrGH.', 'user', NULL, NULL, NULL, NULL, '2025-08-07 11:00:56'),
 (19, 'hangtvmb', 'Nguyễn Thị Thu', 'Thủy', '1976-09-09', 'Hạ Long', 'NCC', '0977660976', NULL, 'user1@bimtech.edu.vn', '$2y$10$IB1rwpJqMjHtcZ16b/e5qu.wnIVyzXxYP5bgbBaVeICYwmbU4AoeG', 'user', NULL, NULL, NULL, NULL, '2025-08-07 11:21:42'),
-(20, 'thuyhm', 'Hoàng Minh', 'Thùy', '1992-01-10', 'Hạ Long', 'NCC', '0982153092', NULL, 'user2@bimtech.edu.vn', '$2y$10$qrbU2c6O5gei.jSZUFnD4eDq0YJuwY5yS8VMKCwDUPIRMNctr9KwO', 'user', NULL, NULL, NULL, NULL, '2025-08-07 11:22:43');
+(20, 'thuyhm', 'Hoàng Minh', 'Thùy', '1992-01-10', 'Hạ Long', 'NCC', '0982153092', NULL, 'user2@bimtech.edu.vn', '$2y$10$qrbU2c6O5gei.jSZUFnD4eDq0YJuwY5yS8VMKCwDUPIRMNctr9KwO', 'user', NULL, NULL, NULL, NULL, '2025-08-07 11:22:43'),
+(21, 'user3', '1', '2', '0000-00-00', 'Hạ Long', 'NCCC', '0888121496', NULL, 'user3@bimtech.edu.vn', '$2y$10$zOX6qi9eeUQZ4M99RSCkoOyK.MlL4N6THDy2nTPfLGafke9yvTZM6', 'user', NULL, NULL, NULL, NULL, '2025-08-11 04:33:51');
 
 -- --------------------------------------------------------
 
@@ -443,6 +654,15 @@ INSERT INTO `work_diary_entries` (`user_id`, `entry_date`, `period`, `content`, 
 (1, '2025-08-08', 'morning', 'Chỉnh sửa tính năng quan lý tổ chức và phân quyền thành viên', NULL, '2025-08-08 07:18:27', '2025-08-08 07:18:27'),
 (1, '2025-08-08', 'afternoon', 'Chỉnh sửa tính năng quan lý tổ chức và phân quyền thành viên', NULL, '2025-08-08 07:18:28', '2025-08-08 07:18:28'),
 (1, '2025-08-08', 'evening', 'Nghỉ', NULL, '2025-08-08 07:18:28', '2025-08-08 07:18:28'),
+(1, '2025-08-09', 'morning', 'Làm việc với UBND xã Quảng Thành', NULL, '2025-08-11 01:27:42', '2025-08-11 01:27:42'),
+(1, '2025-08-09', 'afternoon', 'Làm việc với UBND xã Quảng Thành', NULL, '2025-08-11 01:27:42', '2025-08-11 01:27:42'),
+(1, '2025-08-09', 'evening', 'Nghỉ', NULL, '2025-08-11 01:27:42', '2025-08-11 01:27:42'),
+(1, '2025-08-10', 'morning', 'Nghỉ', NULL, '2025-08-11 01:27:25', '2025-08-11 01:27:25'),
+(1, '2025-08-10', 'afternoon', 'Nghỉ', NULL, '2025-08-11 01:27:25', '2025-08-11 01:27:25'),
+(1, '2025-08-10', 'evening', 'Nghỉ', NULL, '2025-08-11 01:27:25', '2025-08-11 01:27:25'),
+(1, '2025-08-11', 'morning', 'Phát triển tính năng quản lý dự án trong CDE phần tạo dự án', NULL, '2025-08-11 03:26:14', '2025-08-11 03:26:14'),
+(1, '2025-08-11', 'afternoon', 'Phát triển tính năng quản lý dự án trong CDE phần tạo dự án', NULL, '2025-08-11 03:26:14', '2025-08-11 03:26:14'),
+(1, '2025-08-11', 'evening', 'Nghỉ', NULL, '2025-08-11 03:26:14', '2025-08-11 03:26:14'),
 (12, '2025-07-01', 'morning', 'làm', NULL, '2025-08-07 04:29:54', '2025-08-07 04:29:54'),
 (12, '2025-07-01', 'afternoon', 'làm', NULL, '2025-08-07 04:29:54', '2025-08-07 04:29:54'),
 (12, '2025-07-02', 'morning', 'làm', NULL, '2025-08-07 04:30:01', '2025-08-07 04:30:01'),
@@ -813,7 +1033,8 @@ INSERT INTO `work_diary_entries` (`user_id`, `entry_date`, `period`, `content`, 
 (16, '2025-07-25', 'afternoon', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:35:07', '2025-08-07 09:35:07'),
 (16, '2025-07-25', 'evening', 'Nghỉ', NULL, '2025-08-07 09:35:07', '2025-08-07 09:35:07'),
 (16, '2025-07-26', 'morning', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:35:13', '2025-08-07 09:35:13'),
-(16, '2025-07-26', 'afternoon', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:35:13', '2025-08-07 09:35:13'),
+(16, '2025-07-26', 'afternoon', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:35:13', '2025-08-07 09:35:13');
+INSERT INTO `work_diary_entries` (`user_id`, `entry_date`, `period`, `content`, `note`, `created_at`, `updated_at`) VALUES
 (16, '2025-07-26', 'evening', 'Nghỉ', NULL, '2025-08-07 09:35:13', '2025-08-07 09:35:13'),
 (16, '2025-07-27', 'morning', 'Nghỉ', NULL, '2025-08-07 09:35:18', '2025-08-07 09:35:18'),
 (16, '2025-07-27', 'afternoon', 'Nghỉ', NULL, '2025-08-07 09:35:18', '2025-08-07 09:35:18'),
@@ -822,8 +1043,7 @@ INSERT INTO `work_diary_entries` (`user_id`, `entry_date`, `period`, `content`, 
 (16, '2025-07-28', 'afternoon', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:35:32', '2025-08-07 09:35:32'),
 (16, '2025-07-28', 'evening', 'Nghỉ', NULL, '2025-08-07 09:35:32', '2025-08-07 09:35:32'),
 (16, '2025-07-29', 'morning', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:35:44', '2025-08-07 09:35:44'),
-(16, '2025-07-29', 'afternoon', 'Đi hiện trường', NULL, '2025-08-07 09:35:44', '2025-08-07 09:35:44');
-INSERT INTO `work_diary_entries` (`user_id`, `entry_date`, `period`, `content`, `note`, `created_at`, `updated_at`) VALUES
+(16, '2025-07-29', 'afternoon', 'Đi hiện trường', NULL, '2025-08-07 09:35:44', '2025-08-07 09:35:44'),
 (16, '2025-07-29', 'evening', 'Nghỉ', NULL, '2025-08-07 09:35:44', '2025-08-07 09:35:44'),
 (16, '2025-07-30', 'morning', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:35:58', '2025-08-07 09:35:58'),
 (16, '2025-07-30', 'afternoon', 'Đi thực địa', NULL, '2025-08-07 09:35:58', '2025-08-07 09:35:58'),
@@ -1215,6 +1435,13 @@ ALTER TABLE `companies`
   ADD PRIMARY KEY (`id`);
 
 --
+-- Indexes for table `file_versions`
+--
+ALTER TABLE `file_versions`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `file_id` (`file_id`,`version`);
+
+--
 -- Indexes for table `notifications`
 --
 ALTER TABLE `notifications`
@@ -1259,6 +1486,71 @@ ALTER TABLE `organization_member_profiles`
 --
 ALTER TABLE `payment_settings`
   ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `projects`
+--
+ALTER TABLE `projects`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `code` (`code`);
+
+--
+-- Indexes for table `project_activities`
+--
+ALTER TABLE `project_activities`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `project_files`
+--
+ALTER TABLE `project_files`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `project_id` (`project_id`,`folder_id`);
+
+--
+-- Indexes for table `project_folders`
+--
+ALTER TABLE `project_folders`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `project_groups`
+--
+ALTER TABLE `project_groups`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uniq_prj_name` (`project_id`,`name`),
+  ADD KEY `prj_id` (`project_id`);
+
+--
+-- Indexes for table `project_group_members`
+--
+ALTER TABLE `project_group_members`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uniq_member` (`project_id`,`user_id`),
+  ADD KEY `prj_grp` (`project_id`,`group_id`),
+  ADD KEY `grp_id` (`group_id`),
+  ADD KEY `user_id` (`user_id`);
+
+--
+-- Indexes for table `project_invites`
+--
+ALTER TABLE `project_invites`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uniq_token` (`token`),
+  ADD KEY `prj_id` (`project_id`),
+  ADD KEY `status` (`status`);
+
+--
+-- Indexes for table `project_kmz`
+--
+ALTER TABLE `project_kmz`
+  ADD PRIMARY KEY (`project_id`);
+
+--
+-- Indexes for table `project_members`
+--
+ALTER TABLE `project_members`
+  ADD PRIMARY KEY (`project_id`,`user_id`);
 
 --
 -- Indexes for table `subscriptions`
@@ -1309,6 +1601,12 @@ ALTER TABLE `companies`
   MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT for table `file_versions`
+--
+ALTER TABLE `file_versions`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `notifications`
 --
 ALTER TABLE `notifications`
@@ -1333,6 +1631,48 @@ ALTER TABLE `organization_members`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
+-- AUTO_INCREMENT for table `projects`
+--
+ALTER TABLE `projects`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
+-- AUTO_INCREMENT for table `project_activities`
+--
+ALTER TABLE `project_activities`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+
+--
+-- AUTO_INCREMENT for table `project_files`
+--
+ALTER TABLE `project_files`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `project_folders`
+--
+ALTER TABLE `project_folders`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT for table `project_groups`
+--
+ALTER TABLE `project_groups`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
+-- AUTO_INCREMENT for table `project_group_members`
+--
+ALTER TABLE `project_group_members`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
+-- AUTO_INCREMENT for table `project_invites`
+--
+ALTER TABLE `project_invites`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
 -- AUTO_INCREMENT for table `subscriptions`
 --
 ALTER TABLE `subscriptions`
@@ -1348,7 +1688,7 @@ ALTER TABLE `subscription_orders`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
 
 --
 -- AUTO_INCREMENT for table `vouchers`
