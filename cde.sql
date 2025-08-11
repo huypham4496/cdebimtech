@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Aug 11, 2025 at 10:35 AM
+-- Generation Time: Aug 11, 2025 at 12:04 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -268,6 +268,53 @@ INSERT INTO `project_activities` (`id`, `project_id`, `user_id`, `action`, `deta
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `project_colors`
+--
+
+CREATE TABLE `project_colors` (
+  `id` int(11) NOT NULL,
+  `project_id` int(11) NOT NULL,
+  `group_id` int(11) NOT NULL,
+  `label` varchar(191) NOT NULL,
+  `hex_code` char(7) NOT NULL,
+  `sort_order` int(11) NOT NULL DEFAULT 0,
+  `created_by` int(11) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `project_color_groups`
+--
+
+CREATE TABLE `project_color_groups` (
+  `id` int(11) NOT NULL,
+  `project_id` int(11) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `created_by` int(11) NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `project_color_items`
+--
+
+CREATE TABLE `project_color_items` (
+  `id` int(11) NOT NULL,
+  `group_id` int(11) NOT NULL,
+  `label` varchar(255) NOT NULL,
+  `hex_color` varchar(9) NOT NULL,
+  `sort_order` int(11) NOT NULL DEFAULT 0,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `project_files`
 --
 
@@ -316,6 +363,7 @@ CREATE TABLE `project_groups` (
   `id` int(11) NOT NULL,
   `project_id` int(11) NOT NULL,
   `name` varchar(191) NOT NULL,
+  `description` varchar(255) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -323,9 +371,9 @@ CREATE TABLE `project_groups` (
 -- Dumping data for table `project_groups`
 --
 
-INSERT INTO `project_groups` (`id`, `project_id`, `name`, `created_at`) VALUES
-(1, 4, 'manager', '2025-08-11 04:28:50'),
-(2, 4, 'chưa phân loại', '2025-08-11 04:28:50');
+INSERT INTO `project_groups` (`id`, `project_id`, `name`, `description`, `created_at`) VALUES
+(1, 4, 'manager', NULL, '2025-08-11 04:28:50'),
+(2, 4, 'chưa phân loại', NULL, '2025-08-11 04:28:50');
 
 -- --------------------------------------------------------
 
@@ -1501,6 +1549,28 @@ ALTER TABLE `project_activities`
   ADD PRIMARY KEY (`id`);
 
 --
+-- Indexes for table `project_colors`
+--
+ALTER TABLE `project_colors`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `project_id` (`project_id`),
+  ADD KEY `group_id` (`group_id`);
+
+--
+-- Indexes for table `project_color_groups`
+--
+ALTER TABLE `project_color_groups`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uniq_project_group` (`project_id`,`name`);
+
+--
+-- Indexes for table `project_color_items`
+--
+ALTER TABLE `project_color_items`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `fk_color_group` (`group_id`);
+
+--
 -- Indexes for table `project_files`
 --
 ALTER TABLE `project_files`
@@ -1643,6 +1713,24 @@ ALTER TABLE `project_activities`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
+-- AUTO_INCREMENT for table `project_colors`
+--
+ALTER TABLE `project_colors`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `project_color_groups`
+--
+ALTER TABLE `project_color_groups`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
+-- AUTO_INCREMENT for table `project_color_items`
+--
+ALTER TABLE `project_color_items`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `project_files`
 --
 ALTER TABLE `project_files`
@@ -1731,6 +1819,12 @@ ALTER TABLE `organization_members`
 --
 ALTER TABLE `organization_member_profiles`
   ADD CONSTRAINT `organization_member_profiles_ibfk_1` FOREIGN KEY (`member_id`) REFERENCES `organization_members` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `project_color_items`
+--
+ALTER TABLE `project_color_items`
+  ADD CONSTRAINT `fk_color_group` FOREIGN KEY (`group_id`) REFERENCES `project_color_groups` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `subscription_orders`
