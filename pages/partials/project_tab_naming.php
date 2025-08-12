@@ -79,25 +79,42 @@ if ($isAjax) {
 function h($s){ return htmlspecialchars($s ?? '', ENT_QUOTES, 'UTF-8'); }
 function pad4($n){ $n = (int)$n; if ($n < 1) $n = 1; return str_pad((string)$n, 4, '0', STR_PAD_LEFT); }
 
-function vn_titlecase_join(string $s): string {
-  // Bỏ dấu (ưu tiên intl Normalizer), thay đ/Đ, TitleCase theo từng cụm chữ-số, rồi nối liền
-  if (class_exists('Normalizer')) {
-    $s = Normalizer::normalize($s, Normalizer::FORM_D);
-    // bỏ toàn bộ dấu (mark) Unicode
-    $s = preg_replace('/\p{Mn}+/u', '', $s);
-  } else {
-    $converted = @iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$s);
-    if ($converted !== false) $s = $converted;
+/** Ánh xạ tiếng Việt -> ASCII (không rơi chữ) */
+function vn_to_ascii(string $s): string {
+  static $map = null, $search = null, $replace = null;
+  if ($map === null) {
+    $map = [
+      'a' => ['á','à','ả','ã','ạ','ă','ắ','ằ','ẳ','ẵ','ặ','â','ấ','ầ','ẩ','ẫ','ậ'],
+      'A' => ['Á','À','Ả','Ã','Ạ','Ă','Ắ','Ằ','Ẳ','Ẵ','Ặ','Â','Ấ','Ầ','Ẩ','Ẫ','Ậ'],
+      'd' => ['đ'], 'D' => ['Đ'],
+      'e' => ['é','è','ẻ','ẽ','ẹ','ê','ế','ề','ể','ễ','ệ'],
+      'E' => ['É','È','Ẻ','Ẽ','Ẹ','Ê','Ế','Ề','Ể','Ễ','Ệ'],
+      'i' => ['í','ì','ỉ','ĩ','ị'], 'I' => ['Í','Ì','Ỉ','Ĩ','Ị'],
+      'o' => ['ó','ò','ỏ','õ','ọ','ô','ố','ồ','ổ','ỗ','ộ','ơ','ớ','ờ','ở','ỡ','ợ'],
+      'O' => ['Ó','Ò','Ỏ','Õ','Ọ','Ô','Ố','Ồ','Ổ','Ỗ','Ộ','Ơ','Ớ','Ờ','Ở','Ỡ','Ợ'],
+      'u' => ['ú','ù','ủ','ũ','ụ','ư','ứ','ừ','ử','ữ','ự'],
+      'U' => ['Ú','Ù','Ủ','Ũ','Ụ','Ư','Ứ','Ừ','Ử','Ữ','Ự'],
+      'y' => ['ý','ỳ','ỷ','ỹ','ỵ'], 'Y' => ['Ý','Ỳ','Ỷ','Ỹ','Ỵ'],
+    ];
+    $search = []; $replace = [];
+    foreach ($map as $ascii => $chars) {
+      foreach ($chars as $ch) { $search[] = $ch; $replace[] = $ascii; }
+    }
   }
-  $s = str_replace(['đ','Đ'], ['d','D'], $s);
-  $chunks = preg_split('/[^A-Za-z0-9]+/u', $s, -1, PREG_SPLIT_NO_EMPTY);
+  return str_replace($search, $replace, $s);
+}
+
+/** TitleCase + bỏ dấu + bỏ phân cách -> nối liền (Trụ cầu t1 -> TruCauT1) */
+function vn_titlecase_join(string $s): string {
+  $s = vn_to_ascii($s);
+  $chunks = preg_split('/[^A-Za-z0-9]+/', $s, -1, PREG_SPLIT_NO_EMPTY);
   $fixed  = array_map(function($c){
-    $first = mb_substr($c,0,1,'UTF-8');
-    $rest  = mb_substr($c,1,null,'UTF-8');
-    return mb_strtoupper($first,'UTF-8') . mb_strtolower($rest,'UTF-8');
+    $first = substr($c,0,1);
+    $rest  = substr($c,1);
+    return strtoupper($first) . strtolower($rest);
   }, $chunks);
   $joined = implode('', $fixed);
-  return preg_replace('/[^A-Za-z0-9_\-]/u','', $joined) ?? '';
+  return preg_replace('/[^A-Za-z0-9_\-]/','', $joined) ?? '';
 }
 
 function sanitize_extension($ext){
@@ -106,8 +123,8 @@ function sanitize_extension($ext){
   return preg_match('/^[a-z0-9]{1,10}$/', $e) ? $e : '';
 }
 
+/** GHÉP giống Preview (không xử lý lại title) */
 function compose_filename($project_name, $originator, $system_code, $level_code, $type_code, $role_code, $number_seq, $file_title, $extension=''){
-  // GHÉP GIỐNG HỆT PREVIEW: các mã viết HOA, số 4 chữ số, file_title là TitleCase đã bỏ dấu, ext thường
   $parts = [
     strtoupper(trim($project_name)),
     strtoupper(trim($originator)),
@@ -116,11 +133,26 @@ function compose_filename($project_name, $originator, $system_code, $level_code,
     strtoupper(trim($type_code)),
     strtoupper(trim($role_code)),
     pad4($number_seq),
-    vn_titlecase_join((string)$file_title),
+    trim((string)$file_title),
   ];
   $joined = implode('-', $parts);
   $ext = sanitize_extension($extension);
   return $ext !== '' ? ($joined . '.' . $ext) : $joined;
+}
+
+/** Cắt title/ext từ input thô giống hệt Preview */
+function split_title_ext_from_raw(string $raw): array {
+  $raw = trim($raw);
+  if ($raw === '') return ['', ''];
+  $pos = strrpos($raw, '.');
+  if ($pos !== false && $pos > 0 && $pos < strlen($raw) - 1) {
+    $left = substr($raw, 0, $pos);
+    $right = substr($raw, $pos + 1);
+    $title = vn_titlecase_join($left);
+    $ext   = sanitize_extension($right);
+    return [$title, $ext];
+  }
+  return [vn_titlecase_join($raw), ''];
 }
 
 function is_project_manager(PDO $pdo, int $projectId, int $userId): bool {
@@ -205,7 +237,7 @@ if ($isAjax) {
   if ($action === 'create' || $action === 'update') {
     if (!$is_manager) json_out(['ok'=>false, 'error'=>'Forbidden: you are not a project manager.'], 403);
 
-    // nhận từ JS (đã chuẩn hoá ở client), nhưng vẫn xử lý lại để chắc chắn trùng Preview
+    // Mã viết HOA, số, v.v...
     $project_name = strtoupper(trim((string)($_POST['project_name'] ?? '')));
     $originator   = strtoupper(trim((string)($_POST['originator'] ?? '')));
     $system_code  = strtoupper(trim((string)($_POST['system_code'] ?? 'ZZ')));
@@ -215,9 +247,14 @@ if ($isAjax) {
     $number_seq   = (int)($_POST['number_seq'] ?? 1);
     if ($number_seq < 1) $number_seq = 1;
 
-    $raw_title    = (string)($_POST['file_title'] ?? '');
-    $file_title   = vn_titlecase_join($raw_title);
-    $extension    = sanitize_extension($_POST['extension'] ?? '');
+    // Ưu tiên input thô để đồng bộ Preview
+    $raw_full = (string)($_POST['file_title_raw'] ?? '');
+    if (trim($raw_full) !== '') {
+      [$file_title, $extension] = split_title_ext_from_raw($raw_full);
+    } else {
+      $file_title = vn_titlecase_join((string)($_POST['file_title'] ?? ''));
+      $extension  = sanitize_extension($_POST['extension'] ?? '');
+    }
 
     $errors = [];
     if ($project_name === '') $errors[] = 'Project name is required.';
@@ -282,7 +319,7 @@ if ($isAjax) {
 }
 
 /* ---------- Render HTML ---------- */
-$__ver = '1.0.6';
+$__ver = '1.0.8';
 $is_manager = (isset($pdo) && $pdo instanceof PDO && $project_id > 0 && $userId > 0)
   ? is_project_manager($pdo, $project_id, (int)$userId)
   : false;
@@ -410,7 +447,7 @@ $is_manager = (isset($pdo) && $pdo instanceof PDO && $project_id > 0 && $userId 
   <!-- List -->
   <div class="naming-list-wrap">
     <div class="list-head">
-      <h3>Naming Rules</h3>
+      <h3>Saved Naming Rules</h3>
       <a class="btn-export" href="partials/project_tab_naming_export.php?project_id=<?= (int)$project_id ?>" target="_blank" rel="noopener">Export Excel</a>
     </div>
     <table class="naming-table" id="namingTable">
