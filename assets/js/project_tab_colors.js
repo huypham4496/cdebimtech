@@ -1,191 +1,293 @@
-// assets/js/project_tab_colors.js
 (function () {
   const root = document.getElementById('project-colors');
   if (!root) return;
 
-  const projectId = parseInt(root.dataset.projectId || '0', 10);
-  const elGroupList = document.getElementById('group-list');
-  const elItemList  = document.getElementById('item-list');
-  const formCreateGroup = document.getElementById('form-create-group');
-  const formCreateItem  = document.getElementById('form-create-item');
-  const swatch = document.getElementById('swatch');
-  const itemsTitle = document.getElementById('items-title');
+  const projectId = parseInt(root.dataset.projectId, 10);
+  const canManage = root.dataset.canManage === '1';
+  const ENDPOINT = root.dataset.endpoint || 'pages/partials/project_tab_colors.php'; 
 
-  let currentGroupId = null;
+  async function api(action, data = {}) {
+    const form = new URLSearchParams();
+    form.set('action', action);
+    form.set('project_id', projectId);
+    Object.keys(data).forEach(k => form.set(k, data[k]));
 
-  const post = async (action, data = {}) => {
-    const body = new URLSearchParams({ action, ...data });
-    const res = await fetch(location.pathname + location.search, {
+    const res = await fetch(ENDPOINT, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
-      body
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+      body: form.toString()
     });
-    const json = await res.json().catch(() => ({}));
-    if (!res.ok || !json.ok) {
-      const msg = (json && (json.msg || json.error)) || `Lỗi ${res.status}`;
-      throw new Error(msg);
-    }
-    return json;
-  };
+    return res.json();
+  }
 
-  const loadGroups = async () => {
-    if (!projectId) {
-      elGroupList.innerHTML = `<li>Thiếu project_id — truyền bằng query ?project_id=...</li>`;
+  // ---------------- UI helpers ----------------
+  const listEl = document.getElementById('color-groups-list');
+
+  function hexPreviewSpan(hex) {
+    const span = document.createElement('span');
+    span.className = 'hex-preview';
+    span.style.backgroundColor = hex || '#FFFFFF';
+    span.title = hex || '';
+    return span;
+  }
+
+  function iconButton(cls, title = '') {
+    const btn = document.createElement('button');
+    btn.className = `icon-btn ${cls}`;
+    btn.type = 'button';
+    if (title) btn.title = title;
+    return btn;
+  }
+
+  function validateHex(hex) {
+    return /^#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{3})$/.test(hex);
+  }
+
+  function renderGroups(data) {
+    listEl.innerHTML = '';
+    const { groups, itemsByGroup } = data;
+
+    if (!groups || groups.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'empty';
+      empty.textContent = 'Chưa có nhóm màu sắc nào.';
+      listEl.appendChild(empty);
       return;
     }
-    const { groups } = await post('list_groups', { project_id: projectId });
-    elGroupList.innerHTML = '';
-    if (!groups.length) {
-      elGroupList.innerHTML = `<li>Chưa có nhóm nào</li>`;
-    }
+
     groups.forEach(g => {
-      const li = document.createElement('li');
-      li.innerHTML = `
-        <div class="pcg__group">
-          <strong>${escapeHtml(g.name)}</strong>
-          <small>${g.item_count} danh mục</small>
-        </div>
-        <div class="pcg__actions">
-          <button data-act="open" data-id="${g.id}">Mở</button>
-          <button data-act="del"  data-id="${g.id}">Xoá</button>
-        </div>
-      `;
-      elGroupList.appendChild(li);
-    });
-  };
+      const box = document.createElement('div');
+      box.className = 'group-box';
+      box.dataset.groupId = g.id;
 
-  const openGroup = async (groupId, groupName = '') => {
-    currentGroupId = groupId;
-    formCreateItem.removeAttribute('disabled');
-    itemsTitle.textContent = `Danh mục màu · ${groupName || ''}`;
-    await loadItems(groupId);
-  };
+      const header = document.createElement('div');
+      header.className = 'group-header';
 
-  const loadItems = async (groupId) => {
-    const { items } = await post('list_items', { group_id: groupId });
-    elItemList.innerHTML = '';
-    if (!items.length) {
-      elItemList.innerHTML = `<li>Nhóm này chưa có danh mục màu</li>`;
-    }
-    items.forEach(it => {
-      const li = document.createElement('li');
-      li.className = 'pcg__item';
-      li.innerHTML = `
-        <div class="pcg__badge" style="background:${it.hex_code}"></div>
-        <div>
-          <div><strong>${escapeHtml(it.label)}</strong></div>
-          <small>${it.hex_code}</small>
-        </div>
-        <div class="pcg__actions">
-          <button data-act="del-item" data-id="${it.id}">Xoá</button>
-        </div>
-      `;
-      elItemList.appendChild(li);
-    });
-  };
+      const name = document.createElement('div');
+      name.className = 'group-name';
+      name.textContent = g.name;
 
-  formCreateGroup.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const fd = new FormData(formCreateGroup);
-    const name = (fd.get('name') || '').toString().trim();
-    const note = (fd.get('note') || '').toString().trim();
-    if (!name) return;
+      header.appendChild(name);
 
-    try {
-      await post('create_group', { project_id: projectId, name, note });
-      formCreateGroup.reset();
-      await loadGroups();
-    } catch (err) {
-      alert(err.message || 'Lỗi tạo nhóm');
-    }
-  });
+      if (canManage) {
+        const right = document.createElement('div');
+        right.className = 'group-actions';
 
-  formCreateItem.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    if (!currentGroupId) return;
+        const add = iconButton('add', 'Thêm màu');
+        add.innerHTML = '+';
+        add.addEventListener('click', () => addNewRow(box, g.id));
 
-    const fd = new FormData(formCreateItem);
-    let label = (fd.get('label') || '').toString().trim();
-    let hex   = (fd.get('hex_code') || '').toString().trim().toUpperCase();
-
-    if (!label || !hex) return;
-
-    try {
-      // tạo preview đơn giản (HTML) — bạn có thể thay bằng SVG/base64
-      const preview = `<div style="width:36px;height:24px;border-radius:6px;border:1px solid #e5e7eb;background:${hex}"></div>`;
-      await post('create_item', { group_id: currentGroupId, label, hex_code: hex, preview });
-      formCreateItem.reset();
-      swatch.style.background = '';
-      await loadItems(currentGroupId);
-      await loadGroups(); // cập nhật item_count
-    } catch (err) {
-      alert(err.message || 'Lỗi tạo danh mục màu');
-    }
-  });
-
-  elGroupList.addEventListener('click', async (e) => {
-    const btn = e.target.closest('button');
-    if (!btn) return;
-    const id = parseInt(btn.dataset.id || '0', 10);
-    const act = btn.dataset.act;
-    if (act === 'open') {
-      // Lấy tên nhóm để hiển thị ở tiêu đề
-      const name = btn.parentElement?.previousElementSibling?.querySelector('strong')?.textContent || '';
-      await openGroup(id, name);
-    }
-    if (act === 'del') {
-      if (confirm('Xoá nhóm này? (Sẽ xoá cả danh mục bên trong)')) {
-        try {
-          await post('delete_group', { id });
-          if (id === currentGroupId) {
-            currentGroupId = null;
-            formCreateItem.setAttribute('disabled', 'true');
-            itemsTitle.textContent = 'Danh mục màu';
-            elItemList.innerHTML = '';
+        const del = iconButton('delete', 'Xóa nhóm');
+        del.innerHTML = '🗑';
+        del.addEventListener('click', async () => {
+          if (!confirm('Xóa nhóm này và toàn bộ màu bên trong?')) return;
+          const r = await api('delete_group', { group_id: g.id });
+          if (r.ok) {
+            box.remove();
+          } else {
+            alert(r.msg || 'Không thể xóa nhóm.');
           }
-          await loadGroups();
-        } catch (err) {
-          alert(err.message || 'Không xoá được nhóm');
-        }
-      }
-    }
-  });
+        });
 
-  elItemList.addEventListener('click', async (e) => {
-    const btn = e.target.closest('button');
-    if (!btn) return;
-    const id = parseInt(btn.dataset.id || '0', 10);
-    const act = btn.dataset.act;
-    if (act === 'del-item') {
-      if (confirm('Xoá danh mục màu này?')) {
-        try {
-          await post('delete_item', { id });
-          await loadItems(currentGroupId);
-          await loadGroups();
-        } catch (err) {
-          alert(err.message || 'Không xoá được danh mục');
-        }
+        right.appendChild(add);
+        right.appendChild(del);
+        header.appendChild(right);
       }
-    }
-  });
 
-  // Preview ô swatch khi gõ mã màu
-  formCreateItem.querySelector('input[name="hex_code"]').addEventListener('input', (e) => {
-    let v = e.target.value.trim();
-    if (v && v[0] !== '#') v = '#' + v;
-    if (/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(v)) {
-      swatch.style.background = v;
+      box.appendChild(header);
+
+      // body
+      const body = document.createElement('div');
+      body.className = 'group-body';
+
+      const table = document.createElement('table');
+      table.className = 'colors-table';
+      const thead = document.createElement('thead');
+      thead.innerHTML = `
+        <tr>
+          <th style="width:44px">#</th>
+          <th>Label</th>
+          <th style="width:220px">Mã màu (HEX)</th>
+          <th style="width:64px">Preview</th>
+          ${canManage ? '<th style="width:90px"></th>' : ''}
+        </tr>
+      `;
+      table.appendChild(thead);
+
+      const tbody = document.createElement('tbody');
+      const items = itemsByGroup[g.id] || [];
+      items.forEach((it, idx) => {
+        tbody.appendChild(renderRow(it, idx + 1));
+      });
+      table.appendChild(tbody);
+
+      body.appendChild(table);
+      box.appendChild(body);
+
+      listEl.appendChild(box);
+    });
+  }
+
+  function renderRow(item, no) {
+    const tr = document.createElement('tr');
+    tr.dataset.itemId = item.id;
+
+    const tdNo = document.createElement('td');
+    tdNo.className = 'cell-no';
+    tdNo.textContent = String(no ?? '');
+    tr.appendChild(tdNo);
+
+    const tdLabel = document.createElement('td');
+    if (canManage) {
+      const inp = document.createElement('input');
+      inp.type = 'text';
+      inp.className = 'input input-label';
+      inp.value = item.label || '';
+      inp.maxLength = 255;
+      inp.addEventListener('change', () => saveRow(tr));
+      tdLabel.appendChild(inp);
     } else {
-      swatch.style.background = '';
+      tdLabel.textContent = item.label || '';
     }
-  });
+    tr.appendChild(tdLabel);
 
-  const escapeHtml = (s) => (s || '').replace(/[&<>"']/g, (m) => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-  }[m]));
+    const tdHex = document.createElement('td');
+    if (canManage) {
+      const inp = document.createElement('input');
+      inp.type = 'text';
+      inp.className = 'input input-hex';
+      inp.placeholder = '#RRGGBB';
+      inp.value = item.hex_color || '';
+      inp.maxLength = 7;
+      inp.addEventListener('input', () => {
+        // live preview
+        const pv = tr.querySelector('.hex-preview');
+        if (validateHex(inp.value)) pv.style.backgroundColor = inp.value;
+      });
+      inp.addEventListener('change', () => saveRow(tr));
+      tdHex.appendChild(inp);
+    } else {
+      const code = document.createElement('code');
+      code.textContent = item.hex_color || '';
+      tdHex.appendChild(code);
+    }
+    tr.appendChild(tdHex);
 
-  // Khởi động
-  loadGroups().catch(err => {
-    elGroupList.innerHTML = `<li>Lỗi tải nhóm: ${err.message}</li>`;
-  });
+    const tdPreview = document.createElement('td');
+    tdPreview.appendChild(hexPreviewSpan(item.hex_color || '#FFFFFF'));
+    tr.appendChild(tdPreview);
+
+    if (canManage) {
+      const tdAct = document.createElement('td');
+      const del = iconButton('delete-row', 'Xóa');
+      del.innerHTML = '✕';
+      del.addEventListener('click', async () => {
+        if (!confirm('Xóa màu này?')) return;
+        const r = await api('delete_item', { id: item.id });
+        if (r.ok) {
+          tr.remove();
+          renumberRows(tr.parentElement);
+        } else {
+          alert(r.msg || 'Không thể xóa.');
+        }
+      });
+      tdAct.appendChild(del);
+      tr.appendChild(tdAct);
+    }
+
+    return tr;
+  }
+
+  function renumberRows(tbody) {
+    [...tbody.querySelectorAll('tr')].forEach((tr, i) => {
+      const cell = tr.querySelector('.cell-no');
+      if (cell) cell.textContent = String(i + 1);
+    });
+  }
+
+  function addNewRow(groupBox, groupId) {
+    const tbody = groupBox.querySelector('tbody');
+    const tmp = {
+      id: 0,
+      group_id: groupId,
+      label: '',
+      hex_color: '#FFFFFF',
+      sort_order: (tbody.children.length || 0) + 1
+    };
+    const tr = renderRow(tmp, tbody.children.length + 1);
+    tbody.appendChild(tr);
+
+    // focus vào label mới
+    const labelInput = tr.querySelector('.input-label');
+    if (labelInput) labelInput.focus();
+  }
+
+  async function saveRow(tr) {
+    const id = parseInt(tr.dataset.itemId, 10) || 0;
+    const label = tr.querySelector('.input-label')?.value?.trim() || '';
+    const hex = (tr.querySelector('.input-hex')?.value || '').toUpperCase();
+
+    if (!label) {
+      alert('Label không được để trống.');
+      return;
+    }
+    if (!validateHex(hex)) {
+      alert('Mã màu không hợp lệ. Ví dụ: #1A2B3C');
+      return;
+    }
+
+    if (id > 0) {
+      // update
+      const r = await api('update_item', { id, label, hex_color: hex });
+      if (!r.ok) alert(r.msg || 'Không thể lưu thay đổi.');
+    } else {
+      // insert
+      const groupId = parseInt(tr.closest('.group-box').dataset.groupId, 10);
+      const sortOrder = parseInt(tr.querySelector('.cell-no').textContent, 10) || 0;
+      const r = await api('add_item', { group_id: groupId, label, hex_color: hex, sort_order: sortOrder });
+      if (r.ok && r.item) {
+        tr.dataset.itemId = r.item.id;
+      } else {
+        alert(r.msg || 'Không thể thêm màu.');
+      }
+    }
+
+    // cập nhật preview (an toàn)
+    const pv = tr.querySelector('.hex-preview');
+    if (pv && validateHex(hex)) pv.style.backgroundColor = hex;
+  }
+
+  // ---------------- Events (khu vực 1) ----------------
+  if (canManage) {
+    const btnSaveGroup = document.getElementById('btn-save-group');
+    const inpName = document.getElementById('color-group-name');
+
+    btnSaveGroup?.addEventListener('click', async () => {
+      const name = (inpName.value || '').trim();
+      if (!name) {
+        alert('Vui lòng nhập tên group.');
+        return;
+      }
+      const r = await api('add_group', { name });
+      if (r.ok) {
+        inpName.value = '';
+        await loadAll(); // render lại
+      } else {
+        alert(r.msg || 'Không thể tạo group.');
+      }
+    });
+
+    inpName?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') btnSaveGroup.click();
+    });
+  }
+
+  // ---------------- Load initial ----------------
+  async function loadAll() {
+    const r = await api('list');
+    if (r.ok) renderGroups(r.data);
+    else listEl.innerHTML = `<div class="error">${r.msg || 'Không thể tải dữ liệu.'}</div>`;
+  }
+
+  loadAll();
 })();
