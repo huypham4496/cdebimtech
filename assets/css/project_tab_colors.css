@@ -1,86 +1,142 @@
-/* assets/css/project_tab_colors.css */
-#project-colors {
-  display: grid;
-  grid-template-columns: 320px 1fr;
-  gap: 16px;
-  padding: 8px 0;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+.cde-colors {
+  display: block;
+  padding: 12px 8px 24px;
+  font-size: 14px;
 }
 
-.pcg__left, .pcg__right {
+.cde-colors .colors-section {
   background: #fff;
-  border: 1px solid #e5e7eb;
+  border: 1px solid #e6e8ec;
   border-radius: 10px;
   padding: 12px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 2px rgba(10, 18, 50, 0.03);
 }
 
-.pcg__form {
-  display: grid;
-  grid-template-columns: 1fr 1fr auto;
+.cde-colors .colors-create-group.disabled {
+  opacity: 0.75;
+}
+
+.cde-colors h4 {
+  margin: 0 0 10px 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.cde-colors .form-inline {
+  display: flex;
   gap: 8px;
-  margin-bottom: 12px;
-}
-.pcg__form[disabled] {
-  opacity: 0.5;
-  pointer-events: none;
+  align-items: center;
 }
 
-.pcg__form input {
-  height: 36px;
-  border: 1px solid #d1d5db;
+.cde-colors .input {
+  height: 34px;
+  border: 1px solid #d5d8dd;
   border-radius: 8px;
   padding: 0 10px;
+  outline: none;
+  min-width: 240px;
 }
-.pcg__form button {
-  height: 36px;
+
+.cde-colors .input:focus {
+  border-color: #8ab4ff;
+  box-shadow: 0 0 0 3px rgba(138, 180, 255, .2);
+}
+
+.cde-colors .btn {
+  height: 34px;
   padding: 0 12px;
-  border: 1px solid #111827;
-  background: #111827;
+  border: 1px solid #1c7dfa;
+  background: #1c7dfa;
   color: #fff;
   border-radius: 8px;
   cursor: pointer;
 }
-.pcg__form button:hover { opacity: .9; }
+.cde-colors .btn:hover { filter: brightness(0.95); }
+.cde-colors .btn:active { filter: brightness(0.90); }
 
-.pcg__group-list, .pcg__item-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
+.cde-colors .hint {
+  margin-top: 6px;
+  color: #6b7280;
+  font-size: 12px;
 }
 
-.pcg__group-list li, .pcg__item-list li {
+.groups-list .empty {
+  padding: 12px;
+  color: #6b7280;
+}
+
+.group-box {
+  border: 1px dashed #e2e5ea;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.group-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  padding: 8px 10px;
-  margin-bottom: 8px;
+  background: #f8fafc;
+  border-bottom: 1px solid #eef1f5;
+  padding: 8px 12px;
 }
 
-.pcg__group {
-  display: grid;
-  grid-template-columns: 1fr auto;
+.group-name {
+  font-weight: 600;
+}
+
+.group-actions {
+  display: flex;
   gap: 6px;
-}
-.pcg__group small { color: #6b7280; }
-
-.pcg__item {
-  display: grid;
-  grid-template-columns: 36px 1fr auto;
   align-items: center;
-  gap: 10px;
 }
-.pcg__badge {
-  width: 36px; height: 24px; border-radius: 6px; border: 1px solid #e5e7eb;
-}
-.pcg__actions button {
-  background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 8px; padding: 4px 8px; cursor: pointer;
-}
-.pcg__actions button:hover { background: #e5e7eb; }
 
-.pcg__swatch {
-  grid-column: 1 / -1;
-  height: 32px; border-radius: 8px; border: 1px solid #e5e7eb;
+.icon-btn {
+  height: 28px;
+  min-width: 28px;
+  padding: 0 8px;
+  border-radius: 6px;
+  border: 1px solid #d5d8dd;
+  background: #fff;
+  cursor: pointer;
+}
+.icon-btn:hover { background: #f3f4f6; }
+
+.group-body {
+  padding: 10px 12px 12px;
+  overflow-x: auto;
+}
+
+.colors-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.colors-table th, .colors-table td {
+  border-bottom: 1px solid #eef1f5;
+  padding: 8px 10px;
+  white-space: nowrap;
+}
+
+.colors-table thead th {
+  background: #fbfdff;
+  font-weight: 600;
+  color: #374151;
+}
+
+.colors-table td code {
+  display: inline-block;
+  padding: 2px 6px;
+  background: #f3f4f6;
+  border-radius: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+.hex-preview {
+  display: inline-block;
+  width: 38px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  vertical-align: middle;
 }
