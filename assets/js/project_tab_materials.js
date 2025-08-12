@@ -38,7 +38,6 @@
     modeSelect.value = mode;
     tblIn.style.display = mode === 'in' ? '' : 'none';
     tblOut.style.display = mode === 'out' ? '' : 'none';
-    // Toggle form fields visibility
     $$('.mtl-group-in').forEach(el => el.style.display = mode === 'in' ? '' : 'none');
     $$('.mtl-group-out').forEach(el => el.style.display = mode === 'out' ? '' : 'none');
   }
@@ -46,7 +45,6 @@
   modeSelect.addEventListener('change', () => setMode(modeSelect.value));
   setMode('in');
 
-  // Simple search filter
   function applySearch() {
     const q = (searchInput.value || '').toLowerCase().trim();
     const visibleTable = modeSelect.value === 'in' ? tblIn : tblOut;
@@ -61,10 +59,10 @@
   }
   searchInput.addEventListener('input', applySearch);
 
-  // Modal helpers
   function openModal(title) {
     modalTitle.textContent = title;
     modal.style.display = 'block';
+    setTimeout(() => f.name && f.name.focus(), 0);
   }
   function closeModal() {
     modal.style.display = 'none';
@@ -72,19 +70,15 @@
     idInput.value = '';
     actionInput.value = '';
   }
-  modalClose.addEventListener('click', closeModal);
+  $('#mtl-modal-close').addEventListener('click', closeModal);
   btnCancel.addEventListener('click', closeModal);
-  window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeModal();
-  });
-  modal.addEventListener('click', (e) => {
-    if (e.target === modal) closeModal();
-  });
+  window.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+  modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
 
   // Create
   btnCreate.addEventListener('click', () => {
     const mode = modeSelect.value;
-    const now = new Date().toISOString().slice(0,10); // yyyy-mm-dd
+    const now = new Date().toISOString().slice(0,10);
 
     if (mode === 'in') {
       actionInput.value = 'create_in';
@@ -95,45 +89,53 @@
       f.qtyOut.required = true; f.qtyIn.required = false;
       f.outDate.value = now;
     }
-    setMode(mode); // ensure correct fields shown
+    setMode(mode);
     openModal('Create');
   });
 
-  // Edit IN
+  // Bind edit from <a> - IN
   $$('.mtl-edit-in').forEach(a => {
-    a.addEventListener('click', (e) => {
-      e.preventDefault();
-      setMode('in');
-      actionInput.value = 'update_in';
-      idInput.value = a.dataset.id || '';
-      f.name.value = a.dataset.name || '';
-      f.code.value = a.dataset.code || '';
-      f.supplier.value = a.dataset.supplier || '';
-      f.warehouse.value = a.dataset.warehouse || '';
-      f.qtyIn.value = a.dataset.qty_in || '';
-      f.unit.value = a.dataset.unit || '';
-      f.receivedDate.value = a.dataset.received_date || '';
-      f.qtyIn.required = true; f.qtyOut.required = false;
-      openModal('Edit');
-    });
+    a.addEventListener('click', (e) => { e.preventDefault(); populateInEdit(a.dataset); });
   });
+  // Bind edit button - IN
+  $$('.mtl-btn-edit-in').forEach(btn => {
+    btn.addEventListener('click', (e) => { e.preventDefault(); populateInEdit(btn.dataset); });
+  });
+  function populateInEdit(ds) {
+    setMode('in');
+    actionInput.value = 'update_in';
+    idInput.value = ds.id || '';
+    f.name.value = ds.name || '';
+    f.code.value = ds.code || '';
+    f.supplier.value = ds.supplier || '';
+    f.warehouse.value = ds.warehouse || '';
+    f.qtyIn.value = ds.qty_in || '';
+    f.unit.value = ds.unit || '';
+    f.receivedDate.value = ds.received_date || '';
+    f.qtyIn.required = true; f.qtyOut.required = false;
+    openModal('Edit');
+  }
 
-  // Edit OUT
+  // Bind edit from <a> - OUT
   $$('.mtl-edit-out').forEach(a => {
-    a.addEventListener('click', (e) => {
-      e.preventDefault();
-      setMode('out');
-      actionInput.value = 'update_out';
-      idInput.value = a.dataset.id || '';
-      f.name.value = a.dataset.name || '';
-      f.code.value = a.dataset.code || '';
-      f.qtyOut.value = a.dataset.qty_out || '';
-      f.unit.value = a.dataset.unit || '';
-      f.content.value = a.dataset.content || '';
-      f.outDate.value = a.dataset.out_date || '';
-      f.qtyOut.required = true; f.qtyIn.required = false;
-      openModal('Edit');
-    });
+    a.addEventListener('click', (e) => { e.preventDefault(); populateOutEdit(a.dataset); });
   });
+  // Bind edit button - OUT
+  $$('.mtl-btn-edit-out').forEach(btn => {
+    btn.addEventListener('click', (e) => { e.preventDefault(); populateOutEdit(btn.dataset); });
+  });
+  function populateOutEdit(ds) {
+    setMode('out');
+    actionInput.value = 'update_out';
+    idInput.value = ds.id || '';
+    f.name.value = ds.name || '';
+    f.code.value = ds.code || '';
+    f.qtyOut.value = ds.qty_out || '';
+    f.unit.value = ds.unit || '';
+    f.content.value = ds.content || '';
+    f.outDate.value = ds.out_date || '';
+    f.qtyOut.required = true; f.qtyIn.required = false;
+    openModal('Edit');
+  }
 
 })();
