@@ -1,370 +1,249 @@
 <?php
-/**
- * pages/partials/project_tab_colors.php
- * - Single PHP entry for UI (embedded in project_view) + AJAX endpoints (?action=...)
- * - Still uses external CSS/JS: /assets/css/project_tab_colors.css, /assets/js/project_tab_colors.js
- * - No duplicate session_start / helpers; will try to include init/config only if needed (when called directly).
- */
+// Tab này được include bên trong project_view.php.
+// Giả định $pdo (PDO), $_SESSION['user_id'] và $project_id đã có sẵn giống project_tab_members.php.
+// Nếu không, bạn có thể thay thế $project_id = (int)($_GET['id'] ?? 0);
 
-if (!defined('CDE_PARTIAL_COLORS')) {
-    define('CDE_PARTIAL_COLORS', true);
+if (!isset($project_id)) {
+    $project_id = (int)($_GET['id'] ?? 0);
 }
 
-/* -----------------------------------------------------------
- * 0) Bootstrap when called directly (AJAX) – try to load $pdo, session, helpers
- * ----------------------------------------------------------- */
-$__ROOT = realpath(__DIR__ . '/../../'); // .../pages
-$__APP  = realpath(__DIR__ . '/../../'); // same
-$__BASE = realpath(__DIR__ . '/../../'); // compat
 
-if (!isset($pdo) || !($pdo instanceof PDO)) {
-    // Try includes from app root: /includes/init.php then /includes/config.php + helpers.php
-    $rootCandidate = realpath(__DIR__ . '/../../');             // .../pages -> up to htdocs
-    $rootCandidate = dirname($rootCandidate);                    // htdocs
-    $incPath = $rootCandidate . DIRECTORY_SEPARATOR . 'includes';
-
-    if (is_dir($incPath)) {
-        if (file_exists($incPath . '/init.php')) {
-            include_once $incPath . '/init.php';
-        } else {
-            if (file_exists($incPath . '/config.php')) include_once $incPath . '/config.php';
-            if (file_exists($incPath . '/helpers.php')) include_once $incPath . '/helpers.php';
-        }
-    }
-}
-
-/* -----------------------------------------------------------
- * 1) Helpers (safe, no name clash)
- * ----------------------------------------------------------- */
-function _colors_json($data, int $code = 200) {
+// ------------------------- Helpers -------------------------
+function json_out($arr, $code = 200) {
     if (!headers_sent()) {
         http_response_code($code);
         header('Content-Type: application/json; charset=utf-8');
     }
-    echo json_encode($data, JSON_UNESCAPED_UNICODE);
+    echo json_encode($arr);
     exit;
 }
 
-function _colors_get_user_id(): ?int {
-    // Try several common buckets from the app
-    if (isset($GLOBALS['current_user']['id']))     return (int)$GLOBALS['current_user']['id'];
-    if (isset($GLOBALS['user']['id']))             return (int)$GLOBALS['user']['id'];
-    if (isset($_SESSION['user']['id']))            return (int)$_SESSION['user']['id'];
-    if (isset($_SESSION['user_id']))               return (int)$_SESSION['user_id'];
-    if (isset($GLOBALS['auth_user']['id']))        return (int)$GLOBALS['auth_user']['id'];
-    return null;
+function is_project_manager(PDO $pdo, int $project_id, int $user_id): bool {
+    // Người dùng được coi là "manager" nếu nằm trong group có name = 'manager'
+    // hoặc group_id = 1 (thông thường).
+    $sql = "
+        SELECT 1
+        FROM project_group_members pgm
+        JOIN project_groups pg ON pgm.group_id = pg.id
+        WHERE pgm.project_id = :pid
+          AND pgm.user_id = :uid
+          AND (pg.name = 'manager' OR pgm.group_id = 1)
+        LIMIT 1
+    ";
+    $st = $pdo->prepare($sql);
+    $st->execute([':pid' => $project_id, ':uid' => $user_id]);
+    return (bool)$st->fetchColumn();
 }
 
-function _colors_get_project_id(): ?int {
-    if (isset($_GET['id'])) return (int)$_GET['id'];
-    if (isset($GLOBALS['project']['id'])) return (int)$GLOBALS['project']['id'];
-    if (isset($GLOBALS['project_id'])) return (int)$GLOBALS['project_id'];
-    return null;
+function ensure_group_belongs(PDO $pdo, int $group_id, int $project_id) {
+    $st = $pdo->prepare("SELECT id FROM project_color_groups WHERE id = :gid AND project_id = :pid");
+    $st->execute([':gid' => $group_id, ':pid' => $project_id]);
+    if (!$st->fetchColumn()) {
+        json_out(['ok' => false, 'msg' => 'Color group không thuộc về dự án.'], 404);
+    }
 }
 
-/**
- * Ensure color tables exist (safe IF NOT EXISTS).
- * Groups: id, project_id, name, created_by, created_at
- * Items : id, project_id, group_id, label, color_hex, created_by, created_at
- */
-function _colors_ensure_tables(PDO $pdo): void {
-    $pdo->exec("
-        CREATE TABLE IF NOT EXISTS project_color_groups (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            project_id INT NOT NULL,
-            name VARCHAR(191) NOT NULL,
-            created_by INT NULL,
-            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            INDEX idx_pcg_project_id (project_id)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    ");
-
-    $pdo->exec("
-        CREATE TABLE IF NOT EXISTS project_color_items (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            project_id INT NOT NULL,
-            group_id INT NOT NULL,
-            label VARCHAR(191) NOT NULL,
-            color_hex CHAR(7) NOT NULL,
-            created_by INT NULL,
-            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            INDEX idx_pci_project (project_id),
-            INDEX idx_pci_group (group_id)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    ");
+function ensure_item_belongs(PDO $pdo, int $item_id, int $project_id) {
+    $sql = "SELECT i.id
+            FROM project_color_items i
+            JOIN project_color_groups g ON i.group_id = g.id
+            WHERE i.id = :iid AND g.project_id = :pid";
+    $st = $pdo->prepare($sql);
+    $st->execute([':iid' => $item_id, ':pid' => $project_id]);
+    if (!$st->fetchColumn()) {
+        json_out(['ok' => false, 'msg' => 'Color item không thuộc về dự án.'], 404);
+    }
 }
 
-/** Detect column name for HEX: prefer color_hex; fallback hex_code if exists in old DB */
-function _colors_hex_col(PDO $pdo): string {
+$can_manage = is_project_manager($pdo, $project_id, $current_user_id);
+
+// ------------------------- AJAX API -------------------------
+if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['action'])) {
+    $action = $_POST['action'];
+
+    // Chỉ manager được phép thay đổi
+    $mutating_actions = ['add_group','delete_group','add_item','update_item','delete_item','reorder_items'];
+    if (in_array($action, $mutating_actions, true) && !$can_manage) {
+        json_out(['ok' => false, 'msg' => 'Bạn không có quyền thực hiện thao tác này.'], 403);
+    }
+
     try {
-        $stmt = $pdo->query("SHOW COLUMNS FROM project_color_items");
-        $cols = $stmt->fetchAll(PDO::FETCH_COLUMN, 0);
-        if (in_array('color_hex', $cols, true)) return 'color_hex';
-        if (in_array('hex_code', $cols, true))  return 'hex_code';
-    } catch (Throwable $e) {}
-    return 'color_hex';
-}
+        if ($action === 'list') {
+            // Lấy toàn bộ group + items
+            $st = $pdo->prepare("SELECT id, name, created_by, created_at FROM project_color_groups WHERE project_id = :pid ORDER BY id ASC");
+            $st->execute([':pid' => $project_id]);
+            $groups = $st->fetchAll(PDO::FETCH_ASSOC);
 
-/** Check manager permission for this project */
-function _colors_user_can_manage(PDO $pdo, int $projectId, int $userId): bool {
-    // 1) Find manager group id in this project
-    $sqlGroup = "SELECT id FROM project_groups WHERE project_id = ? AND name = 'manager' LIMIT 1";
-    $stmt = $pdo->prepare($sqlGroup);
-    $stmt->execute([$projectId]);
-    $groupId = (int)$stmt->fetchColumn();
-    if (!$groupId) return false;
+            $itemsByGroup = [];
+            if ($groups) {
+                $groupIds = array_column($groups, 'id');
+                $in = implode(',', array_fill(0, count($groupIds), '?'));
+                $sql = "SELECT id, group_id, label, hex_color, sort_order
+                        FROM project_color_items
+                        WHERE group_id IN ($in)
+                        ORDER BY sort_order ASC, id ASC";
+                $stm = $pdo->prepare($sql);
+                $stm->execute($groupIds);
+                while ($row = $stm->fetch(PDO::FETCH_ASSOC)) {
+                    $gid = (int)$row['group_id'];
+                    if (!isset($itemsByGroup[$gid])) $itemsByGroup[$gid] = [];
+                    $itemsByGroup[$gid][] = $row;
+                }
+            }
 
-    // 2) Check membership
-    $sqlMem  = "SELECT 1 FROM project_group_members WHERE project_id = ? AND group_id = ? AND user_id = ? LIMIT 1";
-    $stmt2 = $pdo->prepare($sqlMem);
-    $stmt2->execute([$projectId, $groupId, $userId]);
-    return (bool)$stmt2->fetchColumn();
-}
-
-/** Basic HEX sanitizer (#RRGGBB) */
-function _colors_sanitize_hex(?string $hex): string {
-    $hex = trim((string)$hex);
-    if ($hex === '') return '#000000';
-    if ($hex[0] !== '#') $hex = '#' . $hex;
-    if (!preg_match('/^#[0-9a-fA-F]{6}$/', $hex)) {
-        // Try expand shorthand #RGB
-        if (preg_match('/^#([0-9a-fA-F]{3})$/', $hex, $m)) {
-            $hex = '#' . $m[1][0] . $m[1][0] . $m[1][1] . $m[1][1] . $m[1][2] . $m[1][2];
-        } else {
-            $hex = '#000000';
-        }
-    }
-    return strtoupper($hex);
-}
-
-/* -----------------------------------------------------------
- * 2) Resolve dependencies ($pdo, project/user IDs)
- * ----------------------------------------------------------- */
-$projectId = _colors_get_project_id();
-$userId    = _colors_get_user_id();
-
-if (isset($_GET['action'])) {
-    // AJAX branch
-    if (!isset($pdo) || !($pdo instanceof PDO)) {
-        _colors_json(['ok' => false, 'error' => 'db_missing'], 500);
-    }
-
-    try { _colors_ensure_tables($pdo); } catch (Throwable $e) {
-        _colors_json(['ok'=>false,'error'=>'table_init_failed','message'=>$e->getMessage()], 500);
-    }
-
-    $hexCol = _colors_hex_col($pdo);
-    $action = $_GET['action'];
-
-    // List groups (read-only OK)
-    if ($action === 'list_groups') {
-        if (!$projectId) _colors_json(['ok'=>false,'error'=>'missing_project_id'], 400);
-        try {
-            $sql = "SELECT g.id, g.name, g.created_at,
-                           (SELECT COUNT(*) FROM project_color_items i WHERE i.group_id = g.id) AS items_count
-                    FROM project_color_groups g
-                    WHERE g.project_id = ?
-                    ORDER BY g.id DESC";
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute([$projectId]);
-            $groups = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            _colors_json(['ok'=>true,'groups'=>$groups]);
-        } catch (Throwable $e) {
-            _colors_json(['ok'=>false,'error'=>'sql_error','message'=>$e->getMessage()], 500);
-        }
-    }
-
-    // Create group (need manage)
-    if ($action === 'create_group') {
-        if (!$projectId) _colors_json(['ok'=>false,'error'=>'missing_project_id'], 400);
-        if (!$userId)    _colors_json(['ok'=>false,'error'=>'not_authenticated'], 401);
-        if (!_colors_user_can_manage($pdo, $projectId, $userId)) {
-            _colors_json(['ok'=>false,'error'=>'forbidden'], 403);
-        }
-        $name = isset($_POST['name']) ? trim((string)$_POST['name']) : '';
-        if ($name === '') _colors_json(['ok'=>false,'error'=>'invalid_name'], 422);
-
-        try {
-            $stmt = $pdo->prepare("INSERT INTO project_color_groups (project_id, name, created_by) VALUES (?, ?, ?)");
-            $stmt->execute([$projectId, $name, $userId]);
-            $newId = (int)$pdo->lastInsertId();
-            _colors_json(['ok'=>true,'id'=>$newId,'name'=>$name]);
-        } catch (Throwable $e) {
-            _colors_json(['ok'=>false,'error'=>'sql_error','message'=>$e->getMessage()], 500);
-        }
-    }
-
-    // List items in a group (read-only OK)
-    if ($action === 'list_items') {
-        $groupId = isset($_GET['group_id']) ? (int)$_GET['group_id'] : 0;
-        if (!$projectId || !$groupId) _colors_json(['ok'=>false,'error'=>'missing_params'], 400);
-
-        try {
-            // Ensure the group belongs to the project
-            $chk = $pdo->prepare("SELECT 1 FROM project_color_groups WHERE id=? AND project_id=?");
-            $chk->execute([$groupId,$projectId]);
-            if (!$chk->fetchColumn()) _colors_json(['ok'=>true,'items'=>[]]);
-
-            $stmt = $pdo->prepare("SELECT id, label, {$hexCol} AS hex, created_at
-                                   FROM project_color_items
-                                   WHERE group_id = ?
-                                   ORDER BY id ASC");
-            $stmt->execute([$groupId]);
-            $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            _colors_json(['ok'=>true,'items'=>$items]);
-        } catch (Throwable $e) {
-            _colors_json(['ok'=>false,'error'=>'sql_error','message'=>$e->getMessage()], 500);
-        }
-    }
-
-    // Create item (need manage)
-    if ($action === 'create_item') {
-        if (!$projectId) _colors_json(['ok'=>false,'error'=>'missing_project_id'], 400);
-        if (!$userId)    _colors_json(['ok'=>false,'error'=>'not_authenticated'], 401);
-        if (!_colors_user_can_manage($pdo, $projectId, $userId)) {
-            _colors_json(['ok'=>false,'error'=>'forbidden'], 403);
+            json_out([
+                'ok' => true,
+                'data' => [
+                    'groups' => $groups,
+                    'itemsByGroup' => $itemsByGroup,
+                    'can_manage' => $can_manage
+                ]
+            ]);
         }
 
-        $groupId = isset($_POST['group_id']) ? (int)$_POST['group_id'] : 0;
-        $label   = isset($_POST['label']) ? trim((string)$_POST['label']) : '';
-        $hex     = _colors_sanitize_hex($_POST['hex'] ?? '');
+        if ($action === 'add_group') {
+            $name = trim($_POST['name'] ?? '');
+            if ($name === '') json_out(['ok' => false, 'msg' => 'Tên group không được để trống.'], 422);
 
-        if (!$groupId || $label === '') _colors_json(['ok'=>false,'error'=>'invalid_params'], 422);
+            $st = $pdo->prepare("INSERT INTO project_color_groups (project_id, name, created_by) VALUES (:pid, :name, :uid)");
+            $st->execute([':pid' => $project_id, ':name' => $name, ':uid' => $current_user_id]);
 
-        try {
-            // Ensure group belongs to this project
-            $chk = $pdo->prepare("SELECT 1 FROM project_color_groups WHERE id = ? AND project_id = ?");
-            $chk->execute([$groupId,$projectId]);
-            if (!$chk->fetchColumn()) _colors_json(['ok'=>false,'error'=>'group_not_found'], 404);
+            json_out(['ok' => true, 'id' => (int)$pdo->lastInsertId(), 'name' => $name]);
+        }
 
-            $sql = "INSERT INTO project_color_items (project_id, group_id, label, {$hexCol}, created_by)
-                    VALUES (?, ?, ?, ?, ?)";
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute([$projectId, $groupId, $label, $hex, $userId]);
+        if ($action === 'delete_group') {
+            $group_id = (int)($_POST['group_id'] ?? 0);
+            ensure_group_belongs($pdo, $group_id, $project_id);
+
+            $pdo->beginTransaction();
+            $pdo->prepare("DELETE FROM project_color_items WHERE group_id = :gid")->execute([':gid' => $group_id]);
+            $pdo->prepare("DELETE FROM project_color_groups WHERE id = :gid")->execute([':gid' => $group_id]);
+            $pdo->commit();
+
+            json_out(['ok' => true]);
+        }
+
+        if ($action === 'add_item') {
+            $group_id   = (int)($_POST['group_id'] ?? 0);
+            $label      = trim($_POST['label'] ?? '');
+            $hex_color  = strtoupper(trim($_POST['hex_color'] ?? ''));
+            $sort_order = (int)($_POST['sort_order'] ?? 0);
+
+            ensure_group_belongs($pdo, $group_id, $project_id);
+
+            if ($label === '') json_out(['ok' => false, 'msg' => 'Label không được để trống.'], 422);
+            if (!preg_match('/^#([0-9A-F]{6}|[0-9A-F]{3})$/i', $hex_color)) {
+                json_out(['ok' => false, 'msg' => 'Mã màu không hợp lệ. Ví dụ: #1A2B3C'], 422);
+            }
+
+            $st = $pdo->prepare("
+                INSERT INTO project_color_items (group_id, label, hex_color, sort_order)
+                VALUES (:gid, :label, :hex, :sort_order)
+            ");
+            $st->execute([':gid' => $group_id, ':label' => $label, ':hex' => $hex_color, ':sort_order' => $sort_order]);
             $id = (int)$pdo->lastInsertId();
-            _colors_json(['ok'=>true,'item'=>['id'=>$id,'label'=>$label,'hex'=>$hex]]);
-        } catch (Throwable $e) {
-            _colors_json(['ok'=>false,'error'=>'sql_error','message'=>$e->getMessage()], 500);
+
+            json_out(['ok' => true, 'item' => ['id' => $id, 'group_id' => $group_id, 'label' => $label, 'hex_color' => $hex_color, 'sort_order' => $sort_order]]);
         }
+
+        if ($action === 'update_item') {
+            $item_id   = (int)($_POST['id'] ?? 0);
+            $label     = trim($_POST['label'] ?? '');
+            $hex_color = strtoupper(trim($_POST['hex_color'] ?? ''));
+
+            ensure_item_belongs($pdo, $item_id, $project_id);
+
+            if ($label === '') json_out(['ok' => false, 'msg' => 'Label không được để trống.'], 422);
+            if (!preg_match('/^#([0-9A-F]{6}|[0-9A-F]{3})$/i', $hex_color)) {
+                json_out(['ok' => false, 'msg' => 'Mã màu không hợp lệ.'], 422);
+            }
+
+            $st = $pdo->prepare("
+                UPDATE project_color_items
+                SET label = :label, hex_color = :hex, updated_at = NOW()
+                WHERE id = :id
+            ");
+            $st->execute([':label' => $label, ':hex' => $hex_color, ':id' => $item_id]);
+
+            json_out(['ok' => true]);
+        }
+
+        if ($action === 'delete_item') {
+            $item_id = (int)($_POST['id'] ?? 0);
+            ensure_item_belongs($pdo, $item_id, $project_id);
+            $pdo->prepare("DELETE FROM project_color_items WHERE id = :id")->execute([':id' => $item_id]);
+            json_out(['ok' => true]);
+        }
+
+        if ($action === 'reorder_items') {
+            // Nhận mảng items: [{id, sort_order}, ...]
+            $payload = json_decode($_POST['items'] ?? '[]', true);
+            if (!is_array($payload)) $payload = [];
+
+            // Xác minh tất cả item thuộc về dự án
+            $ids = array_map(fn($i) => (int)($i['id'] ?? 0), $payload);
+            $ids = array_values(array_filter($ids));
+            if ($ids) {
+                $in = implode(',', array_fill(0, count($ids), '?'));
+                $sql = "SELECT i.id
+                        FROM project_color_items i
+                        JOIN project_color_groups g ON i.group_id = g.id
+                        WHERE i.id IN ($in) AND g.project_id = ?";
+                $st = $pdo->prepare($sql);
+                $st->execute([...$ids, $project_id]);
+                $valid = $st->fetchAll(PDO::FETCH_COLUMN);
+                if (count($valid) !== count($ids)) json_out(['ok' => false, 'msg' => 'Có color item không hợp lệ.'], 422);
+            }
+
+            $pdo->beginTransaction();
+            $st = $pdo->prepare("UPDATE project_color_items SET sort_order = :so, updated_at = NOW() WHERE id = :id");
+            foreach ($payload as $it) {
+                $st->execute([':so' => (int)$it['sort_order'], ':id' => (int)$it['id']]);
+            }
+            $pdo->commit();
+
+            json_out(['ok' => true]);
+        }
+
+        json_out(['ok' => false, 'msg' => 'Action không hợp lệ.'], 400);
+    } catch (\Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        json_out(['ok' => false, 'msg' => 'Có lỗi xảy ra: '.$e->getMessage()], 500);
     }
-
-    // Update item (need manage)
-    if ($action === 'update_item') {
-        if (!$projectId) _colors_json(['ok'=>false,'error'=>'missing_project_id'], 400);
-        if (!$userId)    _colors_json(['ok'=>false,'error'=>'not_authenticated'], 401);
-        if (!_colors_user_can_manage($pdo, $projectId, $userId)) {
-            _colors_json(['ok'=>false,'error'=>'forbidden'], 403);
-        }
-
-        $itemId = isset($_POST['item_id']) ? (int)$_POST['item_id'] : 0;
-        $label  = isset($_POST['label']) ? trim((string)$_POST['label']) : null;
-        $hex    = isset($_POST['hex']) ? _colors_sanitize_hex($_POST['hex']) : null;
-
-        if (!$itemId) _colors_json(['ok'=>false,'error'=>'invalid_item_id'], 422);
-
-        try {
-            // Ensure item belongs to this project
-            $chk = $pdo->prepare("SELECT group_id FROM project_color_items WHERE id=? AND project_id=?");
-            $chk->execute([$itemId,$projectId]);
-            $groupId = (int)$chk->fetchColumn();
-            if (!$groupId) _colors_json(['ok'=>false,'error'=>'item_not_found'], 404);
-
-            // Build dynamic SQL
-            $fields = [];
-            $params = [];
-            if ($label !== null) { $fields[] = "label = ?"; $params[] = $label; }
-            if ($hex   !== null) { $fields[] = "{$hexCol} = ?"; $params[] = $hex; }
-            if (!$fields) _colors_json(['ok'=>false,'error'=>'nothing_to_update'], 422);
-            $params[] = $itemId;
-
-            $sql = "UPDATE project_color_items SET ".implode(", ", $fields)." WHERE id = ?";
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute($params);
-            _colors_json(['ok'=>true]);
-        } catch (Throwable $e) {
-            _colors_json(['ok'=>false,'error'=>'sql_error','message'=>$e->getMessage()], 500);
-        }
-    }
-
-    // Delete item (need manage)
-    if ($action === 'delete_item') {
-        if (!$projectId) _colors_json(['ok'=>false,'error'=>'missing_project_id'], 400);
-        if (!$userId)    _colors_json(['ok'=>false,'error'=>'not_authenticated'], 401);
-        if (!_colors_user_can_manage($pdo, $projectId, $userId)) {
-            _colors_json(['ok'=>false,'error'=>'forbidden'], 403);
-        }
-
-        $itemId = isset($_POST['item_id']) ? (int)$_POST['item_id'] : 0;
-        if (!$itemId) _colors_json(['ok'=>false,'error'=>'invalid_item_id'], 422);
-
-        try {
-            $stmt = $pdo->prepare("DELETE FROM project_color_items WHERE id=? AND project_id=?");
-            $stmt->execute([$itemId,$projectId]);
-            _colors_json(['ok'=>true]);
-        } catch (Throwable $e) {
-            _colors_json(['ok'=>false,'error'=>'sql_error','message'=>$e->getMessage()], 500);
-        }
-    }
-
-    // Unknown action
-    _colors_json(['ok'=>false,'error'=>'unknown_action'], 400);
-    // (exit)
+    exit;
 }
 
-/* -----------------------------------------------------------
- * 3) Normal render (included in project_view.php)
- * ----------------------------------------------------------- */
+// ------------------------- HTML (read/write dựa vào $can_manage) -------------------------
 ?>
-<?php if (!isset($pdo) || !($pdo instanceof PDO)): ?>
-    <div class="cde-alert cde-alert-error">DB chưa sẵn sàng. Vui lòng tải lại trang.</div>
-    <?php return; ?>
-<?php endif; ?>
-<?php
-try { _colors_ensure_tables($pdo); } catch (Throwable $e) { /* ignore UI fail-soft */ }
-$hexCol = _colors_hex_col($pdo);
-$uid    = $userId;
-$pid    = $projectId;
-$canManage = ($uid && $pid) ? _colors_user_can_manage($pdo, $pid, $uid) : false;
-?>
+<link rel="stylesheet" href="assets/css/project_tab_colors.css">
+<div id="project-colors"
+     class="cde-colors"
+     data-project-id="<?= htmlspecialchars((string)$project_id) ?>"
+     data-can-manage="<?= $can_manage ? '1' : '0' ?>">
 
-<link rel="stylesheet" href="/assets/css/project_tab_colors.css?v=1" />
-
-<div id="cde-color-tab"
-     data-project-id="<?= htmlspecialchars((string)$pid) ?>"
-     data-can-manage="<?= $canManage ? '1':'0' ?>"
-     class="cde-colors-wrap">
-
-    <!-- Khu vực 1: Tạo nhóm màu (chỉ manager thấy) -->
-    <?php if ($canManage): ?>
-    <div class="cde-color-group-create">
-        <h4>Nhóm màu sắc</h4>
-        <form id="form-create-color-group" method="post" action="/pages/partials/project_tab_colors.php?action=create_group">
-            <input type="hidden" name="project_id" value="<?= (int)$pid ?>">
-            <div class="cde-field-row">
-                <input type="text" name="name" placeholder="Tên nhóm màu..." required />
-                <button type="submit" class="cde-btn cde-btn-primary">Lưu nhóm</button>
-            </div>
-            <div class="cde-help">Chỉ thành viên thuộc nhóm <b>manager</b> mới tạo/sửa.</div>
-        </form>
-        <div class="cde-line"></div>
+    <!-- Khu vực 1: Tạo group màu sắc -->
+    <?php if ($can_manage): ?>
+    <div class="colors-section colors-create-group">
+        <h4>Thêm nhóm màu sắc</h4>
+        <div class="form-inline">
+            <input type="text" id="color-group-name" class="input" placeholder="Tên group (ví dụ: Cấu kiện thép)" maxlength="255">
+            <button class="btn btn-primary" id="btn-save-group">Lưu group</button>
+        </div>
+        <div class="hint">Chỉ thành viên thuộc nhóm <em>manager</em> của dự án mới có quyền thêm/sửa/xóa.</div>
     </div>
     <?php else: ?>
-        <div class="cde-note-readonly">Bạn đang xem ở chế độ chỉ đọc. (Chỉ quản lý dự án – thuộc group <b>manager</b> – mới có thể tạo/sửa.)</div>
-        <div class="cde-line"></div>
+    <div class="colors-section colors-create-group disabled">
+        <h4>Nhóm màu sắc</h4>
+        <div class="hint">Bạn chỉ có quyền xem.</div>
+    </div>
     <?php endif; ?>
 
-    <!-- Khu vực 2: Danh sách nhóm + items -->
-    <div class="cde-color-groups">
-        <div class="cde-groups-header">
-            <h4>Danh sách nhóm màu</h4>
-            <div class="cde-groups-loading" style="display:none">Đang tải...</div>
-            <div class="cde-groups-error cde-alert cde-alert-error" style="display:none"></div>
+    <!-- Khu vực 2: Danh sách group và items -->
+    <div class="colors-section">
+        <div id="color-groups-list" class="groups-list">
+            <!-- JS render tại assets/js/project_tab_colors.js -->
         </div>
-        <div id="cde-groups-list"></div>
     </div>
 </div>
 
-<script>
-window.CDE_COLORS_ENDPOINT = "/pages/partials/project_tab_colors.php";
-</script>
-<script src="/assets/js/project_tab_colors.js?v=1"></script>
+<script src="assets/js/project_tab_colors.js"></script>
