@@ -173,3 +173,59 @@
   cursor: default;
   text-decoration: none;
 }
+
+/* ===== Export Excel button ===== */
+.naming-list-wrap .list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.naming-list-wrap .btn-export {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid #1f7a38;
+  background: #1f8a46;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  line-height: 1;
+  transition: transform .06s ease, box-shadow .2s ease, filter .2s ease, background .2s ease;
+  user-select: none;
+}
+
+.naming-list-wrap .btn-export::before {
+  content: "⬇";
+  font-size: 16px;
+  line-height: 1;
+  transform: translateY(1px);
+}
+
+.naming-list-wrap .btn-export:hover {
+  filter: brightness(1.05);
+}
+
+.naming-list-wrap .btn-export:active {
+  transform: translateY(1px);
+  filter: brightness(0.98);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .naming-list-wrap .btn-export {
+    transition: none;
+  }
+}
+
+/* Optional: when button is disabled via [aria-disabled="true"] or .is-disabled */
+.naming-list-wrap .btn-export[aria-disabled="true"],
+.naming-list-wrap .btn-export.is-disabled {
+  pointer-events: none;
+  opacity: .6;
+  filter: grayscale(0.2);
+}
