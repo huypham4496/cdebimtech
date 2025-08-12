@@ -6,6 +6,7 @@
   --mtl-muted: #6b7280;
   --mtl-primary: #2563eb;
   --mtl-danger: #dc2626;
+  --mtl-secondary: #374151;
   --mtl-border: #e5e7eb;
   --mtl-ok-bg: #ecfdf5;
   --mtl-ok-fg: #065f46;
@@ -39,7 +40,7 @@
   border: 1px solid var(--mtl-border);
   border-radius: 8px;
 }
-.mtl-search { min-width: 350px; }
+.mtl-search { min-width: 260px; }
 
 .mtl-btn {
   height: 36px;
@@ -58,6 +59,8 @@
 .mtl-btn-primary:hover { filter: brightness(0.95); }
 .mtl-btn-danger { background: var(--mtl-danger); color: #fff; border-color: var(--mtl-danger); }
 .mtl-btn-danger:hover { filter: brightness(0.95); }
+.mtl-btn-secondary { background: var(--mtl-secondary); color: #fff; border-color: var(--mtl-secondary); }
+.mtl-btn-secondary:hover { filter: brightness(0.95); }
 .mtl-btn-xs { height: 28px; padding: 0 10px; font-size: 12px; }
 
 .mtl-table {
@@ -150,4 +153,31 @@
 @media (max-width: 640px) {
   .mtl-form-grid { grid-template-columns: 1fr; }
   .mtl-form-grid label { font-weight: 600; }
+}
+/* === Align center for all table cells & headers === */
+.mtl-table th,
+.mtl-table td {
+  text-align: center;
+}
+
+/* Header center (override rule cũ set left) */
+.mtl-table thead th {
+  text-align: center;
+}
+
+/* Riêng cột đầu (Tên) căn trái cho cả header & body */
+.mtl-table th:first-child,
+.mtl-table td:first-child {
+  text-align: left;
+}
+
+/* Vô hiệu hoá căn phải cũ của các ô có .ta-right (giữ trung tâm) */
+.mtl-table td.ta-right,
+.mtl-table th.ta-right {
+  text-align: center !important;
+}
+/* Hiển thị xuống dòng cho cột "Nội dung xuất" (cột số 5 ở bảng Xuất) */
+#mtl-table-out .mtl-table td:nth-child(5) {
+  white-space: pre-line;   /* giữ \n thành xuống dòng, không giữ nhiều khoảng trắng */
+  word-break: break-word;  /* tránh tràn ô với chuỗi quá dài */
 }
