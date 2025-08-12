@@ -5,6 +5,7 @@
 // ---------- helpers ----------
 function ensureMaterialsTables(PDO $pdo)
 {
+    // IN table
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS project_material_in (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -25,6 +26,7 @@ function ensureMaterialsTables(PDO $pdo)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     ");
 
+    // OUT table (NO UNIQUE so multiple rows with same code/name/unit are allowed)
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS project_material_out (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -40,10 +42,12 @@ function ensureMaterialsTables(PDO $pdo)
             updated_by INT DEFAULT NULL,
             created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP,
-            UNIQUE KEY uniq_project_code_name (project_id, code, name, unit),
             INDEX(project_id), INDEX(code), INDEX(out_date)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     ");
+
+    // In case an older version created a UNIQUE index, try to drop it silently
+    try { $pdo->exec("ALTER TABLE project_material_out DROP INDEX uniq_project_code_name"); } catch (Throwable $e) {}
 }
 
 function isProjectMember(PDO $pdo, int $projectId, int $userId): bool
@@ -84,7 +88,7 @@ function requireCanEdit($canEdit)
     }
 }
 
-// ---------- handle POST actions (non-AJAX, postback to project_view) ----------
+// ---------- handle POST actions ----------
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['materials_action'])) {
     try {
         $action = $_POST['materials_action'];
@@ -108,11 +112,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['materials_action'])) 
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
             $st->execute([$projectId, $name, $code, $supplier, $warehouse, $qty_in, $unit, $received_date, $userId, $userId]);
 
-            // ensure a corresponding OUT row exists with qty_out = 0 for this code+name+unit
-            $st2 = $pdo->prepare("INSERT IGNORE INTO project_material_out
-                (project_id, name, code, qty_out, unit, content, out_date, issuer_user_id, created_by)
-                VALUES (?, ?, ?, 0, ?, NULL, NULL, NULL, ?)");
-            $st2->execute([$projectId, $name, $code, $unit, $userId]);
+            // Add a single placeholder OUT row (qty_out = 0) if none exists for this name/code/unit
+            $chk = $pdo->prepare("
+                SELECT id FROM project_material_out
+                WHERE project_id=? AND code=? AND name=? AND unit=? AND (qty_out=0 OR qty_out IS NULL) AND content IS NULL AND out_date IS NULL
+                LIMIT 1
+            ");
+            $chk->execute([$projectId, $code, $name, $unit]);
+            if (!$chk->fetchColumn()) {
+                $insShell = $pdo->prepare("
+                    INSERT INTO project_material_out (project_id, name, code, qty_out, unit, content, out_date, issuer_user_id, created_by)
+                    VALUES (?, ?, ?, 0, ?, NULL, NULL, NULL, ?)
+                ");
+                $insShell->execute([$projectId, $name, $code, $unit, $userId]);
+            }
 
             $messages[] = "Đã tạo bản ghi Nhập vật tư.";
         }
@@ -136,11 +149,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['materials_action'])) 
                 WHERE id=? AND project_id=?");
             $st->execute([$name, $code, $supplier, $warehouse, $qty_in, $unit, $received_date, $userId, $id, $projectId]);
 
-            // also upsert an OUT row shell for the (code,name,unit)
-            $st2 = $pdo->prepare("INSERT IGNORE INTO project_material_out
-                (project_id, name, code, qty_out, unit, created_by)
-                VALUES (?, ?, ?, 0, ?, ?)");
-            $st2->execute([$projectId, $name, $code, $unit, $userId]);
+            // Keep a single shell row (if none exists)
+            $chk = $pdo->prepare("
+                SELECT id FROM project_material_out
+                WHERE project_id=? AND code=? AND name=? AND unit=? AND (qty_out=0 OR qty_out IS NULL) AND content IS NULL AND out_date IS NULL
+                LIMIT 1
+            ");
+            $chk->execute([$projectId, $code, $name, $unit]);
+            if (!$chk->fetchColumn()) {
+                $insShell = $pdo->prepare("
+                    INSERT INTO project_material_out (project_id, name, code, qty_out, unit, content, out_date, issuer_user_id, created_by)
+                    VALUES (?, ?, ?, 0, ?, NULL, NULL, NULL, ?)
+                ");
+                $insShell->execute([$projectId, $name, $code, $unit, $userId]);
+            }
 
             $messages[] = "Đã cập nhật bản ghi Nhập vật tư.";
         }
@@ -165,24 +187,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['materials_action'])) 
                 throw new InvalidArgumentException("Thiếu hoặc sai dữ liệu bắt buộc (Xuất).");
             }
 
-            // Try update existing shell row if exists (same project+code+name+unit and qty_out currently 0)
-            $stChk = $pdo->prepare("SELECT id FROM project_material_out WHERE project_id=? AND code=? AND name=? AND unit=? LIMIT 1");
-            $stChk->execute([$projectId, $code, $name, $unit]);
-            $existingId = (int)($stChk->fetchColumn() ?: 0);
+            // ALWAYS create a new OUT row (no overwrite)
+            $st = $pdo->prepare("INSERT INTO project_material_out
+                (project_id, name, code, qty_out, unit, content, out_date, issuer_user_id, created_by)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            $st->execute([$projectId, $name, $code, $qty_out, $unit, $content, $out_date, $userId, $userId]);
 
-            if ($existingId) {
-                $st = $pdo->prepare("UPDATE project_material_out
-                    SET qty_out=?, content=?, out_date=?, issuer_user_id=?, updated_by=?
-                    WHERE id=? AND project_id=?");
-                $st->execute([$qty_out, $content, $out_date, $userId, $userId, $existingId, $projectId]);
-            } else {
-                $st = $pdo->prepare("INSERT INTO project_material_out
-                    (project_id, name, code, qty_out, unit, content, out_date, issuer_user_id, created_by)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                $st->execute([$projectId, $name, $code, $qty_out, $unit, $content, $out_date, $userId, $userId]);
-            }
-
-            $messages[] = "Đã tạo/cập nhật bản ghi Xuất vật tư.";
+            $messages[] = "Đã tạo bản ghi Xuất vật tư.";
         }
         elseif ($action === 'update_out') {
             requireCanEdit($canEdit);
@@ -205,6 +216,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['materials_action'])) 
 
             $messages[] = "Đã cập nhật bản ghi Xuất vật tư.";
         }
+        elseif ($action === 'delete_out') {
+    requireCanEdit($canEdit);
+    $id = (int)($_POST['id'] ?? 0);
+    if ($id <= 0) throw new InvalidArgumentException("Thiếu ID để xoá (Xuất).");
+
+    $st = $pdo->prepare("DELETE FROM project_material_out WHERE id=? AND project_id=?");
+    $st->execute([$id, $projectId]);
+
+    $messages[] = "Đã xoá bản ghi Xuất vật tư.";
+}
         else {
             throw new InvalidArgumentException("Hành động không hợp lệ.");
         }
@@ -238,14 +259,54 @@ $stOut = $pdo->prepare("
 $stOut->execute([$projectId]);
 $rowsOut = $stOut->fetchAll(PDO::FETCH_ASSOC);
 
-// ---------- Access gate for non-members ----------
+// Distinct values for datalists
+$codes = [];
+$names = [];
+$units = [];
+$suppliers = [];
+$warehouses = [];
+
+// codes
+$st = $pdo->prepare("
+    SELECT code FROM (
+      SELECT DISTINCT code FROM project_material_in WHERE project_id=?
+      UNION
+      SELECT DISTINCT code FROM project_material_out WHERE project_id=?
+    ) t ORDER BY code ASC
+"); $st->execute([$projectId, $projectId]); $codes = $st->fetchAll(PDO::FETCH_COLUMN);
+
+// names
+$st = $pdo->prepare("
+    SELECT name FROM (
+      SELECT DISTINCT name FROM project_material_in WHERE project_id=?
+      UNION
+      SELECT DISTINCT name FROM project_material_out WHERE project_id=?
+    ) t ORDER BY name ASC
+"); $st->execute([$projectId, $projectId]); $names = $st->fetchAll(PDO::FETCH_COLUMN);
+
+// units
+$st = $pdo->prepare("
+    SELECT unit FROM (
+      SELECT DISTINCT unit FROM project_material_in WHERE project_id=?
+      UNION
+      SELECT DISTINCT unit FROM project_material_out WHERE project_id=?
+    ) t ORDER BY unit ASC
+"); $st->execute([$projectId, $projectId]); $units = $st->fetchAll(PDO::FETCH_COLUMN);
+
+// suppliers & warehouses (from IN)
+$st = $pdo->prepare("SELECT DISTINCT supplier FROM project_material_in WHERE project_id=? AND supplier IS NOT NULL AND supplier<>'' ORDER BY supplier ASC");
+$st->execute([$projectId]); $suppliers = $st->fetchAll(PDO::FETCH_COLUMN);
+
+$st = $pdo->prepare("SELECT DISTINCT warehouse FROM project_material_in WHERE project_id=? AND warehouse IS NOT NULL AND warehouse<>'' ORDER BY warehouse ASC");
+$st->execute([$projectId]); $warehouses = $st->fetchAll(PDO::FETCH_COLUMN);
+
+// ---------- Access gate ----------
 if (!$canEdit) {
     ?>
     <div class="materials-access-denied">
         <p>⚠️ Bạn không có quyền truy cập Tab Materials của dự án này (chỉ thành viên trong dự án mới được sửa/cập nhật).</p>
     </div>
     <?php
-    // vẫn cho xem CSS để đồng bộ giao diện
     echo '<link rel="stylesheet" href="../assets/css/project_tab_materials.css?v='.time().'">';
     return;
 }
@@ -280,7 +341,7 @@ if (!$canEdit) {
       </select>
     </div>
     <div class="mtl-right">
-      <input id="mtl-search" type="text" class="mtl-search" placeholder="Tìm theo Tên, Kho hoặc Người nhận / Người xuất...">
+      <input id="mtl-search" type="text" class="mtl-search" placeholder="Tìm theo Tên, Kho/Nội dung hoặc Người nhận/xuất...">
       <button type="button" class="mtl-btn mtl-btn-primary" id="mtl-btn-create">Create</button>
     </div>
   </div>
@@ -301,6 +362,7 @@ if (!$canEdit) {
             <th>Kho</th>
             <th>Ngày nhập</th>
             <th>Người nhận</th>
+            <th>Sửa</th>
             <th>Xoá</th>
           </tr>
         </thead>
@@ -336,6 +398,19 @@ if (!$canEdit) {
               <td><?= htmlspecialchars($r['received_date']) ?></td>
               <td><?= htmlspecialchars($receiver) ?></td>
               <td>
+                <button type="button"
+                        class="mtl-btn mtl-btn-secondary mtl-btn-xs mtl-btn-edit-in"
+                        data-id="<?= (int)$r['id'] ?>"
+                        data-name="<?= htmlspecialchars($r['name']) ?>"
+                        data-code="<?= htmlspecialchars($r['code']) ?>"
+                        data-supplier="<?= htmlspecialchars($r['supplier'] ?? '') ?>"
+                        data-warehouse="<?= htmlspecialchars($r['warehouse'] ?? '') ?>"
+                        data-qty_in="<?= htmlspecialchars($r['qty_in']) ?>"
+                        data-unit="<?= htmlspecialchars($r['unit']) ?>"
+                        data-received_date="<?= htmlspecialchars($r['received_date']) ?>"
+                >Sửa</button>
+              </td>
+              <td>
                 <form method="post" onsubmit="return confirm('Xoá bản ghi nhập này?')">
                   <input type="hidden" name="materials_action" value="delete_in">
                   <input type="hidden" name="id" value="<?= (int)$r['id'] ?>">
@@ -360,6 +435,8 @@ if (!$canEdit) {
             <th>Nội dung xuất</th>
             <th>Ngày xuất</th>
             <th>Người xuất</th>
+            <th>Sửa</th>
+            <th>Xoá</th>
           </tr>
         </thead>
         <tbody>
@@ -388,6 +465,25 @@ if (!$canEdit) {
               <td><?= htmlspecialchars($r['content'] ?? '') ?></td>
               <td><?= htmlspecialchars($r['out_date'] ?? '') ?></td>
               <td><?= htmlspecialchars($issuer) ?></td>
+              <td>
+                <button type="button"
+                        class="mtl-btn mtl-btn-secondary mtl-btn-xs mtl-btn-edit-out"
+                        data-id="<?= (int)$r['id'] ?>"
+                        data-name="<?= htmlspecialchars($r['name']) ?>"
+                        data-code="<?= htmlspecialchars($r['code']) ?>"
+                        data-qty_out="<?= htmlspecialchars($r['qty_out']) ?>"
+                        data-unit="<?= htmlspecialchars($r['unit']) ?>"
+                        data-content="<?= htmlspecialchars($r['content'] ?? '') ?>"
+                        data-out_date="<?= htmlspecialchars($r['out_date'] ?? '') ?>"
+                >Sửa</button>
+              </td>
+              <td>
+  <form method="post" onsubmit="return confirm('Xoá bản ghi xuất này?')">
+    <input type="hidden" name="materials_action" value="delete_out">
+    <input type="hidden" name="id" value="<?= (int)$r['id'] ?>">
+    <button class="mtl-btn mtl-btn-danger mtl-btn-xs" type="submit">Xoá</button>
+  </form>
+</td>
             </tr>
           <?php endforeach; ?>
         </tbody>
@@ -410,19 +506,39 @@ if (!$canEdit) {
 
       <div class="mtl-form-grid">
         <label>Name *</label>
-        <input type="text" name="name" id="mtl-name" required>
+        <input type="text" name="name" id="mtl-name" list="mtl-name-list" autocomplete="off" required>
+        <datalist id="mtl-name-list">
+          <?php foreach ($names as $v): ?>
+            <option value="<?= htmlspecialchars($v) ?>"></option>
+          <?php endforeach; ?>
+        </datalist>
 
         <label>Code *</label>
-        <input type="text" name="code" id="mtl-code" required>
+        <input type="text" name="code" id="mtl-code" list="mtl-code-list" autocomplete="off" required>
+        <datalist id="mtl-code-list">
+          <?php foreach ($codes as $v): ?>
+            <option value="<?= htmlspecialchars($v) ?>"></option>
+          <?php endforeach; ?>
+        </datalist>
 
         <div class="mtl-group mtl-group-in">
           <label>Supplier</label>
-          <input type="text" name="supplier" id="mtl-supplier">
+          <input type="text" name="supplier" id="mtl-supplier" list="mtl-supplier-list" autocomplete="off">
+          <datalist id="mtl-supplier-list">
+            <?php foreach ($suppliers as $v): ?>
+              <option value="<?= htmlspecialchars($v) ?>"></option>
+            <?php endforeach; ?>
+          </datalist>
         </div>
 
         <div class="mtl-group mtl-group-in">
           <label>Warehouse</label>
-          <input type="text" name="warehouse" id="mtl-warehouse">
+          <input type="text" name="warehouse" id="mtl-warehouse" list="mtl-warehouse-list" autocomplete="off">
+          <datalist id="mtl-warehouse-list">
+            <?php foreach ($warehouses as $v): ?>
+              <option value="<?= htmlspecialchars($v) ?>"></option>
+            <?php endforeach; ?>
+          </datalist>
         </div>
 
         <label class="mtl-group-in">Qty In *</label>
@@ -432,7 +548,12 @@ if (!$canEdit) {
         <input class="mtl-group-out" type="number" step="0.001" name="qty_out" id="mtl-qty-out">
 
         <label>Unit *</label>
-        <input type="text" name="unit" id="mtl-unit" required>
+        <input type="text" name="unit" id="mtl-unit" list="mtl-unit-list" autocomplete="off" required>
+        <datalist id="mtl-unit-list">
+          <?php foreach ($units as $v): ?>
+            <option value="<?= htmlspecialchars($v) ?>"></option>
+          <?php endforeach; ?>
+        </datalist>
 
         <div class="mtl-group mtl-group-in">
           <label>Received date *</label>
