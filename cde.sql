@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Aug 12, 2025 at 05:31 AM
+-- Generation Time: Aug 12, 2025 at 10:32 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -398,7 +398,8 @@ CREATE TABLE `project_group_members` (
 
 INSERT INTO `project_group_members` (`id`, `project_id`, `group_id`, `user_id`, `role`, `created_at`) VALUES
 (1, 4, 1, 1, 'control', '2025-08-11 04:28:50'),
-(2, 4, 1, 14, 'deploy', '2025-08-11 04:32:40');
+(2, 4, 1, 14, 'deploy', '2025-08-11 04:32:40'),
+(5, 4, 2, 20, 'deploy', '2025-08-12 03:58:52');
 
 -- --------------------------------------------------------
 
@@ -451,6 +452,42 @@ INSERT INTO `project_members` (`project_id`, `user_id`, `role`, `added_at`) VALU
 (2, 1, 'owner', '2025-08-11 10:17:16'),
 (3, 1, 'owner', '2025-08-11 10:18:26'),
 (4, 1, 'owner', '2025-08-11 10:20:58');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `project_naming_rules`
+--
+
+CREATE TABLE `project_naming_rules` (
+  `id` int(11) NOT NULL,
+  `project_id` int(11) NOT NULL,
+  `project_name` varchar(64) NOT NULL,
+  `originator` varchar(64) NOT NULL,
+  `system_code` varchar(2) NOT NULL,
+  `level_code` varchar(2) NOT NULL,
+  `type_code` varchar(2) NOT NULL,
+  `role_code` varchar(2) NOT NULL,
+  `number_seq` int(11) NOT NULL DEFAULT 1,
+  `file_title` varchar(255) NOT NULL,
+  `extension` varchar(10) NOT NULL DEFAULT 'dwg',
+  `computed_filename` varchar(300) NOT NULL,
+  `created_by` int(11) NOT NULL,
+  `updated_by` int(11) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `project_naming_rules`
+--
+
+INSERT INTO `project_naming_rules` (`id`, `project_id`, `project_name`, `originator`, `system_code`, `level_code`, `type_code`, `role_code`, `number_seq`, `file_title`, `extension`, `computed_filename`, `created_by`, `updated_by`, `created_at`, `updated_at`) VALUES
+(4, 4, 'CKH', 'NCC', 'ZZ', 'ZZ', 'M3', 'S', 1, 'TruCauT1', 'dwg', 'CKH-NCC-ZZ-ZZ-M3-S-0001-TruCauT1.dwg', 1, 1, '2025-08-12 14:19:53', '2025-08-12 15:16:02'),
+(5, 4, 'CKH', 'NCC', 'ZZ', 'ZZ', 'CA', 'C', 1, 'TruCauT2', 'dwg', 'CKH-NCC-ZZ-ZZ-CA-C-0001-TruCauT2.dwg', 1, 1, '2025-08-12 14:20:21', '2025-08-12 15:15:58'),
+(6, 4, 'CKP', 'NCC', 'ZZ', 'ZZ', 'M3', 'S', 1, 'TruCauT3', 'dwg', 'CKP-NCC-ZZ-ZZ-M3-S-0001-TruCauT3.dwg', 1, 1, '2025-08-12 14:36:50', '2025-08-12 15:15:51'),
+(7, 4, 'CLL', 'NCC', 'ZZ', 'ZZ', 'M3', 'S', 1, 'Bangtinhtru', 'pdf', 'CLL-NCC-ZZ-ZZ-M3-S-0001-Bangtinhtru.pdf', 1, 1, '2025-08-12 14:46:52', '2025-08-12 15:16:34'),
+(8, 4, 'CLL', 'NCC', 'ZZ', 'ZZ', 'M3', 'S', 1, 'MoDeoM2', 'dwg', 'CLL-NCC-ZZ-ZZ-M3-S-0001-MoDeoM2.dwg', 1, 1, '2025-08-12 15:12:15', '2025-08-12 15:16:13');
 
 -- --------------------------------------------------------
 
@@ -713,9 +750,9 @@ INSERT INTO `work_diary_entries` (`user_id`, `entry_date`, `period`, `content`, 
 (1, '2025-08-11', 'morning', 'Phát triển tính năng quản lý dự án trong CDE phần tạo dự án', NULL, '2025-08-11 03:26:14', '2025-08-11 03:26:14'),
 (1, '2025-08-11', 'afternoon', 'Phát triển tính năng quản lý dự án trong CDE phần tạo dự án', NULL, '2025-08-11 03:26:14', '2025-08-11 03:26:14'),
 (1, '2025-08-11', 'evening', 'Nghỉ', NULL, '2025-08-11 03:26:14', '2025-08-11 03:26:14'),
-(1, '2025-08-12', 'morning', 'Phát triển tính năng quản lý màu sắc cho IFC trong dự án', NULL, '2025-08-12 01:21:27', '2025-08-12 01:21:27'),
-(1, '2025-08-12', 'afternoon', 'Phát triển tính năng quản lý màu sắc cho IFC trong dự án', NULL, '2025-08-12 01:21:27', '2025-08-12 01:21:27'),
-(1, '2025-08-12', 'evening', 'Nghỉ', NULL, '2025-08-12 01:21:27', '2025-08-12 01:21:27'),
+(1, '2025-08-12', 'morning', 'Phát triển tính năng quản lý màu sắc cho IFC trong dự án', NULL, '2025-08-12 08:18:14', '2025-08-12 08:18:14'),
+(1, '2025-08-12', 'afternoon', 'Phát triển tính năng quản lý quy tắc file trong dự án', NULL, '2025-08-12 08:18:14', '2025-08-12 08:18:14'),
+(1, '2025-08-12', 'evening', '17:00-19:30: Nghỉ', NULL, '2025-08-12 08:18:14', '2025-08-12 08:18:14'),
 (12, '2025-07-01', 'morning', 'làm', NULL, '2025-08-07 04:29:54', '2025-08-07 04:29:54'),
 (12, '2025-07-01', 'afternoon', 'làm', NULL, '2025-08-07 04:29:54', '2025-08-07 04:29:54'),
 (12, '2025-07-02', 'morning', 'làm', NULL, '2025-08-07 04:30:01', '2025-08-07 04:30:01'),
@@ -1620,6 +1657,14 @@ ALTER TABLE `project_members`
   ADD PRIMARY KEY (`project_id`,`user_id`);
 
 --
+-- Indexes for table `project_naming_rules`
+--
+ALTER TABLE `project_naming_rules`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_project` (`project_id`),
+  ADD KEY `idx_filename` (`computed_filename`);
+
+--
 -- Indexes for table `subscriptions`
 --
 ALTER TABLE `subscriptions`
@@ -1743,13 +1788,19 @@ ALTER TABLE `project_groups`
 -- AUTO_INCREMENT for table `project_group_members`
 --
 ALTER TABLE `project_group_members`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `project_invites`
 --
 ALTER TABLE `project_invites`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT for table `project_naming_rules`
+--
+ALTER TABLE `project_naming_rules`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `subscriptions`
