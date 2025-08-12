@@ -1,7 +1,8 @@
-/* Naming Rule Tab JS
- * - Endpoint via data-endpoint (relative to /pages/)
- * - Extension is parsed from the single "Tên file" input (e.g. TruCauT2.rvt)
- * - All messages in English
+/* assets/js/project_tab_naming.js
+ * - POST-only actions (list/get/create/update/delete)
+ * - Filename rule mirrored with server: codes UPPER, number 4-digits, filename TitleCase ASCII (no spaces)
+ * - Table includes extra columns + Edit/Delete (for managers)
+ * - Button label always "Save"
  */
 
 (function () {
@@ -12,23 +13,8 @@
   const isManager = root.dataset.isManager === '1';
   const endpoint  = root.dataset.endpoint || 'partials/project_tab_naming.php';
 
-  const $ = (sel) => document.querySelector(sel);
-  const nfId        = $('#nf_id');
-  const nfProject   = $('#nf_project_name');
-  const nfOrigin    = $('#nf_originator');
-  const nfSystem    = $('#nf_system');
-  const nfLevel     = $('#nf_level');
-  const nfType      = $('#nf_type');
-  const nfRole      = $('#nf_role');
-  const nfNumber    = $('#nf_number');
-  const nfTitle     = $('#nf_title');
-
-  const preview     = $('#namingPreview');
-  const btnSave     = $('#btnSaveNaming');
-  const btnSaveText = $('#btnSaveText');
-  const btnCancel   = $('#btnCancelEdit');
-  const tableBody   = document.querySelector('#namingTable tbody');
-
+  // Helpers
+  const up = (s) => (s || '').toUpperCase();
   const pad4 = (n) => {
     n = ('' + (n ?? '')).replace(/\D/g, '');
     if (!n) n = '1';
@@ -37,38 +23,51 @@
     const s = '' + x;
     return s.length >= 4 ? s : '0000'.slice(s.length) + s;
   };
-
-  const sanitizeTitle = (s) => {
-    if (!s) return '';
-    // drop diacritics
-    try { s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch(_){}
-    s = s.replace(/đ/g,'d').replace(/Đ/g,'D');
-    s = s.replace(/\s+/g, '');
-    s = s.replace(/[^A-Za-z0-9_\-]/g, '');
-    return s;
-  };
-
   const sanitizeExt = (e) => {
     if (!e) return '';
     e = e.trim().toLowerCase();
     return /^[a-z0-9]{1,10}$/.test(e) ? e : '';
   };
-
-  const up = (s) => (s || '').toUpperCase();
-
+  const toTitleChunksJoin = (s) => {
+    if (!s) return '';
+    try { s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (_){}
+    s = s.replace(/đ/g, 'd').replace(/Đ/g, 'D');
+    const chunks = s.split(/[^A-Za-z0-9]+/).filter(Boolean);
+    const fixed  = chunks.map(ch => ch.charAt(0).toUpperCase() + ch.slice(1).toLowerCase());
+    const joined = fixed.join('');
+    return joined.replace(/[^A-Za-z0-9_\-]/g, '');
+  };
   const parseFileInput = (raw) => {
     raw = (raw || '').trim();
     const idx = raw.lastIndexOf('.');
     if (idx > 0 && idx < raw.length - 1) {
-      const title = sanitizeTitle(raw.slice(0, idx));
+      const title = toTitleChunksJoin(raw.slice(0, idx));
       const ext   = sanitizeExt(raw.slice(idx + 1));
       if (title && ext) return { title, ext };
       if (title) return { title, ext: '' };
       return { title: '', ext: '' };
     }
-    return { title: sanitizeTitle(raw), ext: '' };
+    return { title: toTitleChunksJoin(raw), ext: '' };
   };
 
+  // DOM
+  const $ = (sel) => document.querySelector(sel);
+  const nfId      = $('#nf_id');
+  const nfProject = $('#nf_project_name');
+  const nfOrigin  = $('#nf_originator');
+  const nfSystem  = $('#nf_system');
+  const nfLevel   = $('#nf_level');
+  const nfType    = $('#nf_type');
+  const nfRole    = $('#nf_role');
+  const nfNumber  = $('#nf_number');
+  const nfTitle   = $('#nf_title');
+
+  const preview   = $('#namingPreview');
+  const btnSave   = $('#btnSaveNaming');
+  const btnCancel = $('#btnCancelEdit');
+  const tableBody = document.querySelector('#namingTable tbody');
+
+  // Compose -> Preview (exactly same rule as PHP)
   const compose = () => {
     const pName = up(nfProject?.value?.trim());
     const org   = up(nfOrigin?.value?.trim());
@@ -81,12 +80,10 @@
     const { title, ext } = parseFileInput(nfTitle?.value);
     const base = [pName, org, sys, lvl, typ, rol, num, title].join('-');
     const joined = ext ? `${base}.${ext}` : base;
-
     if (preview) preview.textContent = joined;
-    if (btnSaveText) btnSaveText.textContent = joined;
+
     return { joined, title, ext };
   };
-
   [nfProject, nfOrigin, nfSystem, nfLevel, nfType, nfRole, nfNumber, nfTitle].forEach(el => {
     if (!el) return;
     el.addEventListener('input', compose);
@@ -94,6 +91,7 @@
   });
   compose();
 
+  // AJAX helper
   const fetchJSON = async (url, opts) => {
     const res = await fetch(url, opts);
     let data = {};
@@ -105,37 +103,53 @@
     return data;
   };
 
+  // Reload table
   const reloadList = async () => {
-    tableBody.innerHTML = `<tr><td colspan="6">Loading...</td></tr>`;
+    if (!tableBody) return;
+    tableBody.innerHTML = `<tr><td colspan="10">Loading...</td></tr>`;
     try {
-      const data = await fetchJSON(`${endpoint}?action=list&project_id=${projectId}`);
+      const body = new FormData();
+      body.append('action', 'list');
+      body.append('project_id', String(projectId));
+      const data = await fetchJSON(endpoint, { method: 'POST', body });
       const rows = data.data || [];
       const isMgr = !!data.is_manager;
       if (!rows.length) {
-        tableBody.innerHTML = `<tr><td colspan="6">No records</td></tr>`;
+        tableBody.innerHTML = `<tr><td colspan="10">No records</td></tr>`;
         return;
       }
       tableBody.innerHTML = rows.map(r => {
         const file = r.computed_filename || '';
-        const cls  = isMgr ? 'link-filename' : 'link-filename disabled';
         const num  = ('' + (r.number_seq ?? 1)).padStart(4, '0');
         const time = r.updated_at ? new Date((r.updated_at || '').replace(' ', 'T')).toLocaleString() : '';
+        const actions = isMgr
+          ? `<button class="btn-ghost btn-sm btn-edit" data-id="${r.id}">Edit</button>
+             <button class="btn-ghost btn-sm btn-del"  data-id="${r.id}">Delete</button>`
+          : '';
+        const fileLink = isMgr
+          ? `<a href="javascript:void(0)" class="link-filename btn-edit" data-id="${r.id}">${file}</a>`
+          : `<span class="link-filename disabled">${file}</span>`;
         return `
           <tr data-id="${r.id}">
-            <td><a href="javascript:void(0)" class="${cls}" data-id="${r.id}">${file}</a></td>
+            <td>${fileLink}</td>
+            <td>${r.project_name || ''}</td>
             <td>${r.originator || ''}</td>
+            <td>${r.system_code || ''}</td>
+            <td>${r.level_code || ''}</td>
             <td>${r.type_code || ''}</td>
             <td>${r.role_code || ''}</td>
             <td>${num}</td>
             <td>${time}</td>
+            ${isMgr ? `<td>${actions}</td>` : ``}
           </tr>
         `;
       }).join('');
     } catch (err) {
-      tableBody.innerHTML = `<tr><td colspan="6">Load failed: ${err.message}</td></tr>`;
+      tableBody.innerHTML = `<tr><td colspan="10">Load failed: ${err.message}</td></tr>`;
     }
   };
 
+  // Edit / Delete
   const setEditMode = (row) => {
     nfId.value      = row.id;
     nfProject.value = row.project_name || '';
@@ -146,12 +160,11 @@
     nfRole.value    = row.role_code   || 'Z';
     nfNumber.value  = ('' + (row.number_seq || 1)).padStart(4, '0');
 
-    // Merge title + extension back into one field for editing
     const ext = (row.extension || '').toLowerCase();
     nfTitle.value   = row.file_title + (ext ? ('.' + ext) : '');
 
     compose();
-    if (btnSave) btnSave.firstChild.nodeValue = 'Update: ';
+    if (btnSave) btnSave.textContent = 'Save';
     if (btnCancel) btnCancel.style.display = '';
   };
 
@@ -166,27 +179,53 @@
     nfNumber.value = '0001';
     nfTitle.value = '';
     compose();
-    if (btnSave) btnSave.firstChild.nodeValue = 'Save: ';
+    if (btnSave) btnSave.textContent = 'Save';
     if (btnCancel) btnCancel.style.display = 'none';
   };
 
   root.addEventListener('click', async (e) => {
-    const a = e.target.closest('.link-filename');
-    if (!a) return;
-    if (!isManager || a.classList.contains('disabled')) return;
-    const id = parseInt(a.dataset.id || '0', 10);
-    if (!id) return;
-    try {
-      const data = await fetchJSON(`${endpoint}?action=get&project_id=${projectId}&id=${id}`);
-      if (data && data.data) setEditMode(data.data);
-    } catch (err) {
-      alert('Failed to load the record: ' + err.message);
+    const editBtn = e.target.closest('.btn-edit');
+    const delBtn  = e.target.closest('.btn-del');
+
+    if (editBtn) {
+      if (!isManager) return;
+      const id = parseInt(editBtn.dataset.id || '0', 10);
+      if (!id) return;
+      try {
+        const body = new FormData();
+        body.append('action', 'get');
+        body.append('project_id', String(projectId));
+        body.append('id', String(id));
+        const data = await fetchJSON(endpoint, { method: 'POST', body });
+        if (data && data.data) setEditMode(data.data);
+      } catch (err) {
+        alert('Failed to load the record: ' + err.message);
+      }
+      return;
+    }
+
+    if (delBtn) {
+      if (!isManager) return;
+      const id = parseInt(delBtn.dataset.id || '0', 10);
+      if (!id) return;
+      if (!confirm('Delete this record?')) return;
+      try {
+        const body = new FormData();
+        body.append('action', 'delete');
+        body.append('project_id', String(projectId));
+        body.append('id', String(id));
+        await fetchJSON(endpoint, { method: 'POST', body });
+        await reloadList();
+      } catch (err) {
+        alert('Delete failed: ' + err.message);
+      }
+      return;
     }
   });
 
   btnSave && btnSave.addEventListener('click', async () => {
     if (!isManager) return;
-    const { joined, title, ext } = compose();
+    const { title, ext } = compose();
 
     const body = new FormData();
     const updating = !!nfId.value;
@@ -201,31 +240,26 @@
     body.append('type_code', nfType.value);
     body.append('role_code', nfRole.value);
     body.append('number_seq', (nfNumber.value || '').replace(/\D/g, '') || '1');
-    body.append('file_title', title);      // sanitized base name
-    body.append('extension', ext);         // sanitized ext (can be '')
+    body.append('file_title', title);  // TitleCase sanitized (server still rechecks)
+    body.append('extension', ext);     // sanitized ('' allowed)
 
     btnSave.disabled = true;
     btnSave.classList.add('is-busy');
-    const oldText = btnSave.textContent;
-    btnSave.textContent = updating ? 'Updating...' : 'Saving...';
 
     try {
       await fetchJSON(endpoint, { method: 'POST', body });
       clearForm();
       await reloadList();
-      btnSave.textContent = 'Save: ' + (preview?.textContent || joined);
     } catch (err) {
       alert(err.message || 'Save failed.');
-      btnSave.textContent = oldText;
     } finally {
       btnSave.disabled = false;
       btnSave.classList.remove('is-busy');
     }
   });
 
-  btnCancel && btnCancel.addEventListener('click', () => {
-    clearForm();
-  });
+  btnCancel && btnCancel.addEventListener('click', clearForm);
 
+  // Initial
   reloadList();
 })();
