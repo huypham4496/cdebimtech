@@ -1,6 +1,7 @@
 /* assets/js/project_tab_naming.js
  * - POST-only actions (list/get/create/update/delete)
  * - Filename rule mirrored with server: codes UPPER, number 4-digits, filename TitleCase ASCII (no spaces)
+ * - VN diacritics -> ASCII with explicit mapping (no character loss)
  * - Table includes extra columns + Edit/Delete (for managers)
  * - Button label always "Save"
  */
@@ -13,8 +14,34 @@
   const isManager = root.dataset.isManager === '1';
   const endpoint  = root.dataset.endpoint || 'partials/project_tab_naming.php';
 
-  // Helpers
+  // ===== Helpers =====
   const up = (s) => (s || '').toUpperCase();
+
+  // Explicit VN → ASCII mapping (avoid environment-dependent normalize/iconv)
+  const vnToAscii = (s) => {
+    if (!s) return '';
+    const rules = [
+      [/đ/g, 'd'], [/Đ/g, 'D'],
+      (/[áàảãạăắằẳẵặâấầẩẫậ]/g), 'a',
+      (/[ÁÀẢÃẠĂẮẰẲẴẶÂẤẦẨẪẬ]/g), 'A',
+      (/[éèẻẽẹêếềểễệ]/g), 'e',
+      (/[ÉÈẺẼẸÊẾỀỂỄỆ]/g), 'E',
+      (/[íìỉĩị]/g), 'i',
+      (/[ÍÌỈĨỊ]/g), 'I',
+      (/[óòỏõọôốồổỗộơớờởỡợ]/g), 'o',
+      (/[ÓÒỎÕỌÔỐỒỔỖỘƠỚỜỞỠỢ]/g), 'O',
+      (/[úùủũụưứừửữự]/g), 'u',
+      (/[ÚÙỦŨỤƯỨỪỬỮỰ]/g), 'U',
+      (/[ýỳỷỹỵ]/g), 'y',
+      (/[ÝỲỶỸỴ]/g), 'Y',
+    ];
+    // apply
+    for (let i = 0; i < rules.length; i += 2) {
+      s = s.replace(rules[i], rules[i + 1]);
+    }
+    return s;
+  };
+
   const pad4 = (n) => {
     n = ('' + (n ?? '')).replace(/\D/g, '');
     if (!n) n = '1';
@@ -23,20 +50,21 @@
     const s = '' + x;
     return s.length >= 4 ? s : '0000'.slice(s.length) + s;
   };
+
   const sanitizeExt = (e) => {
     if (!e) return '';
     e = e.trim().toLowerCase();
     return /^[a-z0-9]{1,10}$/.test(e) ? e : '';
   };
+
   const toTitleChunksJoin = (s) => {
-    if (!s) return '';
-    try { s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (_){}
-    s = s.replace(/đ/g, 'd').replace(/Đ/g, 'D');
+    s = vnToAscii(s);
     const chunks = s.split(/[^A-Za-z0-9]+/).filter(Boolean);
     const fixed  = chunks.map(ch => ch.charAt(0).toUpperCase() + ch.slice(1).toLowerCase());
     const joined = fixed.join('');
     return joined.replace(/[^A-Za-z0-9_\-]/g, '');
   };
+
   const parseFileInput = (raw) => {
     raw = (raw || '').trim();
     const idx = raw.lastIndexOf('.');
@@ -50,7 +78,7 @@
     return { title: toTitleChunksJoin(raw), ext: '' };
   };
 
-  // DOM
+  // ===== DOM =====
   const $ = (sel) => document.querySelector(sel);
   const nfId      = $('#nf_id');
   const nfProject = $('#nf_project_name');
@@ -67,7 +95,7 @@
   const btnCancel = $('#btnCancelEdit');
   const tableBody = document.querySelector('#namingTable tbody');
 
-  // Compose -> Preview (exactly same rule as PHP)
+  // ===== Compose -> Preview (exactly same rule as PHP) =====
   const compose = () => {
     const pName = up(nfProject?.value?.trim());
     const org   = up(nfOrigin?.value?.trim());
@@ -91,7 +119,7 @@
   });
   compose();
 
-  // AJAX helper
+  // ===== AJAX helper =====
   const fetchJSON = async (url, opts) => {
     const res = await fetch(url, opts);
     let data = {};
@@ -103,7 +131,7 @@
     return data;
   };
 
-  // Reload table
+  // ===== Reload table =====
   const reloadList = async () => {
     if (!tableBody) return;
     tableBody.innerHTML = `<tr><td colspan="10">Loading...</td></tr>`;
@@ -149,7 +177,7 @@
     }
   };
 
-  // Edit / Delete
+  // ===== Edit / Delete =====
   const setEditMode = (row) => {
     nfId.value      = row.id;
     nfProject.value = row.project_name || '';
@@ -223,6 +251,7 @@
     }
   });
 
+  // ===== Save =====
   btnSave && btnSave.addEventListener('click', async () => {
     if (!isManager) return;
     const { title, ext } = compose();
@@ -240,8 +269,11 @@
     body.append('type_code', nfType.value);
     body.append('role_code', nfRole.value);
     body.append('number_seq', (nfNumber.value || '').replace(/\D/g, '') || '1');
-    body.append('file_title', title);  // TitleCase sanitized (server still rechecks)
-    body.append('extension', ext);     // sanitized ('' allowed)
+
+    // Gửi cả giá trị đã tách và input thô để server xử lý giống Preview
+    body.append('file_title', title);
+    body.append('extension', ext);
+    body.append('file_title_raw', nfTitle.value || '');
 
     btnSave.disabled = true;
     btnSave.classList.add('is-busy');
