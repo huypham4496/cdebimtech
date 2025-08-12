@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Aug 11, 2025 at 12:04 PM
+-- Generation Time: Aug 12, 2025 at 05:31 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -268,23 +268,6 @@ INSERT INTO `project_activities` (`id`, `project_id`, `user_id`, `action`, `deta
 -- --------------------------------------------------------
 
 --
--- Table structure for table `project_colors`
---
-
-CREATE TABLE `project_colors` (
-  `id` int(11) NOT NULL,
-  `project_id` int(11) NOT NULL,
-  `group_id` int(11) NOT NULL,
-  `label` varchar(191) NOT NULL,
-  `hex_code` char(7) NOT NULL,
-  `sort_order` int(11) NOT NULL DEFAULT 0,
-  `created_by` int(11) NOT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- --------------------------------------------------------
-
---
 -- Table structure for table `project_color_groups`
 --
 
@@ -295,6 +278,15 @@ CREATE TABLE `project_color_groups` (
   `created_by` int(11) NOT NULL,
   `created_at` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `project_color_groups`
+--
+
+INSERT INTO `project_color_groups` (`id`, `project_id`, `name`, `created_by`, `created_at`) VALUES
+(4, 4, 'Phần cầu', 1, '2025-08-12 09:43:04'),
+(6, 4, 'Phần đường', 1, '2025-08-12 09:50:56'),
+(7, 4, 'Phần ATGT', 1, '2025-08-12 10:26:01');
 
 -- --------------------------------------------------------
 
@@ -311,6 +303,16 @@ CREATE TABLE `project_color_items` (
   `created_at` datetime NOT NULL DEFAULT current_timestamp(),
   `updated_at` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `project_color_items`
+--
+
+INSERT INTO `project_color_items` (`id`, `group_id`, `label`, `hex_color`, `sort_order`, `created_at`, `updated_at`) VALUES
+(5, 6, 'Bê tông nhựa C19', '#556421', 1, '2025-08-12 09:51:16', '2025-08-12 09:51:19'),
+(6, 4, 'Bệ mố', '#D35C78', 2, '2025-08-12 09:51:27', '2025-08-12 10:13:40'),
+(8, 7, 'Vạch 3.1', '#FFFFFF', 2, '2025-08-12 10:26:18', '2025-08-12 10:26:20'),
+(9, 4, 'Thân trụ', '#850000', 2, '2025-08-12 10:26:33', '2025-08-12 10:26:39');
 
 -- --------------------------------------------------------
 
@@ -711,6 +713,9 @@ INSERT INTO `work_diary_entries` (`user_id`, `entry_date`, `period`, `content`, 
 (1, '2025-08-11', 'morning', 'Phát triển tính năng quản lý dự án trong CDE phần tạo dự án', NULL, '2025-08-11 03:26:14', '2025-08-11 03:26:14'),
 (1, '2025-08-11', 'afternoon', 'Phát triển tính năng quản lý dự án trong CDE phần tạo dự án', NULL, '2025-08-11 03:26:14', '2025-08-11 03:26:14'),
 (1, '2025-08-11', 'evening', 'Nghỉ', NULL, '2025-08-11 03:26:14', '2025-08-11 03:26:14'),
+(1, '2025-08-12', 'morning', 'Phát triển tính năng quản lý màu sắc cho IFC trong dự án', NULL, '2025-08-12 01:21:27', '2025-08-12 01:21:27'),
+(1, '2025-08-12', 'afternoon', 'Phát triển tính năng quản lý màu sắc cho IFC trong dự án', NULL, '2025-08-12 01:21:27', '2025-08-12 01:21:27'),
+(1, '2025-08-12', 'evening', 'Nghỉ', NULL, '2025-08-12 01:21:27', '2025-08-12 01:21:27'),
 (12, '2025-07-01', 'morning', 'làm', NULL, '2025-08-07 04:29:54', '2025-08-07 04:29:54'),
 (12, '2025-07-01', 'afternoon', 'làm', NULL, '2025-08-07 04:29:54', '2025-08-07 04:29:54'),
 (12, '2025-07-02', 'morning', 'làm', NULL, '2025-08-07 04:30:01', '2025-08-07 04:30:01'),
@@ -1077,12 +1082,12 @@ INSERT INTO `work_diary_entries` (`user_id`, `entry_date`, `period`, `content`, 
 (16, '2025-07-24', 'morning', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:34:52', '2025-08-07 09:34:52'),
 (16, '2025-07-24', 'afternoon', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:34:52', '2025-08-07 09:34:52'),
 (16, '2025-07-24', 'evening', '17:00-19:30: Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:34:52', '2025-08-07 09:34:52'),
-(16, '2025-07-25', 'morning', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:35:07', '2025-08-07 09:35:07'),
+(16, '2025-07-25', 'morning', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:35:07', '2025-08-07 09:35:07');
+INSERT INTO `work_diary_entries` (`user_id`, `entry_date`, `period`, `content`, `note`, `created_at`, `updated_at`) VALUES
 (16, '2025-07-25', 'afternoon', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:35:07', '2025-08-07 09:35:07'),
 (16, '2025-07-25', 'evening', 'Nghỉ', NULL, '2025-08-07 09:35:07', '2025-08-07 09:35:07'),
 (16, '2025-07-26', 'morning', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:35:13', '2025-08-07 09:35:13'),
-(16, '2025-07-26', 'afternoon', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:35:13', '2025-08-07 09:35:13');
-INSERT INTO `work_diary_entries` (`user_id`, `entry_date`, `period`, `content`, `note`, `created_at`, `updated_at`) VALUES
+(16, '2025-07-26', 'afternoon', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:35:13', '2025-08-07 09:35:13'),
 (16, '2025-07-26', 'evening', 'Nghỉ', NULL, '2025-08-07 09:35:13', '2025-08-07 09:35:13'),
 (16, '2025-07-27', 'morning', 'Nghỉ', NULL, '2025-08-07 09:35:18', '2025-08-07 09:35:18'),
 (16, '2025-07-27', 'afternoon', 'Nghỉ', NULL, '2025-08-07 09:35:18', '2025-08-07 09:35:18'),
@@ -1549,14 +1554,6 @@ ALTER TABLE `project_activities`
   ADD PRIMARY KEY (`id`);
 
 --
--- Indexes for table `project_colors`
---
-ALTER TABLE `project_colors`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `project_id` (`project_id`),
-  ADD KEY `group_id` (`group_id`);
-
---
 -- Indexes for table `project_color_groups`
 --
 ALTER TABLE `project_color_groups`
@@ -1713,22 +1710,16 @@ ALTER TABLE `project_activities`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
--- AUTO_INCREMENT for table `project_colors`
---
-ALTER TABLE `project_colors`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
---
 -- AUTO_INCREMENT for table `project_color_groups`
 --
 ALTER TABLE `project_color_groups`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `project_color_items`
 --
 ALTER TABLE `project_color_items`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT for table `project_files`
