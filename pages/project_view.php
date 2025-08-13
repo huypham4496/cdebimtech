@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
 
@@ -21,7 +22,43 @@ if (!isset($pdo) || !($pdo instanceof PDO)) {
     ]);
   } else { http_response_code(500); echo 'DB config missing.'; exit; }
 }
+if (session_status() === PHP_SESSION_NONE) session_start();
 
+/** Lấy userId từ session (giữ logic đa nguồn của bạn nếu muốn) */
+$cands = [
+  $_SESSION['user_id'] ?? null,
+  $_SESSION['id'] ?? null,
+  $_SESSION['user']['id'] ?? null,
+  $_SESSION['auth']['user_id'] ?? null,
+  $_SESSION['auth']['id'] ?? null
+];
+$userId = 0; foreach ($cands as $v) { if (is_numeric($v) && (int)$v>0) { $userId = (int)$v; break; } }
+if (!$userId) { header('Location: /index.php'); exit; }
+
+/** ===== AJAX proxy for Daily Logs (MUST be before any HTML or guards) ===== */
+if (isset($_GET['ajax']) && $_GET['ajax'] === 'daily') {
+    // Nhận project id từ project_id hoặc id (ưu tiên project_id)
+    if (!isset($projectId)) {
+        $projectId = (int)($_GET['project_id'] ?? $_GET['id'] ?? 0);
+    } else {
+        if (isset($_GET['project_id'])) $projectId = (int)$_GET['project_id'];
+        elseif (isset($_GET['id']))     $projectId = (int)$_GET['id'];
+    }
+
+    // Dọn buffer và tắt hiển thị warning để JSON không bị bẩn
+    while (ob_get_level()) { ob_end_clean(); }
+    ini_set('display_errors', '0');
+
+    // Require partial trực tiếp từ /pages/partials (KHÔNG qua helpers)
+    $partial = __DIR__ . '/partials/project_tab_daily.php';
+    if (!is_file($partial)) {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['ok'=>false,'message'=>"Partial not found: $partial"]);
+        exit;
+    }
+    require $partial;
+    exit;
+}
 /** User */
 $cands = [$_SESSION['user_id'] ?? null, $_SESSION['id'] ?? null, $_SESSION['user']['id'] ?? null, $_SESSION['auth']['user_id'] ?? null, $_SESSION['auth']['id'] ?? null];
 $userId = 0; foreach ($cands as $v) { if (is_numeric($v) && (int)$v>0) { $userId = (int)$v; break; } }
