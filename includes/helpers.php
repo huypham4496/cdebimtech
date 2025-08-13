@@ -168,3 +168,4 @@ if (!function_exists('currentUserSubscription')) {
     return null;
   }
 }
+
