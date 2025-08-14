@@ -40,7 +40,7 @@
   border: 1px solid var(--mtl-border);
   border-radius: 8px;
 }
-.mtl-search { min-width: 260px; }
+.mtl-search { min-width: 450px; }
 
 .mtl-btn {
   height: 36px;
