@@ -9,6 +9,7 @@
   const projectId   = parseInt(root.getAttribute('data-project-id') || '0', 10);
   const canEdit     = root.getAttribute('data-can-edit') === '1';
   const ajaxBase    = root.getAttribute('data-ajax-base') || window.location.pathname;
+  const uploadPrefx = root.getAttribute('data-upload-prefix') || '';
 
   const tbody     = $('#dl-tbody');
   const btnCreate = $('#dl-btn-create');
@@ -16,8 +17,8 @@
 
   const modal     = $('#dl-modal');
   const form      = $('#dl-form');
-  const btnClose  = $('.dl-close', modal);
-  const btnCancel = $('.dl-cancel', modal);
+  const btnClose  = modal ? modal.querySelector('.dl-close') : null;
+  const btnCancel = modal ? modal.querySelector('.dl-cancel') : null;
 
   const eqList    = $('#dl-eq-list');
   const lbList    = $('#dl-lb-list');
@@ -28,16 +29,8 @@
 
   const lightbox  = $('#dl-lightbox');
   const lightImg  = $('#dl-lightbox-img');
-  const lightClose= $('#dl-lightbox .close');
 
   function apiUrl(qs) { return `${ajaxBase}?ajax=daily&${qs}&_=${Date.now()}`; }
-
-  // Normalize DB relative path like "uploads/PRJxxxx/daily_logs/a.jpg" to absolute URL "/uploads/..."
-  function toUrl(rel) {
-    if (!rel) return '';
-    rel = String(rel).replace(/^\/+/, ''); // strip leading '/'
-    return '/' + rel; // absolute from site root -> avoids 'pages/uploads'
-  }
 
   function addEqRow(name = '', qty = '') {
     const row = document.createElement('div');
@@ -48,7 +41,7 @@
       <button type="button" class="dl-btn dl-btn-link dl-line-del" title="Remove"><i class="fas fa-times-circle"></i></button>
     `;
     row.querySelector('.dl-line-del').addEventListener('click', () => row.remove());
-    eqList.appendChild(row);
+    if (eqList) eqList.appendChild(row);
   }
   function addLbRow(name = '', qty = '') {
     const row = document.createElement('div');
@@ -59,52 +52,56 @@
       <button type="button" class="dl-btn dl-btn-link dl-line-del" title="Remove"><i class="fas fa-times-circle"></i></button>
     `;
     row.querySelector('.dl-line-del').addEventListener('click', () => row.remove());
-    lbList.appendChild(row);
+    if (lbList) lbList.appendChild(row);
   }
 
   function setFormDisabled(disabled) {
+    if (!form) return;
     form.querySelectorAll('input, select, textarea, button').forEach(el => {
       if (el.classList.contains('dl-close') || el.classList.contains('dl-cancel')) return;
       if (el === fileInput) { el.disabled = disabled; return; }
       el.disabled = disabled;
     });
-    btnClose.disabled = false;
-    btnCancel.disabled = false;
     const submitBtn = form.querySelector('button[type="submit"]');
     if (submitBtn) submitBtn.style.display = disabled ? 'none' : '';
   }
 
   function clearForm() {
+    if (!form) return;
     form.reset();
     form.querySelector('input[name="dl_action"]').value = 'create';
     form.querySelector('input[name="id"]').value = '';
-    form.querySelector('button[type="submit"]').innerHTML = '<i class="fas fa-save"></i> Save';
-    eqList.innerHTML = '';
-    lbList.innerHTML = '';
-    imgsWrap.innerHTML = '';
-    addEqRow();
-    addLbRow();
+    const sb = form.querySelector('button[type="submit"]');
+    if (sb) sb.innerHTML = '<i class="fas fa-save"></i> Save';
+    if (eqList) { eqList.innerHTML = ''; addEqRow(); }
+    if (lbList) { lbList.innerHTML = ''; addLbRow(); }
+    if (imgsWrap) imgsWrap.innerHTML = '';
     setFormDisabled(!canEdit);
   }
 
   function renderThumbs(images) {
+    if (!imgsWrap) return;
     imgsWrap.innerHTML = '';
     if (!images || !images.length) return;
     const grid = document.createElement('div');
     grid.className = 'dl-images';
     images.forEach(im => {
-      const url = toUrl(im.path); // now "/uploads/..."
+      const rel = im.path || '';
+      const url = rel.startsWith('/') ? rel : '/' + rel; // ensure absolute '/uploads/...'
       const img = document.createElement('img');
       img.className = 'dl-thumb';
       img.src = url;
       img.alt = im.file_name || 'image';
-      img.addEventListener('click', () => { lightImg.src = url; lightbox.classList.add('open'); });
+      img.addEventListener('click', () => {
+        if (lightImg && lightbox) { lightImg.src = url; lightbox.classList.add('open'); }
+      });
       grid.appendChild(img);
     });
     imgsWrap.appendChild(grid);
   }
 
   function fillFormFromData(j) {
+    if (!form) return;
     const d = j.data || {};
     form.querySelector('input[name="dl_action"]').value = 'update';
     form.querySelector('input[name="id"]').value = d.id;
@@ -120,13 +117,16 @@
     form.querySelector('select[name="labor_safety"]').value = d.labor_safety || 'normal';
     form.querySelector('textarea[name="work_detail"]').value = d.work_detail || '';
 
-    eqList.innerHTML = '';
-    (j.equipment || []).forEach(r => addEqRow(r.item_name, r.qty));
-    if (eqList.children.length === 0) addEqRow();
-
-    lbList.innerHTML = '';
-    (j.labor || []).forEach(r => addLbRow(r.person_name, r.qty));
-    if (lbList.children.length === 0) addLbRow();
+    if (eqList) {
+      eqList.innerHTML = '';
+      (j.equipment || []).forEach(r => addEqRow(r.item_name, r.qty));
+      if (eqList.children.length === 0) addEqRow();
+    }
+    if (lbList) {
+      lbList.innerHTML = '';
+      (j.labor || []).forEach(r => addLbRow(r.person_name, r.qty));
+      if (lbList.children.length === 0) addLbRow();
+    }
 
     renderThumbs(j.images || []);
     setFormDisabled(!j.editable);
@@ -146,16 +146,23 @@
       .then(j => { if (!j.ok) throw new Error(j.message || 'Server error'); return j; });
   }
 
+  // ---- Search by name, code, date ----
+  function normalize(s){ return (s||'').toString().toLowerCase(); }
   function applySearch() {
-    const q = (searchBox.value || '').toLowerCase().trim();
+    if (!tbody) return;
+    const q = normalize(searchBox ? searchBox.value : '');
+    if (!q) { $$('.dl-row', tbody).forEach(tr => tr.style.display = ''); return; }
     $$('.dl-row', tbody).forEach(tr => {
-      const name = (tr.getAttribute('data-name') || '').toLowerCase();
-      tr.style.display = name.includes(q) ? '' : 'none';
+      const name = normalize(tr.getAttribute('data-name'));
+      const code = normalize(tr.getAttribute('data-code'));
+      const date = normalize(tr.getAttribute('data-date'));
+      tr.style.display = (name.includes(q) || code.includes(q) || date.includes(q)) ? '' : 'none';
     });
   }
-  searchBox.addEventListener('input', applySearch);
+  if (searchBox) searchBox.addEventListener('input', applySearch);
 
   function bindRowHandlers() {
+    if (!tbody) return;
     $$('.dl-open', tbody).forEach(a => {
       a.addEventListener('click', (e) => {
         e.preventDefault();
@@ -163,7 +170,7 @@
         if (!id) return;
         fetch(apiUrl(`action=get_log&project_id=${projectId}&id=${id}`), { cache:'no-store', credentials:'same-origin' })
           .then(parseJsonSafe)
-          .then(j => { clearForm(); fillFormFromData(j); openModal(); })
+          .then(j => { clearForm(); fillFormFromData(j); if (modal) { modal.style.display='flex'; document.body.classList.add('dl-modal-open'); } })
           .catch(err => alert('Failed to open: ' + err.message));
       });
     });
@@ -180,20 +187,24 @@
     });
   }
 
-  function openModal(){ modal.style.display='flex'; modal.setAttribute('aria-hidden','false'); document.body.classList.add('dl-modal-open'); }
-  function closeModal(){ modal.style.display='none';  modal.setAttribute('aria-hidden','true');  document.body.classList.remove('dl-modal-open'); }
-  btnClose?.addEventListener('click', closeModal);
-  btnCancel?.addEventListener('click', closeModal);
-  window.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
-  modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
-  lightClose?.addEventListener('click', () => lightbox.classList.remove('open'));
-  lightbox?.addEventListener('click', (e) => { if (e.target === lightbox) lightbox.classList.remove('open'); });
+  // Close modal and lightbox
+  if (modal){
+    const closeModal = () => { modal.style.display='none'; document.body.classList.remove('dl-modal-open'); };
+    modal.querySelector('.dl-close')?.addEventListener('click', closeModal);
+    modal.querySelector('.dl-cancel')?.addEventListener('click', closeModal);
+    window.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+    modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+  }
+  const lightboxEl = lightbox;
+  if (lightboxEl){
+    lightboxEl.addEventListener('click', (e)=>{ if (e.target === lightboxEl || e.target.classList.contains('close')) lightboxEl.classList.remove('open'); });
+  }
 
-  btnCreate && btnCreate.addEventListener('click', () => { clearForm(); openModal(); });
-  eqAdd?.addEventListener('click', () => addEqRow());
-  lbAdd?.addEventListener('click', () => addLbRow());
+  if (btnCreate) btnCreate.addEventListener('click', () => { clearForm(); if (modal) { modal.style.display='flex'; document.body.classList.add('dl-modal-open'); } });
+  if (eqAdd) eqAdd.addEventListener('click', () => addEqRow());
+  if (lbAdd) lbAdd.addEventListener('click', () => addLbRow());
 
-  form.addEventListener('submit', (e) => {
+  if (form) form.addEventListener('submit', (e) => {
     e.preventDefault();
     const fd = new FormData(form);
     if (!(form.querySelector('input[name="code"]').value || '').trim() ||
