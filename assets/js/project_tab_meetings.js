@@ -1,250 +1,312 @@
 // assets/js/project_tab_meetings.js
 (function(){
-    const root = document.getElementById('meetings-tab');
-    if (!root) return;
-    const projectId = parseInt(root.dataset.projectId || '0', 10);
-    const canCreate = root.dataset.canCreate === '1';
+  const root = document.getElementById('cde-meetings');
+  if (!root) return;
 
-    // Utility
-    function post(action, data, asForm = true) {
-        const payload = new FormData();
-        payload.append('action', action);
-        for (const k in data) {
-            if (Array.isArray(data[k])) {
-                data[k].forEach(v => payload.append(k+'[]', v));
-            } else {
-                payload.append(k, data[k]);
-            }
-        }
-        return fetch('project_tab_meetings.php?project_id='+projectId, {
-            method: 'POST',
-            body: payload,
-            credentials: 'same-origin'
-        }).then(r => {
-            const ct = r.headers.get('Content-Type') || '';
-            if (ct.includes('application/msword')) return r.text(); // export
-            return r.json();
-        });
+  const projectId = root.dataset.projectId;
+  const userId = root.dataset.userId;
+  const canControl = root.dataset.canControl === '1';
+
+  // Your structure: /pages/project_view.php and /pages/partials/...
+  // Call the gateway on project_view.php (must be added there) and exit before page rendering.
+  const endpoint = '/pages/project_view.php?ajax_meetings=1';
+
+  // Elements
+  const tbody = document.getElementById('mt-tbody');
+  const btnCreate = document.getElementById('mt-btn-create');
+  const modal = document.getElementById('mt-modal');    // hidden by default
+  const form = document.getElementById('mt-form');
+  const modalTitle = document.getElementById('mt-modal-title');
+  const btnSave = document.getElementById('mt-btn-save');
+
+  const btnSearch = document.getElementById('mt-btn-search');
+  const btnClear = document.getElementById('mt-btn-clear');
+  const inpKw = document.getElementById('mt-search-text');
+  const inpDate = document.getElementById('mt-search-date');
+
+  // Detail drawer
+  const drawer = document.getElementById('mt-detail');  // hidden by default
+  const dtTitle = document.getElementById('dt-title');
+  const dtMeta = document.getElementById('dt-meta');
+  const dtBtnClose = document.getElementById('dt-btn-close');
+  const dtBtnExport = document.getElementById('dt-btn-export');
+
+  const dtStartAt = document.getElementById('dt-start-at');
+  const dtLocation = document.getElementById('dt-location');
+  const dtOnline = document.getElementById('dt-online-link');
+  const dtShort = document.getElementById('dt-short-desc');
+  const dtEditor = document.getElementById('dt-editor');
+  const dtBtnSaveContent = document.getElementById('dt-btn-save-content');
+  const dtMembers = document.getElementById('dt-project-members');
+  const dtExternal = document.getElementById('dt-external');
+  const dtBtnNotify = document.getElementById('dt-btn-notify');
+
+  let currentId = null;
+  let creatorId = null;
+
+  // Hide modal/drawer hard just in case
+  if (modal) modal.setAttribute('hidden','');
+  if (drawer) drawer.setAttribute('hidden','');
+
+  // Utilities
+  const ajax = async (params, method='POST') => {
+    const data = new URLSearchParams(params);
+    data.append('ajax', '1'); // signal ajax mode for the partial
+    let url = endpoint;
+    let fetchInit = {
+      method: method || 'POST',
+      headers: {'Content-Type':'application/x-www-form-urlencoded'},
+      body: data.toString(),
+      credentials:'same-origin'
+    };
+    if (method === 'GET') {
+      url = endpoint + '&' + data.toString();
+      fetchInit = { method: 'GET', credentials:'same-origin' };
     }
-
-    function fmtDateTime(dt) {
-        if (!dt) return '';
-        const d = new Date(dt.replace(' ', 'T'));
-        if (isNaN(d.getTime())) return dt;
-        return d.toLocaleString();
+    const res = await fetch(url, fetchInit);
+    const text = await res.text();
+    try {
+      return JSON.parse(text);
+    } catch (e) {
+      console.error('Meetings AJAX non-JSON response:', text);
+      return { ok:false, error:'NON_JSON', message:text, status: res.status };
     }
+  };
 
-    // List view handlers
-    const tbody = document.getElementById('mt-tbody');
-    if (tbody) {
-        const btnSearch = document.getElementById('mt-btn-search');
-        const inpKw = document.getElementById('mt-keyword');
-        const inpFrom = document.getElementById('mt-date-from');
-        const inpTo = document.getElementById('mt-date-to');
-        const btnCreate = document.getElementById('mt-btn-create');
-        const modal = document.getElementById('mt-create-modal');
-        const closeEls = modal ? modal.querySelectorAll('[data-close]') : [];
+  const fmtDate = (s) => {
+    if (!s) return '';
+    const d = new Date(s.replace(' ', 'T'));
+    if (isNaN(d)) return s;
+    return d.toLocaleString();
+  };
 
-        function loadList() {
-            tbody.innerHTML = `<tr><td colspan="5" class="loading">Loading...</td></tr>`;
-            post('list', {
-                keyword: inpKw.value.trim(),
-                date_from: inpFrom.value,
-                date_to: inpTo.value
-            }).then(res => {
-                if (!res.ok) throw new Error(res.error || 'Failed to load');
-                if (res.items.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="5" class="empty">No meetings found.</td></tr>`;
-                    return;
-                }
-                tbody.innerHTML = res.items.map(it => {
-                    const viewUrl = `project_view.php?project_id=${projectId}&tab=meetings&meeting_id=${it.id}`;
-                    const actions = [];
-                    if (it.can_edit) {
-                        actions.push(`<button class="danger" data-del="${it.id}">Delete</button>`);
-                    }
-                    actions.push(`<a href="${viewUrl}" class="link">View</a>`);
-                    return `<tr>
-                        <td><a href="${viewUrl}" class="title">${it.title}</a><div class="sub">${it.short_desc || ''}</div></td>
-                        <td>${it.creator_name || ''}</td>
-                        <td>${fmtDateTime(it.start_time || it.created_at)}</td>
-                        <td>${it.location || ''}</td>
-                        <td class="actions">${actions.join(' ')}</td>
-                    </tr>`;
-                }).join('');
-            }).catch(err => {
-                tbody.innerHTML = `<tr><td colspan="5" class="error">${err.message}</td></tr>`;
-            });
-        }
+  const toast = (msg, type='info') => {
+    const t = document.createElement('div');
+    t.className = `cde-toast ${type}`;
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(()=> t.classList.add('show'), 10);
+    setTimeout(()=> { t.classList.remove('show'); setTimeout(()=> t.remove(), 300); }, 3000);
+  };
 
-        btnSearch && btnSearch.addEventListener('click', loadList);
-        loadList();
-
-        // Create modal
-        function openModal(){ if (!modal) return; modal.classList.remove('hidden'); }
-        function closeModal(){ if (!modal) return; modal.classList.add('hidden'); }
-        closeEls.forEach(el => el.addEventListener('click', closeModal));
-        btnCreate && btnCreate.addEventListener('click', () => { if (canCreate) openModal(); });
-
-        if (modal) {
-            const btnSave = modal.querySelector('#mtc-save');
-            const errEl = modal.querySelector('#mtc-error');
-            btnSave && btnSave.addEventListener('click', () => {
-                errEl.textContent = '';
-                const title = modal.querySelector('#mtc-title').value.trim();
-                const short_desc = modal.querySelector('#mtc-short').value.trim();
-                const online_url = modal.querySelector('#mtc-online').value.trim();
-                const location = modal.querySelector('#mtc-location').value.trim();
-                const start_time = modal.querySelector('#mtc-start').value;
-
-                if (!title) { errEl.textContent = 'Title is required.'; return; }
-                post('create', { title, short_desc, online_url, location, start_time }).then(res => {
-                    if (!res.ok) throw new Error(res.error || 'Create failed');
-                    closeModal();
-                    window.location.href = `project_view.php?project_id=${projectId}&tab=meetings&meeting_id=${res.id}`;
-                }).catch(e => { errEl.textContent = e.message; });
-            });
-
-            // close modal when clicking outside
-            modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
-        }
-
-        // Delete
-        tbody.addEventListener('click', (e) => {
-            const delId = e.target.closest('button')?.dataset?.del;
-            if (delId) {
-                if (!confirm('Delete this meeting?')) return;
-                post('delete', { meeting_id: delId }).then(res => {
-                    if (!res.ok) throw new Error(res.error || 'Delete failed');
-                    loadList();
-                }).catch(err => alert(err.message));
-            }
-        });
+  const openModal = (isEdit=false, row=null) => {
+    if (!modal) return;
+    modal.removeAttribute('hidden'); // open only when user clicks "Create meeting" or "Edit"
+    if (!isEdit) {
+      modalTitle.textContent = 'Create meeting';
+      form.reset();
+      document.getElementById('mt-id').value = '';
+    } else {
+      modalTitle.textContent = 'Update meeting';
+      document.getElementById('mt-id').value = row.id;
+      document.getElementById('mt-title').value = row.title || '';
+      document.getElementById('mt-start-at').value = row.start_at ? row.start_at.replace(' ', 'T').slice(0,16) : '';
+      document.getElementById('mt-location').value = row.location || '';
+      document.getElementById('mt-online-link').value = row.online_link || '';
+      document.getElementById('mt-short-desc').value = row.short_desc || '';
     }
+  };
+  const closeModal = () => { if (modal) modal.setAttribute('hidden',''); }
 
-    // Detail view handlers
-    const detail = document.querySelector('.cde-meeting-detail');
-    if (detail) {
-        const meetingId = parseInt(detail.dataset.meetingId || '0', 10);
-        const titleEl = document.getElementById('md-title');
-        const startEl = document.getElementById('md-start');
-        const locationEl = document.getElementById('md-location');
-        const onlineEl = document.getElementById('md-online');
-        const shortEl = document.getElementById('md-short');
-        const editor = document.getElementById('md-editor');
-        const err = document.getElementById('md-error');
-        const btnSave = document.getElementById('md-save');
-        const btnSaveNotify = document.getElementById('md-save-notify');
-        const btnExport = document.getElementById('md-export');
+  // Close modal buttons
+  Array.prototype.forEach.call(document.querySelectorAll('[data-close="mt-modal"]'), function(btn){
+    btn.addEventListener('click', closeModal);
+  });
 
-        // Toolbar
-        const toolbar = document.getElementById('md-toolbar');
-        toolbar.addEventListener('click', (e) => {
-            const btn = e.target.closest('button');
-            if (!btn) return;
-            const cmd = btn.dataset.cmd;
-            if (cmd === 'createTable') {
-                // simple 3x3 table
-                const table = document.createElement('table');
-                table.border = 1;
-                for (let r=0;r<3;r++){
-                    const tr = document.createElement('tr');
-                    for (let c=0;c<3;c++){ const td=document.createElement('td'); td.innerHTML='&nbsp;'; tr.appendChild(td); }
-                    table.appendChild(tr);
-                }
-                editor.focus();
-                document.execCommand('insertHTML', false, table.outerHTML);
-                return;
-            }
-            const val = btn.dataset.value || null;
-            document.execCommand(cmd, false, val);
-            editor.focus();
-        });
-        document.getElementById('md-font-size').addEventListener('change', (e)=>{
-            document.execCommand('fontSize', false, e.target.value);
-            editor.focus();
-        });
-        document.getElementById('md-color').addEventListener('input', (e)=>{
-            document.execCommand('foreColor', false, e.target.value);
-            editor.focus();
-        });
-        document.getElementById('md-bg').addEventListener('input', (e)=>{
-            document.execCommand('hiliteColor', false, e.target.value);
-            editor.focus();
-        });
+  // Create button (open modal on click only)
+  if (btnCreate) btnCreate.addEventListener('click', ()=> {
+    if (!canControl) { toast('You do not have permission to create a meeting.', 'error'); return; }
+    openModal(false);
+  });
 
-        function toDatetimeLocalValue(iso) {
-            if (!iso) return '';
-            const d = new Date(iso.replace(' ', 'T'));
-            if (isNaN(d.getTime())) return '';
-            const pad = (n)=> String(n).padStart(2,'0');
-            return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-        }
+  // Save (create/update)
+  if (btnSave) btnSave.addEventListener('click', async ()=> {
+    const fd = new FormData(form);
+    const id = fd.get('id');
+    const action = id ? 'update' : 'create';
+    const payload = {
+      action,
+      project_id: projectId, user_id: userId,
+      id: id || '',
+      title: fd.get('title'),
+      start_at: fd.get('start_at'),
+      location: fd.get('location'),
+      online_link: fd.get('online_link'),
+      short_desc: fd.get('short_desc')
+    };
+    const json = await ajax(payload, 'POST');
+    if (!json.ok) { toast(json.message || json.error || 'Unknown error', 'error'); return; }
+    toast('Saved', 'success');
+    closeModal();
+    loadList();
+  });
 
-        function loadDetail() {
-            post('get', { meeting_id: meetingId }).then(res => {
-                if (!res.ok) throw new Error(res.error || 'Load failed');
-                const m = res.meeting;
-                titleEl.value = m.title || '';
-                startEl.value = toDatetimeLocalValue(m.start_time || '');
-                locationEl.value = m.location || '';
-                onlineEl.value = m.online_url || '';
-                shortEl.value = m.short_desc || '';
-                editor.innerHTML = m.content || '';
-                // participants
-                const existing = new Set((res.participants || []).filter(x=>x.internal_user_id).map(x=>String(x.internal_user_id)));
-                document.querySelectorAll('.mt-member').forEach(chk => {
-                    chk.checked = existing.has(chk.value);
-                });
-                const externals = (res.participants || []).filter(x=>x.external_name).map(x=>x.external_name).join('\n');
-                const extArea = document.getElementById('md-external');
-                extArea.value = externals;
-                const canEdit = !!res.can_edit;
-                [titleEl,startEl,locationEl,onlineEl,shortEl,editor].forEach(el => el.disabled = !canEdit);
-                btnSave.disabled = !canEdit;
-                btnSaveNotify.disabled = !canEdit;
-            }).catch(e => err.textContent = e.message);
-        }
-        loadDetail();
+  // Search
+  const doSearch = ()=> {
+    loadList(inpKw ? inpKw.value.trim() : '', inpDate ? inpDate.value : '');
+  };
+  if (btnSearch) btnSearch.addEventListener('click', doSearch);
+  if (btnClear) btnClear.addEventListener('click', ()=> { if (inpKw) inpKw.value=''; if (inpDate) inpDate.value=''; doSearch(); });
 
-        function gatherAndSave(notify=false) {
-            err.textContent = '';
-            const data = {
-                meeting_id: meetingId,
-                title: titleEl.value.trim(),
-                start_time: startEl.value,
-                location: locationEl.value.trim(),
-                online_url: onlineEl.value.trim(),
-                short_desc: shortEl.value.trim(),
-                content: editor.innerHTML
-            };
-            post('update', data).then(res => {
-                if (!res.ok) throw new Error(res.error || 'Save failed');
-                if (!notify) { alert('Saved'); return; }
-                // participants
-                const internal = Array.from(document.querySelectorAll('.mt-member:checked')).map(chk => chk.value);
-                const externals = document.getElementById('md-external').value.split('\n').map(s=>s.trim()).filter(s=>s.length>0);
-                return post('save_participants_and_notify', { meeting_id: meetingId, internal_user_ids: internal, external_names: externals });
-            }).then(res => {
-                if (!res) return;
-                if (!res.ok) throw new Error(res.error || 'Notify failed');
-                alert('Saved & notifications sent');
-            }).catch(e => err.textContent = e.message);
-        }
-
-        btnSave && btnSave.addEventListener('click', ()=>gatherAndSave(false));
-        btnSaveNotify && btnSaveNotify.addEventListener('click', ()=>gatherAndSave(true));
-
-        btnExport && btnExport.addEventListener('click', () => {
-            // export via POST then force download by creating a hidden form
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = 'project_tab_meetings.php?project_id='+projectId;
-            const a1 = document.createElement('input'); a1.type='hidden'; a1.name='action'; a1.value='export_word'; form.appendChild(a1);
-            const a2 = document.createElement('input'); a2.type='hidden'; a2.name='meeting_id'; a2.value=meetingId; form.appendChild(a2);
-            document.body.appendChild(form);
-            form.submit();
-            setTimeout(()=>form.remove(), 1000);
-        });
+  // Load list
+  async function loadList(q='', date='') {
+    if (!tbody) return;
+    tbody.innerHTML = `<tr><td colspan="5" class="txt-center muted">Loading...</td></tr>`;
+    const json = await ajax({ action:'list', project_id:projectId, user_id:userId, q, date }, 'GET');
+    if (!json.ok) {
+      const msg = json.message || json.error || 'Error';
+      tbody.innerHTML = `<tr><td colspan="5" class="txt-center text-error">${escapeHtml(msg)}</td></tr>`;
+      return;
     }
+    const items = json.items || [];
+    if (!items.length) {
+      tbody.innerHTML = `<tr><td colspan="5" class="txt-center muted">No meetings</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = items.map(function(r){ return rowHtml(r, json); }).join('');
+    bindRowEvents(items, json);
+  }
+
+  function rowHtml(r, meta) {
+    const isOwner = String(meta.user_id) === String(r.created_by);
+    const canEdit = meta.can_control && isOwner;
+    return `<tr data-id="${r.id}">
+      <td><button class="link-btn mt-row-title">${escapeHtml(r.title||'No title')}</button></td>
+      <td>${escapeHtml(r.creator_name||('User#'+r.created_by))}</td>
+      <td>${fmtDate(r.created_at)}</td>
+      <td>${escapeHtml(r.location||'')}</td>
+      <td class="row-actions">
+        ${canEdit ? `<button class="btn btn-ghost sm mt-row-edit">Edit</button>`:''}
+        ${canEdit ? `<button class="btn btn-danger sm mt-row-del">Delete</button>`:''}
+      </td>
+    </tr>`;
+  }
+
+  function bindRowEvents(items, meta) {
+    const titleBtns = tbody.querySelectorAll('.mt-row-title');
+    Array.prototype.forEach.call(titleBtns, function(btn, idx){
+      const r = items[idx];
+      btn.addEventListener('click', function(){ openDetail(r.id); });
+    });
+
+    const editBtns = tbody.querySelectorAll('.mt-row-edit');
+    Array.prototype.forEach.call(editBtns, function(btn){
+      btn.addEventListener('click', function(){
+        const row = items.find(function(x){ return String(x.created_by) === String(meta.user_id); });
+        if (row) openModal(true, row);
+      });
+    });
+
+    const delBtns = tbody.querySelectorAll('.mt-row-del');
+    Array.prototype.forEach.call(delBtns, function(btn){
+      btn.addEventListener('click', async function(){
+        const tr = btn.closest('tr');
+        const id = tr ? tr.getAttribute('data-id') : null;
+        if (!id) return;
+        if (!confirm('Delete this meeting?')) return;
+        const json = await ajax({ action:'delete', project_id:projectId, user_id:userId, id: id }, 'POST');
+        if (!json.ok) { toast(json.message || json.error || 'Delete failed', 'error'); return; }
+        toast('Deleted', 'success');
+        doSearch();
+      });
+    });
+  }
+
+  async function openDetail(id) {
+    const json = await ajax({ action:'get', project_id:projectId, user_id:userId, id: id }, 'GET');
+    if (!json.ok) { toast(json.message || json.error || 'Failed to load details', 'error'); return; }
+    const m = json.meeting;
+    currentId = m.id;
+    creatorId = json.creator_id;
+    if (drawer) drawer.removeAttribute('hidden');
+    dtTitle.textContent = m.title || 'Meeting';
+    dtMeta.textContent = `Created by ${m.creator_name||('User#'+m.created_by)} • ${fmtDate(m.created_at)}`;
+    dtStartAt.value = m.start_at ? m.start_at.replace(' ', 'T').slice(0,16) : '';
+    dtLocation.value = m.location || '';
+    dtOnline.value = m.online_link || '';
+    dtShort.value = m.short_desc || '';
+    dtEditor.innerHTML = json.content || '';
+
+    // permissions
+    const editable = (canControl && String(creatorId) === String(userId));
+    [dtStartAt, dtLocation, dtOnline, dtShort, dtEditor, dtBtnSaveContent, dtBtnNotify].forEach(function(el){
+      if (!el) return;
+      if (editable) { el.removeAttribute('disabled'); dtEditor.setAttribute('contenteditable','true'); }
+      else { el.setAttribute('disabled',''); dtEditor.setAttribute('contenteditable','false'); }
+    });
+
+    // load members
+    loadMembers(json.participants || []);
+  }
+
+  function closeDetail() { if (drawer) drawer.setAttribute('hidden',''); currentId = null; }
+  if (dtBtnClose) dtBtnClose.addEventListener('click', closeDetail);
+
+  // Inline update of summary fields
+  [dtStartAt, dtLocation, dtOnline, dtShort].forEach(function(el){
+    if (!el) return;
+    el.addEventListener('change', async function(){
+      if (!currentId) return;
+      const json = await ajax({
+        action:'update', project_id:projectId, user_id:userId, id: currentId,
+        title: dtTitle.textContent,
+        start_at: dtStartAt.value,
+        location: dtLocation.value,
+        online_link: dtOnline.value,
+        short_desc: dtShort.value
+      }, 'POST');
+      if (!json.ok) { toast(json.message||json.error||'Update failed', 'error'); return; }
+      toast('Updated', 'success');
+      loadList(inpKw ? inpKw.value.trim() : '', inpDate ? inpDate.value : '');
+    });
+  });
+
+  // Save content
+  if (dtBtnSaveContent) dtBtnSaveContent.addEventListener('click', async function(){
+    if (!currentId) return;
+    const json = await ajax({ action:'save_content', project_id:projectId, user_id:userId, id: currentId, content: dtEditor.innerHTML }, 'POST');
+    if (!json.ok) { toast(json.message||json.error||'Save failed', 'error'); return; }
+    toast('Saved', 'success');
+  });
+
+  // Members loading and save
+  async function loadMembers(selected) {
+    dtMembers.innerHTML = 'Loading...';
+    const json = await ajax({ action:'members', project_id:projectId, user_id:userId }, 'GET');
+    if (!json.ok) { dtMembers.textContent = json.message || json.error || 'Error'; return; }
+    const set = {};
+    (selected || []).forEach(function(x){
+      if (x.user_id) set[String(x.user_id)] = true;
+    });
+    dtMembers.innerHTML = (json.items || []).map(function(u){
+      var checked = set[String(u.id)] ? 'checked' : '';
+      return '<label class="person"><input type="checkbox" data-user-id="'+u.id+'" '+checked+'/> <span>'+escapeHtml(u.name||('User#'+u.id))+'</span></label>';
+    }).join('');
+    // external prefill
+    const externals = (selected || []).filter(function(x){ return !x.is_internal; }).map(function(x){ return x.external_name || x.external_contact || ''; }).filter(Boolean);
+    dtExternal.value = externals.join('\n');
+  }
+
+  if (dtBtnNotify) dtBtnNotify.addEventListener('click', async function(){
+    if (!currentId) return;
+    const internal = Array.prototype.map.call(dtMembers.querySelectorAll('input[type="checkbox"]:checked'), function(i){ return i.dataset.userId; });
+    const json1 = await ajax({ action:'save_participants', project_id:projectId, user_id:userId, id: currentId, internal: JSON.stringify(internal), external: dtExternal.value }, 'POST');
+    if (!json1.ok) { toast(json1.message||json1.error||'Failed to save participants', 'error'); return; }
+    const json2 = await ajax({ action:'notify', project_id:projectId, user_id:userId, id: currentId }, 'POST');
+    if (!json2.ok) { toast(json2.message||json2.error||'Failed to notify', 'error'); return; }
+    toast('Saved & notifications created', 'success');
+  });
+
+  // Export placeholder
+  if (dtBtnExport) dtBtnExport.addEventListener('click', function(){
+    toast('Export to Word will be implemented later.', 'info');
+  });
+
+  function escapeHtml(s){
+    return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // Initial load
+  loadList();
+
 })();
