@@ -1,489 +1,470 @@
 <?php
-// project_tab_meetings.php
-// NOTE: This file is meant to be INCLUDED by project_view.php (which already includes config.php & starts session).
-// All AJAX requests should call THIS file directly with ?ajax=1 to avoid header issues from parent output.
+/**
+ * Meetings Tab (PDO-only, legacy-friendly)
+ * File: pages/partials/project_tab_meetings.php
+ * 
+ * - Expects $pdo (PDO) provided by project_view.php (which already included config.php).
+ * - This file DOES NOT include config.php.
+ * - Only project members may view; only role='control' can create/update/delete, and only their own meetings.
+ * - All user-facing strings here are in English per request.
+ */
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+if (session_status() === PHP_SESSION_NONE) { session_start(); }
 
-// Detect DB connection coming from parent include (config.php in project_view.php)
-$conn = isset($conn) ? $conn : (isset($GLOBALS['conn']) ? $GLOBALS['conn'] : null);
-
-// Current user and project
-$current_user_id = isset($_SESSION['user_id']) ? intval($_SESSION['user_id']) : 0;
-$project_id = isset($_GET['project_id']) ? intval($_GET['project_id']) : (isset($GLOBALS['project_id']) ? intval($GLOBALS['project_id']) : 0);
-
-// Utility: safe header set (only when this script is called directly for AJAX)
-function maybe_set_json_header() {
-    if (!headers_sent() && (isset($_GET['ajax']) || (isset($_POST['action']) && basename($_SERVER['SCRIPT_NAME']) === basename(__FILE__)))) {
+/* ---------- Resolve $pdo ---------- */
+if (!isset($pdo) || !($pdo instanceof PDO)) {
+    if (!isset($_GET['ajax']) && !isset($_POST['ajax'])) {
+        echo '<div class="cde-alert cde-alert-danger">Database connection is not available. Expected $pdo (PDO).</div>';
+        return;
+    } else {
         header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(array('ok'=>false,'error'=>'DB_NOT_AVAILABLE','message'=>'Database connection is not available. Expected $pdo (PDO).'));
+        exit;
     }
 }
 
-// Early return if this is an AJAX call
-if ((isset($_GET['ajax']) || (isset($_POST['action']) && basename($_SERVER['SCRIPT_NAME']) === basename(__FILE__)))) {
-    if (!$conn) {
-        maybe_set_json_header();
-        echo json_encode(['ok' => false, 'error' => 'DB_NOT_CONNECTED']);
-        exit;
-    }
-    if (!$current_user_id) {
-        maybe_set_json_header();
-        echo json_encode(['ok' => false, 'error' => 'NOT_LOGGED_IN']);
-        exit;
-    }
-    if (!$project_id) {
-        maybe_set_json_header();
-        echo json_encode(['ok' => false, 'error' => 'MISSING_PROJECT_ID']);
-        exit;
-    }
+/* ---------- Robust context detection ---------- */
+function _pick($arr) {
+    foreach ($arr as $v) { if (isset($v) && $v !== '' && $v !== null) return $v; }
+    return null;
+}
 
-    mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
-    $conn->set_charset('utf8mb4');
+$project_id = null;
+$project_id = _pick(array(
+    isset($project_id)?$project_id:null,
+    isset($project) && is_array($project) && isset($project['id']) ? $project['id'] : null,
+    isset($proj) && is_array($proj) && isset($proj['id']) ? $proj['id'] : null,
+    isset($current_project) && is_array($current_project) && isset($current_project['id']) ? $current_project['id'] : null,
+    isset($currentProject) && is_array($currentProject) && isset($currentProject['id']) ? $currentProject['id'] : null,
+    isset($_GET['project_id']) ? $_GET['project_id'] : null,
+    isset($_POST['project_id']) ? $_POST['project_id'] : null,
+    // Common pattern: project_view.php?id=...
+    isset($_GET['id']) ? $_GET['id'] : null
+));
+$project_id = intval($project_id);
 
-    // Ensure tables exist (idempotent)
-    $conn->query("CREATE TABLE IF NOT EXISTS project_meetings (
+$current_user_id = null;
+$current_user_id = _pick(array(
+    isset($current_user_id)?$current_user_id:null,
+    isset($_SESSION['user_id']) ? $_SESSION['user_id'] : null,
+    isset($_SESSION['id']) ? $_SESSION['id'] : null,
+    isset($_SESSION['user']) && is_array($_SESSION['user']) && isset($_SESSION['user']['id']) ? $_SESSION['user']['id'] : null,
+    isset($_SESSION['auth']) && is_array($_SESSION['auth']) && isset($_SESSION['auth']['user_id']) ? $_SESSION['auth']['user_id'] : null,
+    isset($_SESSION['auth']) && is_array($_SESSION['auth']) && isset($_SESSION['auth']['id']) ? $_SESSION['auth']['id'] : null,
+    isset($user) && is_array($user) && isset($user['id']) ? $user['id'] : null,
+    isset($authUser) && is_array($authUser) && isset($authUser['id']) ? $authUser['id'] : null,
+    isset($_GET['user_id']) ? $_GET['user_id'] : null,
+    isset($_POST['user_id']) ? $_POST['user_id'] : null
+));
+$current_user_id = intval($current_user_id);
+
+/* -------------------- Non-AJAX render -------------------- */
+if (!isset($_GET['ajax']) && !isset($_POST['ajax'])) {
+    ?>
+    <link rel="stylesheet" href="../assets/css/project_tab_meetings.css?v=10" />
+    <div id="cde-meetings"
+         class="cde-meetings"
+         data-project-id="<?php echo htmlspecialchars($project_id); ?>"
+         data-user-id="<?php echo htmlspecialchars($current_user_id); ?>"
+         data-can-control="<?php echo htmlspecialchars(user_can_control($pdo, $project_id, $current_user_id) ? '1' : '0'); ?>">
+        <?php if (!$project_id || !$current_user_id): ?>
+            <div class="cde-alert cde-alert-warning">Missing project or user context. Please open this tab from the Project page.</div>
+        <?php elseif (!user_in_project($pdo, $project_id, $current_user_id)): ?>
+            <div class="cde-alert cde-alert-danger">Access denied: you are not a member of this project.</div>
+        <?php else: ?>
+            <div class="cde-meetings__header">
+                <div class="cde-meetings__title">
+                    <h3>Meetings</h3>
+                    <p class="muted">Manage all meetings for this project</p>
+                </div>
+                <div class="cde-meetings__actions">
+                    <div class="search-group">
+                        <input type="text" id="mt-search-text" placeholder="Search by title..." />
+                        <input type="date" id="mt-search-date" />
+                        <button class="btn btn-outline" id="mt-btn-search" title="Search">
+                            <span class="icon">🔎</span><span>Search</span>
+                        </button>
+                        <button class="btn btn-ghost" id="mt-btn-clear">Clear</button>
+                    </div>
+                    <button class="btn btn-primary" id="mt-btn-create" <?php echo user_can_control($pdo, $project_id, $current_user_id) ? '' : 'disabled'; ?>>
+                        <span class="icon">＋</span>Create meeting
+                    </button>
+                </div>
+            </div>
+
+            <div class="cde-card">
+                <div class="table-responsive">
+                    <table class="cde-table" id="mt-table">
+                        <thead>
+                            <tr>
+                                <th>Meeting title</th>
+                                <th>Creator</th>
+                                <th>Created at</th>
+                                <th>Location</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="mt-tbody">
+                            <tr><td colspan="5" class="txt-center muted">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Modal: Create/Update (hidden by default) -->
+            <div class="cde-modal" id="mt-modal" hidden>
+                <div class="cde-modal__dialog">
+                    <div class="cde-modal__header">
+                        <h4 id="mt-modal-title">Create meeting</h4>
+                        <button class="icon-btn" data-close="mt-modal">✕</button>
+                    </div>
+                    <div class="cde-modal__body">
+                        <form id="mt-form">
+                            <input type="hidden" name="id" id="mt-id" />
+                            <div class="grid-2">
+                                <div class="form-group">
+                                    <label>Meeting title <span class="req">*</span></label>
+                                    <input type="text" name="title" id="mt-title" required />
+                                </div>
+                                <div class="form-group">
+                                    <label>Start time</label>
+                                    <input type="datetime-local" name="start_at" id="mt-start-at" />
+                                </div>
+                            </div>
+                            <div class="grid-2">
+                                <div class="form-group">
+                                    <label>Location</label>
+                                    <input type="text" name="location" id="mt-location" placeholder="Room, address..." />
+                                </div>
+                                <div class="form-group">
+                                    <label>Online link</label>
+                                    <input type="url" name="online_link" id="mt-online-link" placeholder="https://..." />
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Short description</label>
+                                <textarea name="short_desc" id="mt-short-desc" rows="3" placeholder="Objectives, key points..."></textarea>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="cde-modal__footer">
+                        <button class="btn btn-ghost" data-close="mt-modal">Cancel</button>
+                        <button class="btn btn-primary" id="mt-btn-save">Save</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Drawer: Detail (hidden by default) -->
+            <div class="cde-drawer" id="mt-detail" hidden>
+                <div class="cde-drawer__panel">
+                    <div class="cde-drawer__header">
+                        <div>
+                            <h4 id="dt-title">Meeting details</h4>
+                            <p class="muted" id="dt-meta"></p>
+                        </div>
+                        <div class="right">
+                            <button class="btn btn-outline" id="dt-btn-export">Export (Word)</button>
+                            <button class="icon-btn" id="dt-btn-close">✕</button>
+                        </div>
+                    </div>
+                    <div class="cde-drawer__body">
+                        <section class="dt-section">
+                            <h5>KV1. Summary</h5>
+                            <div class="grid-2">
+                                <div class="form-group">
+                                    <label>Start time</label>
+                                    <input type="datetime-local" id="dt-start-at" />
+                                </div>
+                                <div class="form-group">
+                                    <label>Location</label>
+                                    <input type="text" id="dt-location" />
+                                </div>
+                                <div class="form-group">
+                                    <label>Online link</label>
+                                    <input type="url" id="dt-online-link" placeholder="https://..." />
+                                </div>
+                                <div class="form-group">
+                                    <label>Short description</label>
+                                    <input type="text" id="dt-short-desc" />
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="dt-section">
+                            <h5>KV2. Content</h5>
+                            <div class="editor-toolbar" id="dt-editor-toolbar">
+                                <button data-cmd="bold" title="Bold"><b>B</b></button>
+                                <button data-cmd="italic" title="Italic"><i>I</i></button>
+                                <button data-cmd="underline" title="Underline"><u>U</u></button>
+                                <button data-cmd="strikeThrough" title="Strike">S</button>
+                                <button data-cmd="insertUnorderedList" title="Bullet">•</button>
+                                <button data-cmd="insertOrderedList" title="Number">1.</button>
+                                <select id="dt-font-size">
+                                    <option value="">Font size</option>
+                                    <option value="1">1</option>
+                                    <option value="2">2</option>
+                                    <option value="3">3</option>
+                                    <option value="4">4</option>
+                                    <option value="5">5</option>
+                                    <option value="6">6</option>
+                                    <option value="7">7</option>
+                                </select>
+                                <input type="color" id="dt-forecolor" title="Text color" />
+                                <button data-cmd="formatBlock" data-value="h1">H1</button>
+                                <button data-cmd="formatBlock" data-value="h2">H2</button>
+                                <button data-cmd="formatBlock" data-value="p">P</button>
+                                <button id="dt-insert-table" title="Insert table">▦</button>
+                            </div>
+                            <div id="dt-editor" class="rich-editor" contenteditable="true"></div>
+                            <div class="right mt-8">
+                                <button class="btn btn-primary" id="dt-btn-save-content">Save content</button>
+                            </div>
+                        </section>
+
+                        <section class="dt-section">
+                            <h5>KV3. Participants</h5>
+                            <div class="grid-2">
+                                <div>
+                                    <label>Project members</label>
+                                    <div id="dt-project-members" class="people-list">Loading...</div>
+                                </div>
+                                <div>
+                                    <label>External participants (one per line: name, email, phone)</label>
+                                    <textarea id="dt-external" rows="6" placeholder="One person per line"></textarea>
+                                </div>
+                            </div>
+                            <div class="right mt-8">
+                                <button class="btn btn-outline" id="dt-btn-notify">Save & Notify</button>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+            </div>
+        <?php endif; ?>
+    </div>
+    <script src="../assets/js/project_tab_meetings.js?v=10"></script>
+    <?php
+    return;
+}
+
+/* -------------------- AJAX handling -------------------- */
+header('Content-Type: application/json; charset=utf-8');
+
+// Re-resolve context again for AJAX (also accept ?id=)
+if (!$project_id) {
+    $project_id = isset($_REQUEST['project_id']) ? intval($_REQUEST['project_id']) : 0;
+    if (!$project_id && isset($_REQUEST['id'])) $project_id = intval($_REQUEST['id']);
+}
+if (!$current_user_id) {
+    $current_user_id = isset($_REQUEST['user_id']) ? intval($_REQUEST['user_id']) : 0;
+    if (!$current_user_id && isset($_SESSION['user_id'])) $current_user_id = intval($_SESSION['user_id']);
+}
+
+if (!$project_id || !$current_user_id) {
+    echo json_encode(array('ok'=>false,'error'=>'MISSING_CONTEXT','message'=>'Missing project or user context.')); exit;
+}
+if (!user_in_project($pdo, $project_id, $current_user_id)) {
+    echo json_encode(array('ok'=>false,'error'=>'FORBIDDEN','message'=>'Only project members can access this tab.')); exit;
+}
+
+// Ensure tables exist
+bootstrap_tables($pdo);
+
+$action = isset($_REQUEST['action']) ? $_REQUEST['action'] : 'list';
+
+switch ($action) {
+    case 'list':
+        $q = isset($_REQUEST['q']) ? trim($_REQUEST['q']) : '';
+        $date = isset($_REQUEST['date']) ? $_REQUEST['date'] : '';
+        $where = "WHERE m.project_id = :pid";
+        $params = array(':pid'=>$project_id);
+        if ($q !== '') { $where .= " AND (m.title LIKE :q OR m.short_desc LIKE :q)"; $params[':q'] = "%".$q."%"; }
+        if ($date !== '') { $where .= " AND DATE(m.created_at) = :d"; $params[':d'] = $date; }
+        $sql = "SELECT m.*, CONCAT(u.first_name,' ',u.last_name) AS creator_name
+                FROM project_meetings m
+                LEFT JOIN users u ON u.id=m.created_by
+                $where
+                ORDER BY m.created_at DESC";
+        $st = $pdo->prepare($sql);
+        $st->execute($params);
+        $items = $st->fetchAll(PDO::FETCH_ASSOC);
+        echo json_encode(array('ok'=>true,'items'=>$items,'can_control'=>user_can_control($pdo,$project_id,$current_user_id),'user_id'=>$current_user_id));
+        break;
+
+    case 'create':
+        if (!user_can_control($pdo, $project_id, $current_user_id)) { echo json_encode(array('ok'=>false,'error'=>'NO_PERMISSION','message'=>'Only control role can create meetings.')); break; }
+        $title = isset($_POST['title']) ? trim($_POST['title']) : '';
+        if ($title === '') { echo json_encode(array('ok'=>false,'error'=>'VALIDATION','message'=>'Meeting title is required.')); break; }
+        $short = isset($_POST['short_desc']) ? trim($_POST['short_desc']) : '';
+        $start = isset($_POST['start_at']) ? $_POST['start_at'] : null;
+        $loc   = isset($_POST['location']) ? trim($_POST['location']) : '';
+        $url   = isset($_POST['online_link']) ? trim($_POST['online_link']) : '';
+        $st = $pdo->prepare("INSERT INTO project_meetings(project_id,title,short_desc,start_at,location,online_link,created_by) VALUES (:pid,:t,:s,:start,:loc,:url,:uid)");
+        $ok = $st->execute(array(':pid'=>$project_id,':t'=>$title,':s'=>$short,':start'=>$start? $start:null,':loc'=>$loc,':url'=>$url,':uid'=>$current_user_id));
+        echo json_encode(array('ok'=>$ok,'id'=>$pdo->lastInsertId()));
+        break;
+
+    case 'get':
+        $id = isset($_GET['id']) ? intval($_GET['id']) : 0;
+        $st = $pdo->prepare("SELECT m.*, CONCAT(u.first_name,' ',u.last_name) AS creator_name FROM project_meetings m LEFT JOIN users u ON u.id=m.created_by WHERE m.id=:id AND m.project_id=:pid");
+        $st->execute(array(':id'=>$id, ':pid'=>$project_id));
+        $meeting = $st->fetch(PDO::FETCH_ASSOC);
+        if (!$meeting) { echo json_encode(array('ok'=>false,'error'=>'NOT_FOUND')); break; }
+        $st = $pdo->prepare("SELECT content FROM project_meeting_contents WHERE meeting_id=:id");
+        $st->execute(array(':id'=>$id));
+        $content = $st->fetchColumn(); if ($content === false) $content = '';
+        $st = $pdo->prepare("SELECT * FROM project_meeting_participants WHERE meeting_id=:id ORDER BY id");
+        $st->execute(array(':id'=>$id));
+        $parts = $st->fetchAll(PDO::FETCH_ASSOC);
+        echo json_encode(array('ok'=>true,'meeting'=>$meeting,'content'=>$content,'participants'=>$parts,'can_control'=>user_can_control($pdo,$project_id,$current_user_id),'creator_id'=>intval($meeting['created_by']),'user_id'=>$current_user_id));
+        break;
+
+    case 'update':
+        $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
+        if (!is_owner_and_control($pdo,$project_id,$current_user_id,$id)) { echo json_encode(array('ok'=>false,'error'=>'NO_PERMISSION','message'=>'Only the creator with control role can update.')); break; }
+        $title = isset($_POST['title']) ? trim($_POST['title']) : '';
+        if ($title === '') { echo json_encode(array('ok'=>false,'error'=>'VALIDATION','message'=>'Meeting title is required.')); break; }
+        $short = isset($_POST['short_desc']) ? trim($_POST['short_desc']) : '';
+        $start = isset($_POST['start_at']) ? $_POST['start_at'] : null;
+        $loc   = isset($_POST['location']) ? trim($_POST['location']) : '';
+        $url   = isset($_POST['online_link']) ? trim($_POST['online_link']) : '';
+        $st = $pdo->prepare("UPDATE project_meetings SET title=:t, short_desc=:s, start_at=:start, location=:loc, online_link=:url, updated_at=NOW() WHERE id=:id AND project_id=:pid");
+        $ok = $st->execute(array(':t'=>$title,':s'=>$short,':start'=>$start? $start:null,':loc'=>$loc,':url'=>$url,':id'=>$id,':pid'=>$project_id));
+        echo json_encode(array('ok'=>$ok));
+        break;
+
+    case 'delete':
+        $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
+        if (!is_owner_and_control($pdo,$project_id,$current_user_id,$id)) { echo json_encode(array('ok'=>false,'error'=>'NO_PERMISSION','message'=>'Only the creator with control role can delete.')); break; }
+        $pdo->prepare("DELETE FROM project_meeting_participants WHERE meeting_id=:id")->execute(array(':id'=>$id));
+        $pdo->prepare("DELETE FROM project_meeting_contents WHERE meeting_id=:id")->execute(array(':id'=>$id));
+        $ok = $pdo->prepare("DELETE FROM project_meetings WHERE id=:id AND project_id=:pid")->execute(array(':id'=>$id,':pid'=>$project_id));
+        echo json_encode(array('ok'=>$ok));
+        break;
+
+    case 'members':
+        $st = $pdo->prepare("SELECT u.id, CONCAT(u.first_name,' ',u.last_name) AS name
+                             FROM project_group_members pgm
+                             JOIN users u ON u.id=pgm.user_id
+                             WHERE pgm.project_id=:pid
+                             ORDER BY name");
+        $st->execute(array(':pid'=>$project_id));
+        echo json_encode(array('ok'=>true,'items'=>$st->fetchAll(PDO::FETCH_ASSOC)));
+        break;
+
+    case 'save_content':
+        $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
+        if (!is_owner_and_control($pdo,$project_id,$current_user_id,$id)) { echo json_encode(array('ok'=>false,'error'=>'NO_PERMISSION','message'=>'Only the creator with control role can save content.')); break; }
+        $content = isset($_POST['content']) ? $_POST['content'] : '';
+        $sql = "INSERT INTO project_meeting_contents (meeting_id, content, updated_by, updated_at)
+                VALUES (:id,:c,:uid,NOW())
+                ON DUPLICATE KEY UPDATE content=VALUES(content), updated_by=VALUES(updated_by), updated_at=VALUES(updated_at)";
+        $ok = $pdo->prepare($sql)->execute(array(':id'=>$id,':c'=>$content,':uid'=>$current_user_id));
+        echo json_encode(array('ok'=>$ok));
+        break;
+
+    case 'save_participants':
+        $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
+        if (!is_owner_and_control($pdo,$project_id,$current_user_id,$id)) { echo json_encode(array('ok'=>false,'error'=>'NO_PERMISSION','message'=>'Only the creator with control role can save participants.')); break; }
+        $internalJson = isset($_POST['internal']) ? $_POST['internal'] : '[]';
+        $externalText = isset($_POST['external']) ? $_POST['external'] : '';
+        $internals = json_decode($internalJson, true);
+        if (!is_array($internals)) $internals = array();
+        $pdo->prepare("DELETE FROM project_meeting_participants WHERE meeting_id=:id")->execute(array(':id'=>$id));
+        if (!empty($internals)) {
+            $ins = $pdo->prepare("INSERT INTO project_meeting_participants (meeting_id, user_id, is_internal) VALUES (:mid,:uid,1)");
+            foreach ($internals as $uid2) {
+                $ins->execute(array(':mid'=>$id,':uid'=>intval($uid2)));
+            }
+        }
+        $lines = preg_split('/\r\n|\r|\n/', $externalText);
+        $insE = $pdo->prepare("INSERT INTO project_meeting_participants (meeting_id, external_name, external_contact, is_internal) VALUES (:mid,:name,:contact,0)");
+        foreach ($lines as $ln) {
+            $ln = trim($ln);
+            if ($ln !== '') { $insE->execute(array(':mid'=>$id,':name'=>$ln,':contact'=>$ln)); }
+        }
+        echo json_encode(array('ok'=>true));
+        break;
+
+    case 'notify':
+        $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
+        if (!is_owner_and_control($pdo,$project_id,$current_user_id,$id)) { echo json_encode(array('ok'=>false,'error'=>'NO_PERMISSION','message'=>'Only the creator with control role can notify.')); break; }
+        $msg = "Meeting #".$id." has been updated. Please check details.";
+        $sql1 = "INSERT INTO project_meeting_notifications (meeting_id, sender_id, receiver_id, message)
+                 SELECT :mid, :sid, p.user_id, :msg FROM project_meeting_participants p WHERE p.meeting_id=:mid AND p.is_internal=1 AND p.user_id IS NOT NULL";
+        $pdo->prepare($sql1)->execute(array(':mid'=>$id,':sid'=>$current_user_id,':msg'=>$msg));
+        $sql2 = "INSERT INTO project_meeting_notifications (meeting_id, sender_id, external_contact, message)
+                 SELECT :mid, :sid, p.external_contact, :msg FROM project_meeting_participants p WHERE p.meeting_id=:mid AND p.is_internal=0 AND p.external_contact IS NOT NULL";
+        $pdo->prepare($sql2)->execute(array(':mid'=>$id,':sid'=>$current_user_id,':msg'=>$msg));
+        echo json_encode(array('ok'=>true,'message'=>'Notifications stored (simulation).'));
+        break;
+
+    default:
+        echo json_encode(array('ok'=>false,'error'=>'UNKNOWN_ACTION'));
+}
+
+/* ---------- Helpers (legacy-friendly) ---------- */
+function bootstrap_tables(PDO $pdo) {
+    $pdo->exec("CREATE TABLE IF NOT EXISTS project_meetings (
         id INT AUTO_INCREMENT PRIMARY KEY,
         project_id INT NOT NULL,
         title VARCHAR(255) NOT NULL,
-        short_desc VARCHAR(500) DEFAULT NULL,
-        online_link VARCHAR(500) DEFAULT NULL,
-        location VARCHAR(255) DEFAULT NULL,
-        start_time DATETIME DEFAULT NULL,
-        detail MEDIUMTEXT DEFAULT NULL,
+        short_desc VARCHAR(500) NULL,
+        start_at DATETIME NULL,
+        location VARCHAR(255) NULL,
+        online_link VARCHAR(500) NULL,
         created_by INT NOT NULL,
         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
-        INDEX (project_id),
-        INDEX (created_by),
-        INDEX (start_time)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+        updated_at DATETIME NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
 
-    $conn->query("CREATE TABLE IF NOT EXISTS project_meeting_participants (
+    $pdo->exec("CREATE TABLE IF NOT EXISTS project_meeting_contents (
+        meeting_id INT PRIMARY KEY,
+        content MEDIUMTEXT NULL,
+        updated_by INT NULL,
+        updated_at DATETIME NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+
+    $pdo->exec("CREATE TABLE IF NOT EXISTS project_meeting_participants (
         id INT AUTO_INCREMENT PRIMARY KEY,
         meeting_id INT NOT NULL,
-        user_id INT DEFAULT NULL,       -- internal participant (users.id)
-        external_name VARCHAR(255) DEFAULT NULL, -- external participant name/email/phone
-        type ENUM('internal','external') NOT NULL DEFAULT 'internal',
-        UNIQUE KEY uniq_internal (meeting_id, user_id),
-        INDEX (meeting_id)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+        user_id INT NULL,
+        external_name VARCHAR(255) NULL,
+        external_contact VARCHAR(255) NULL,
+        is_internal TINYINT(1) NOT NULL DEFAULT 1
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
 
-    $conn->query("CREATE TABLE IF NOT EXISTS project_meeting_notifications (
+    $pdo->exec("CREATE TABLE IF NOT EXISTS project_meeting_notifications (
         id INT AUTO_INCREMENT PRIMARY KEY,
-        project_id INT NOT NULL,
         meeting_id INT NOT NULL,
         sender_id INT NOT NULL,
-        receiver_id INT DEFAULT NULL,      -- null means external receiver; see receiver_name/email
-        receiver_name VARCHAR(255) DEFAULT NULL,
-        receiver_email VARCHAR(255) DEFAULT NULL,
+        receiver_id INT NULL,
+        external_contact VARCHAR(255) NULL,
         message VARCHAR(500) NOT NULL,
         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        is_read TINYINT(1) NOT NULL DEFAULT 0,
-        INDEX (project_id),
-        INDEX (meeting_id),
-        INDEX (receiver_id)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
-
-    // Access helpers
-    $stmt = $conn->prepare("SELECT 1 FROM project_group_members WHERE project_id=? AND user_id=? LIMIT 1");
-    $stmt->bind_param("ii", $project_id, $current_user_id);
-    $stmt->execute();
-    $is_member = $stmt->get_result()->num_rows > 0;
-    $stmt->close();
-
-    if (!$is_member) {
-        maybe_set_json_header();
-        echo json_encode(['ok' => false, 'error' => 'ACCESS_DENIED']);
-        exit;
-    }
-
-    $stmt = $conn->prepare("SELECT 1 FROM project_group_members WHERE project_id=? AND user_id=? AND role='control' LIMIT 1");
-    $stmt->bind_param("ii", $project_id, $current_user_id);
-    $stmt->execute();
-    $is_control = $stmt->get_result()->num_rows > 0;
-    $stmt->close();
-
-    $action = $_POST['action'] ?? ($_GET['action'] ?? '');
-
-    try {
-        switch ($action) {
-            case 'list':
-                // Filters
-                $kw = trim($_GET['q'] ?? '');
-                $date = trim($_GET['date'] ?? '');
-
-                $sql = "SELECT m.id, m.title, m.created_at, m.location, u.first_name, u.last_name
-                        FROM project_meetings m
-                        LEFT JOIN users u ON u.id = m.created_by
-                        WHERE m.project_id = ?";
-                $params = [$project_id];
-                $types = "i";
-
-                if ($kw !== '') {
-                    $sql .= " AND (m.title LIKE CONCAT('%', ?, '%') OR m.short_desc LIKE CONCAT('%', ?, '%'))";
-                    $params[] = $kw; $params[] = $kw; $types .= "ss";
-                }
-                if ($date !== '') {
-                    $sql .= " AND DATE(m.created_at) = ?";
-                    $params[] = $date; $types .= "s";
-                }
-                $sql .= " ORDER BY COALESCE(m.start_time, m.created_at) DESC";
-
-                $stmt = $conn->prepare($sql);
-                $stmt->bind_param($types, ...$params);
-                $stmt->execute();
-                $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-                $stmt->close();
-
-                maybe_set_json_header();
-                echo json_encode(['ok' => true, 'data' => $rows]);
-                break;
-
-            case 'get':
-                $meeting_id = intval($_GET['id'] ?? 0);
-                $stmt = $conn->prepare("SELECT m.*, CONCAT(u.first_name,' ',u.last_name) AS creator_name
-                                        FROM project_meetings m
-                                        LEFT JOIN users u ON u.id=m.created_by
-                                        WHERE m.id=? AND m.project_id=?");
-                $stmt->bind_param("ii", $meeting_id, $project_id);
-                $stmt->execute();
-                $meeting = $stmt->get_result()->fetch_assoc();
-                $stmt->close();
-
-                // participants
-                $stmt = $conn->prepare("SELECT p.*, CONCAT(u.first_name,' ',u.last_name) AS user_name, u.email 
-                                        FROM project_meeting_participants p
-                                        LEFT JOIN users u ON u.id=p.user_id
-                                        WHERE p.meeting_id=? ORDER BY p.id");
-                $stmt->bind_param("i", $meeting_id);
-                $stmt->execute();
-                $parts = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-                $stmt->close();
-
-                maybe_set_json_header();
-                echo json_encode(['ok' => true, 'meeting' => $meeting, 'participants' => $parts, 'is_control' => $is_control, 'current_user_id' => $current_user_id]);
-                break;
-
-            case 'create':
-                if (!$is_control) { maybe_set_json_header(); echo json_encode(['ok'=>false,'error'=>'NO_PERMISSION']); break; }
-                $title = trim($_POST['title'] ?? '');
-                $short_desc = trim($_POST['short_desc'] ?? '');
-                $online_link = trim($_POST['online_link'] ?? '');
-                $location = trim($_POST['location'] ?? '');
-                $start_time = trim($_POST['start_time'] ?? '');
-                if ($title === '') { maybe_set_json_header(); echo json_encode(['ok'=>false,'error'=>'TITLE_REQUIRED']); break; }
-
-                $stmt = $conn->prepare("INSERT INTO project_meetings (project_id,title,short_desc,online_link,location,start_time,created_by) VALUES (?,?,?,?,?,?,?)");
-                $stmt->bind_param("isssssi", $project_id, $title, $short_desc, $online_link, $location, $start_time, $current_user_id);
-                $stmt->execute();
-                $new_id = $stmt->insert_id;
-                $stmt->close();
-
-                maybe_set_json_header();
-                echo json_encode(['ok'=>true,'id'=>$new_id]);
-                break;
-
-            case 'update':
-                $meeting_id = intval($_POST['id'] ?? 0);
-
-                // allow only if creator == current user and user is control
-                $stmt = $conn->prepare("SELECT created_by FROM project_meetings WHERE id=? AND project_id=?");
-                $stmt->bind_param("ii", $meeting_id, $project_id);
-                $stmt->execute();
-                $row = $stmt->get_result()->fetch_assoc();
-                $stmt->close();
-
-                if (!$row || !$is_control || intval($row['created_by']) !== $current_user_id) {
-                    maybe_set_json_header(); echo json_encode(['ok'=>false,'error'=>'NO_PERMISSION']); break;
-                }
-
-                $title = trim($_POST['title'] ?? '');
-                $short_desc = trim($_POST['short_desc'] ?? '');
-                $online_link = trim($_POST['online_link'] ?? '');
-                $location = trim($_POST['location'] ?? '');
-                $start_time = trim($_POST['start_time'] ?? '');
-                $detail = trim($_POST['detail'] ?? '');
-
-                $stmt = $conn->prepare("UPDATE project_meetings SET title=?, short_desc=?, online_link=?, location=?, start_time=?, detail=? WHERE id=? AND project_id=?");
-                $stmt->bind_param("ssssssii", $title, $short_desc, $online_link, $location, $start_time, $detail, $meeting_id, $project_id);
-                $stmt->execute();
-                $stmt->close();
-
-                maybe_set_json_header(); echo json_encode(['ok'=>true]); break;
-
-            case 'delete':
-                $meeting_id = intval($_POST['id'] ?? 0);
-                // allow only if creator == current user and user is control
-                $stmt = $conn->prepare("SELECT created_by FROM project_meetings WHERE id=? AND project_id=?");
-                $stmt->bind_param("ii", $meeting_id, $project_id);
-                $stmt->execute();
-                $row = $stmt->get_result()->fetch_assoc();
-                $stmt->close();
-
-                if (!$row || !$is_control || intval($row['created_by']) !== $current_user_id) {
-                    maybe_set_json_header(); echo json_encode(['ok'=>false,'error'=>'NO_PERMISSION']); break;
-                }
-
-                $stmt = $conn->prepare("DELETE FROM project_meeting_participants WHERE meeting_id=?");
-                $stmt->bind_param("i", $meeting_id);
-                $stmt->execute();
-                $stmt->close();
-
-                $stmt = $conn->prepare("DELETE FROM project_meetings WHERE id=? AND project_id=?");
-                $stmt->bind_param("ii", $meeting_id, $project_id);
-                $stmt->execute();
-                $stmt->close();
-
-                maybe_set_json_header(); echo json_encode(['ok'=>true]); break;
-
-            case 'save_participants_and_notify':
-                $meeting_id = intval($_POST['id'] ?? 0);
-                // allow only if creator == current user and user is control
-                $stmt = $conn->prepare("SELECT title, start_time, online_link, location, created_by FROM project_meetings WHERE id=? AND project_id=?");
-                $stmt->bind_param("ii", $meeting_id, $project_id);
-                $stmt->execute();
-                $meeting = $stmt->get_result()->fetch_assoc();
-                $stmt->close();
-
-                if (!$meeting || !$is_control || intval($meeting['created_by']) !== $current_user_id) {
-                    maybe_set_json_header(); echo json_encode(['ok'=>false,'error'=>'NO_PERMISSION']); break;
-                }
-
-                $internal_ids = $_POST['internal_ids'] ?? []; // array of user IDs
-                $external_names = $_POST['external_names'] ?? []; // array of strings
-                if (!is_array($internal_ids)) $internal_ids = [];
-                if (!is_array($external_names)) $external_names = [];
-
-                // reset participants
-                $stmt = $conn->prepare("DELETE FROM project_meeting_participants WHERE meeting_id=?");
-                $stmt->bind_param("i", $meeting_id);
-                $stmt->execute();
-                $stmt->close();
-
-                // add internal
-                if (!empty($internal_ids)) {
-                    $stmt = $conn->prepare("INSERT INTO project_meeting_participants (meeting_id, user_id, type) VALUES (?,?, 'internal')");
-                    foreach ($internal_ids as $uid) {
-                        $uid = intval($uid);
-                        if ($uid > 0) { $stmt->bind_param("ii", $meeting_id, $uid); $stmt->execute(); }
-                    }
-                    $stmt->close();
-                }
-                // add external
-                if (!empty($external_names)) {
-                    $stmt = $conn->prepare("INSERT INTO project_meeting_participants (meeting_id, external_name, type) VALUES (?, ?, 'external')");
-                    foreach ($external_names as $name) {
-                        $name = trim((string)$name);
-                        if ($name !== '') { $stmt->bind_param("is", $meeting_id, $name); $stmt->execute(); }
-                    }
-                    $stmt->close();
-                }
-
-                // notifications for internal participants
-                $message = "Cuộc họp: ".$meeting['title']." | Thời gian: ".($meeting['start_time'] ?: 'Chưa xác định')." | Địa điểm: ".($meeting['location'] ?: '—')." | Online: ".($meeting['online_link'] ?: '—');
-                if (!empty($internal_ids)) {
-                    $stmt = $conn->prepare("INSERT INTO project_meeting_notifications (project_id, meeting_id, sender_id, receiver_id, message) VALUES (?,?,?,?,?)");
-                    foreach ($internal_ids as $uid) {
-                        $uid = intval($uid);
-                        if ($uid > 0) { $stmt->bind_param("iiiis", $project_id, $meeting_id, $current_user_id, $uid, $message); $stmt->execute(); }
-                    }
-                    $stmt->close();
-                }
-                // external notifications: store names only (optional email later)
-                if (!empty($external_names)) {
-                    $stmt = $conn->prepare("INSERT INTO project_meeting_notifications (project_id, meeting_id, sender_id, receiver_id, receiver_name, message) VALUES (?,?,?,?,?,?)");
-                    foreach ($external_names as $name) {
-                        $name = trim((string)$name);
-                        if ($name !== '') { $null = null; $stmt->bind_param("iiiiss", $project_id, $meeting_id, $current_user_id, $null, $name, $message); $stmt->execute(); }
-                    }
-                    $stmt->close();
-                }
-
-                maybe_set_json_header(); echo json_encode(['ok'=>true]); break;
-
-            case 'export_word':
-                // Export a super-simple .docx (actually .doc HTML) for quick download
-                $meeting_id = intval($_GET['id'] ?? 0);
-                // Basic fetch
-                $stmt = $conn->prepare("SELECT m.*, CONCAT(u.first_name,' ',u.last_name) AS creator_name
-                                        FROM project_meetings m
-                                        LEFT JOIN users u ON u.id = m.created_by
-                                        WHERE m.id=? AND m.project_id=?");
-                $stmt->bind_param("ii", $meeting_id, $project_id);
-                $stmt->execute();
-                $m = $stmt->get_result()->fetch_assoc();
-                $stmt->close();
-
-                if (!$m) {
-                    maybe_set_json_header(); echo json_encode(['ok'=>false,'error'=>'NOT_FOUND']); break;
-                }
-
-                // Word-compatible HTML
-                $filename = 'meeting_'.$meeting_id.'.doc';
-                if (!headers_sent()) {
-                    header("Content-Type: application/msword; charset=utf-8");
-                    header("Content-Disposition: attachment; filename=\"$filename\"");
-                }
-                echo "<html><head><meta charset='utf-8'></head><body>";
-                echo "<h2>Biên bản cuộc họp</h2>";
-                echo "<p><strong>Tên:</strong> ".htmlspecialchars($m['title'])."</p>";
-                echo "<p><strong>Thời gian:</strong> ".htmlspecialchars($m['start_time'] ?? '')."</p>";
-                echo "<p><strong>Địa điểm:</strong> ".htmlspecialchars($m['location'] ?? '')."</p>";
-                echo "<p><strong>Online:</strong> ".htmlspecialchars($m['online_link'] ?? '')."</p>";
-                echo "<hr>";
-                echo "<div>".($m['detail'] ?? '')."</div>";
-                echo "</body></html>";
-                break;
-
-            default:
-                maybe_set_json_header(); echo json_encode(['ok'=>false,'error'=>'UNKNOWN_ACTION']); break;
-        }
-    } catch (Throwable $e) {
-        maybe_set_json_header();
-        echo json_encode(['ok'=>false,'error'=>'EXCEPTION','message'=>$e->getMessage()]);
-    }
-    exit;
+        is_read TINYINT(1) NOT NULL DEFAULT 0
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
 }
 
-// -------------- Render HTML for the tab (when included) ----------------
+function user_in_project(PDO $pdo, $project_id, $user_id) {
+    if (!$project_id || !$user_id) return false;
+    $st = $pdo->prepare("SELECT 1 FROM project_group_members WHERE project_id=:p AND user_id=:u LIMIT 1");
+    $st->execute(array(':p'=>$project_id, ':u'=>$user_id));
+    return (bool)$st->fetchColumn();
+}
 
-?>
-<div id="meetings-tab" class="meetings-tab">
-    <?php if (!$conn): ?>
-        <div class="alert alert-danger">Không thể kết nối cơ sở dữ liệu. Hãy đảm bảo <code>config.php</code> đã được include trong <code>project_view.php</code> và thiết lập biến <code>$conn</code>.</div>
-    <?php elseif (!$current_user_id): ?>
-        <div class="alert alert-danger">Bạn chưa đăng nhập.</div>
-    <?php elseif (!$project_id): ?>
-        <div class="alert alert-danger">Thiếu <code>project_id</code> khi include tab Meetings.</div>
-    <?php else: ?>
-        <?php
-        // Check membership (view permission)
-        $stmt = $conn->prepare("SELECT 1 FROM project_group_members WHERE project_id=? AND user_id=? LIMIT 1");
-        $stmt->bind_param("ii", $project_id, $current_user_id);
-        $stmt->execute();
-        $is_member = $stmt->get_result()->num_rows > 0;
-        $stmt->close();
+function user_can_control(PDO $pdo, $project_id, $user_id) {
+    if (!$project_id || !$user_id) return false;
+    $st = $pdo->prepare("SELECT 1 FROM project_group_members WHERE project_id=:p AND user_id=:u AND role='control' LIMIT 1");
+    $st->execute(array(':p'=>$project_id, ':u'=>$user_id));
+    return (bool)$st->fetchColumn();
+}
 
-        $stmt = $conn->prepare("SELECT 1 FROM project_group_members WHERE project_id=? AND user_id=? AND role='control' LIMIT 1");
-        $stmt->bind_param("ii", $project_id, $current_user_id);
-        $stmt->execute();
-        $is_control = $stmt->get_result()->num_rows > 0;
-        $stmt->close();
-        ?>
-
-        <?php if (!$is_member): ?>
-            <div class="alert alert-warning">Bạn không thuộc dự án này. Truy cập bị từ chối.</div>
-        <?php else: ?>
-            <link rel="stylesheet" href="assets/css/project_tab_meetings.css">
-            <div class="mt-toolbar">
-                <div class="left">
-                    <input type="date" id="mt-filter-date">
-                    <input type="text" id="mt-filter-q" placeholder="Tìm theo tiêu đề...">
-                    <button id="mt-btn-refresh">Tìm kiếm</button>
-                </div>
-                <div class="right">
-                    <?php if ($is_control): ?>
-                        <button id="mt-btn-create">Tạo cuộc họp</button>
-                    <?php endif; ?>
-                </div>
-            </div>
-
-            <div class="mt-table-wrap">
-                <table class="mt-table" id="mt-table">
-                    <thead>
-                        <tr>
-                            <th>Tên cuộc họp</th>
-                            <th>Người tạo</th>
-                            <th>Ngày tạo</th>
-                            <th>Địa điểm</th>
-                            <th>Hành động</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-
-            <!-- Modal Create/Edit -->
-            <div class="mt-modal" id="mt-modal" style="display:none">
-                <div class="mt-modal-content">
-                    <h3 id="mt-modal-title">Tạo cuộc họp</h3>
-                    <label>Tên cuộc họp *</label>
-                    <input type="text" id="mt-title">
-                    <label>Mô tả ngắn</label>
-                    <input type="text" id="mt-short-desc">
-                    <label>Thời gian bắt đầu</label>
-                    <input type="datetime-local" id="mt-start-time">
-                    <label>Đường dẫn Online</label>
-                    <input type="url" id="mt-online-link" placeholder="https://...">
-                    <label>Địa điểm tổ chức</label>
-                    <input type="text" id="mt-location">
-                    <div class="mt-modal-actions">
-                        <button id="mt-save">Lưu</button>
-                        <button id="mt-cancel">Hủy</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Detail Drawer -->
-            <div class="mt-detail" id="mt-detail" style="display:none">
-                <div class="mt-detail-content">
-                    <div class="mt-detail-head">
-                        <h3 id="md-title">Chi tiết cuộc họp</h3>
-                        <button id="md-close">Đóng</button>
-                    </div>
-                    <!-- KV1 -->
-                    <div class="md-kv1">
-                        <div><strong>Thời gian:</strong> <span id="md-start"></span></div>
-                        <div><strong>Địa điểm:</strong> <span id="md-location"></span></div>
-                        <div><strong>Online:</strong> <a href="#" id="md-online" target="_blank">Mở</a></div>
-                    </div>
-                    <!-- KV2: Rich text -->
-                    <div class="md-kv2">
-                        <label>Nội dung chi tiết</label>
-                        <div class="md-toolbar">
-                            <button data-cmd="bold">B</button>
-                            <button data-cmd="italic"><em>I</em></button>
-                            <button data-cmd="underline"><u>U</u></button>
-                            <button data-cmd="strikeThrough"><s>S</s></button>
-                            <button data-cmd="insertOrderedList">OL</button>
-                            <button data-cmd="insertUnorderedList">UL</button>
-                            <button data-cmd="formatBlock" data-value="h3">H3</button>
-                            <button data-cmd="backColor" data-value="yellow">HL</button>
-                            <button data-cmd="foreColor" data-value="#d00">Red</button>
-                            <button id="md-insert-table">Table 3x3</button>
-                        </div>
-                        <div id="md-editor" contenteditable="true" class="md-editor"></div>
-                    </div>
-                    <!-- KV3: Participants -->
-                    <div class="md-kv3">
-                        <div class="md-part-columns">
-                            <div>
-                                <label>Thành viên trong dự án</label>
-                                <div id="md-internal-list" class="md-list"></div>
-                            </div>
-                            <div>
-                                <label>Thành viên ngoài dự án</label>
-                                <div id="md-external-list" class="md-list"></div>
-                                <button id="md-add-external">+ Thêm dòng</button>
-                            </div>
-                        </div>
-                        <div class="md-actions">
-                            <button id="md-save-all">Lưu & Gửi thông báo</button>
-                            <a id="md-export" href="#" class="md-export">Xuất biên bản (Word)</a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <script>
-                window.MEETINGS_CFG = {
-                    project_id: <?php echo intval($project_id); ?>,
-                    ajax_url: 'pages/partials/project_tab_meetings.php?ajax=1&project_id=<?php echo intval($project_id); ?>'
-                };
-            </script>
-            <script src="assets/js/project_tab_meetings.js"></script>
-        <?php endif; ?>
-    <?php endif; ?>
-</div>
+function is_owner_and_control(PDO $pdo, $project_id, $user_id, $meeting_id) {
+    if (!$project_id || !$user_id || !$meeting_id) return false;
+    $st = $pdo->prepare("SELECT created_by FROM project_meetings WHERE id=:id AND project_id=:pid");
+    $st->execute(array(':id'=>$meeting_id, ':pid'=>$project_id));
+    $creator = $st->fetchColumn();
+    if (!$creator || intval($creator) !== intval($user_id)) return false;
+    return user_can_control($pdo, $project_id, $user_id);
+}
