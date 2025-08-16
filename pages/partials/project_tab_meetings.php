@@ -94,12 +94,12 @@ if (!isset($_GET['ajax']) && !isset($_POST['ajax'])) {
                             <th>Meeting title</th>
                             <th>Creator</th>
                             <th>Created at</th>
-                            <th>Location</th>
+                            <th>Start time</th><th>Online link</th><th>Location</th>
                             <th>Action</th>
                         </tr>
                     </thead>
                     <tbody id="mt-tbody">
-                        <tr><td colspan="5" class="txt-center muted">Loading...</td></tr>
+                        <tr><td colspan="7" class="txt-center muted">Loading...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -279,7 +279,9 @@ if ($action === 'list') {
     exit;
 }
 
-if ($action === 'create') {
+if ($action === 'create') {  if ($start_at === '') { echo json_encode(array('ok'=>false,'error'=>'VALIDATION','message'=>'Start time is required.')); exit; }
+  $start_at = isset($_POST['start_at']) ? trim($_POST['start_at']) : '';
+
     if (!user_can_control($pdo, $project_id, $current_user_id)) { echo json_encode(array('ok'=>false,'error'=>'NO_PERMISSION','message'=>'Only control role can create meetings.')); exit; }
     $title = isset($_POST['title']) ? trim($_POST['title']) : '';
     if ($title === '') { echo json_encode(array('ok'=>false,'error'=>'VALIDATION','message'=>'Meeting title is required.')); exit; }
@@ -319,7 +321,19 @@ if ($action === 'get') {
     $meeting = $stmt->fetch(PDO::FETCH_ASSOC);
     if (!$meeting) { echo json_encode(array('ok'=>false,'error'=>'NOT_FOUND')); exit; }
 
-    $stmt = $pdo->prepare("SELECT content FROM project_meeting_contents WHERE meeting_id=:id");
+    $stmt = $pdo->prepare("SELECT
+  m.id,
+  m.title AS title,
+  COALESCE(u.fullname, '') AS creator_name,
+  m.created_at AS created_at,
+  COALESCE(m.start_at, m.start_time) AS start_at,
+  COALESCE(m.online_link, m.online_url) AS online_link,
+  m.location AS location
+FROM project_meetings m
+LEFT JOIN users u ON u.id = COALESCE(m.created_by, m.creator_id)
+WHERE m.project_id = ?
+ORDER BY COALESCE(m.start_at, m.start_time, m.created_at) DESC, m.id DESC
+LIMIT 1000");
     $stmt->execute(array(':id'=>$id));
     $content = $stmt->fetchColumn();
     if (!$content) $content = '';
