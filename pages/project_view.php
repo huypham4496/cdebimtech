@@ -34,7 +34,18 @@ $cands = [
 ];
 $userId = 0; foreach ($cands as $v) { if (is_numeric($v) && (int)$v>0) { $userId = (int)$v; break; } }
 if (!$userId) { header('Location: /index.php'); exit; }
+// ==== GATEWAY for Meetings AJAX (place BEFORE any HTML output) ====
+if (isset($_GET['ajax_meetings']) || isset($_POST['ajax_meetings'])) {
+    if (session_status() === PHP_SESSION_NONE) session_start();
 
+    // Cấp context cho partial nếu request có truyền
+    $project_id = isset($_REQUEST['project_id']) ? (int)$_REQUEST['project_id'] : (isset($project_id)?(int)$project_id:0);
+    $current_user_id = isset($_REQUEST['user_id']) ? (int)$_REQUEST['user_id']
+        : (isset($current_user_id)?(int)$current_user_id : (isset($_SESSION['user_id'])?(int)$_SESSION['user_id']:0));
+
+    require __DIR__ . '/partials/project_tab_meetings.php';
+    exit; // trả JSON, không render HTML
+}
 /** ===== AJAX proxy for Daily Logs (MUST be before any HTML or guards) ===== */
 if (isset($_GET['ajax']) && $_GET['ajax'] === 'daily') {
     // Nhận project id từ project_id hoặc id (ưu tiên project_id)
@@ -44,18 +55,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'daily') {
         if (isset($_GET['project_id'])) $projectId = (int)$_GET['project_id'];
         elseif (isset($_GET['id']))     $projectId = (int)$_GET['id'];
     }
-// ==== GATEWAY for Meetings AJAX (place BEFORE any HTML output) ====
-if (isset($_GET['ajax_meetings']) || isset($_POST['ajax_meetings'])) {
-    if (session_status() === PHP_SESSION_NONE) session_start();
 
-    // Cấp sẵn context cho partial (nếu request có truyền)
-    $project_id = isset($_REQUEST['project_id']) ? (int)$_REQUEST['project_id'] : (isset($project_id)?(int)$project_id:0);
-    $current_user_id = isset($_REQUEST['user_id']) ? (int)$_REQUEST['user_id'] 
-        : (isset($current_user_id)?(int)$current_user_id : (isset($_SESSION['user_id'])?(int)$_SESSION['user_id']:0));
-
-    require __DIR__ . '/partials/project_tab_meetings.php';
-    exit; // trả JSON, không render HTML trang
-}
     // Dọn buffer và tắt hiển thị warning để JSON không bị bẩn
     while (ob_get_level()) { ob_end_clean(); }
     ini_set('display_errors', '0');
