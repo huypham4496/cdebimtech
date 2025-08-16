@@ -4,6 +4,18 @@
   function warn(){ try{ (console && console.warn).apply(console, ['[Meetings]'].concat([].slice.call(arguments))); }catch(e){} }
   function error(){ try{ (console && console.error).apply(console, ['[Meetings]'].concat([].slice.call(arguments))); }catch(e){} }
 
+  // Polyfill for Element.closest (older browsers)
+  if (!Element.prototype.closest) {
+    Element.prototype.closest = function(selector) {
+      var el = this;
+      while (el) {
+        if (el.matches && el.matches(selector)) return el;
+        el = el.parentElement;
+      }
+      return null;
+    };
+  }
+
   function deriveApiUrl(){
     if (window.CDE && CDE.meetingsApiUrl){ return CDE.meetingsApiUrl; }
     var scripts = document.getElementsByTagName('script');
@@ -17,7 +29,6 @@
         }catch(e){}
       }
     }
-    // Fallback: guess from current path
     try{
       var here = location.pathname;
       var base = here.replace(/\/pages\/.*/, '');
@@ -33,20 +44,36 @@
     return isNaN(dt) ? String(d) : dt.toLocaleString();
   }
 
+  function safeJsonResponse(r, url){
+    var ct = (r.headers.get && r.headers.get('content-type')) || '';
+    if (ct && ct.indexOf('application/json') !== -1) return r.json();
+    return r.text().then(function(t){
+      // Try to salvage JSON even if header is wrong
+      var txt = (t||'').trim().replace(/^\uFEFF/, ''); // strip BOM
+      try { return JSON.parse(txt); }
+      catch(e){
+        error('Non-JSON response from', url, 'Content-Type:', ct, 'Body:', txt.slice(0, 3000));
+        throw new Error('Non-JSON response');
+      }
+    });
+  }
+
   onReady(function init(){
     var root = document.querySelector('.meetings-wrapper');
     if (!root){ warn('Root .meetings-wrapper not found'); return; }
 
-    var projectId = root.getAttribute('data-project-id') || (new URLSearchParams(location.search).get('project_id') || '');
-    var tbody = document.getElementById('meetings-tbody') || (root.querySelector('tbody') || null);
-    var btnNew = document.getElementById('btn-new-meeting');
-    var modal = document.getElementById('mtg-modal');
-    var btnSave = document.getElementById('mtg-save');
+    var tbody = document.getElementById('meetings-tbody') || root.querySelector('tbody');
+    var btnNew = document.getElementById('btn-new-meeting') || root.querySelector('.btn-new-meeting, [data-action="new-meeting"]');
+    var modal = document.getElementById('mtg-modal') || document.querySelector('.mtg-modal, #meeting-modal');
+    var btnSave = document.getElementById('mtg-save') || document.querySelector('#mtg-save, .btn-save-meeting');
+    var titleEl = document.getElementById('mtg-title') || document.querySelector('[name="meeting_title"], #meeting-title');
+    var startEl = document.getElementById('mtg-start') || document.querySelector('[name="start_at"], #meeting-start');
+    var locEl   = document.getElementById('mtg-location') || document.querySelector('[name="location"], #meeting-location');
+    var linkEl  = document.getElementById('mtg-online') || document.querySelector('[name="online_link"], #meeting-online');
 
-    var titleEl = document.getElementById('mtg-title');
-    var startEl = document.getElementById('mtg-start');
-    var locEl = document.getElementById('mtg-location');
-    var linkEl = document.getElementById('mtg-online');
+    var projectId = root.getAttribute('data-project-id')
+                  || (document.getElementById('project_id') && document.getElementById('project_id').value)
+                  || (new URLSearchParams(location.search).get('project_id') || '');
 
     var API_URL = deriveApiUrl();
     window._MEETINGS_DEBUG = { projectId: projectId, API_URL: API_URL };
@@ -54,6 +81,11 @@
 
     function api(action, data, method){
       method = method || 'GET';
+      if (!projectId){
+        if (tbody) tbody.innerHTML = '<tr><td colspan="7">Missing project id.</td></tr>';
+        warn('Missing project_id; abort', action);
+        return Promise.reject(new Error('Missing project id'));
+      }
       var url = API_URL + '?action=' + encodeURIComponent(action) + '&project_id=' + encodeURIComponent(projectId||'');
       var opts = { method: method, credentials: 'same-origin' };
       if (method === 'POST'){
@@ -64,16 +96,7 @@
         opts.body = body.toString();
       }
       log('Fetch', url, opts);
-      return fetch(url, opts).then(function(r){
-        var ct = r.headers.get('content-type') || '';
-        if (ct.indexOf('application/json') === -1){
-          return r.text().then(function(t){
-            error('Non-JSON response', ct, 'Body:', t);
-            throw new Error('Non-JSON response');
-          });
-        }
-        return r.json();
-      });
+      return fetch(url, opts).then(function(r){ return safeJsonResponse(r, url); });
     }
 
     function render(rows){
@@ -112,11 +135,14 @@
       tbody.innerHTML = '<tr><td colspan="7">Loading...</td></tr>';
       api('list').then(function(res){
         log('List response', res);
-        if (!res || res.ok !== true){ tbody.innerHTML = '<tr><td colspan="7">' + esc((res && (res.error||res.message)) || 'Failed to load.') + '</td></tr>'; return; }
+        if (!res || res.ok !== true){
+          tbody.innerHTML = '<tr><td colspan="7">' + esc((res && (res.error||res.message)) || 'Failed to load.') + '</td></tr>';
+          return;
+        }
         render(res.rows);
       }).catch(function(err){
         error('Load failed', err);
-        tbody.innerHTML = '<tr><td colspan="7">Failed to load.</td></tr>';
+        if (tbody) tbody.innerHTML = '<tr><td colspan="7">Failed to load.</td></tr>';
       });
     }
 
@@ -124,37 +150,13 @@
       if (!modal) return;
       try {
         if (show){
-          modal.hidden = false;
-          modal.style.display = 'flex';
+          modal.hidden = false; modal.style.display = 'flex';
           if (titleEl) setTimeout(function(){ try{ titleEl.focus(); }catch(e){} }, 0);
-        }else{
-          modal.hidden = true;
-          modal.style.display = 'none';
+        } else {
+          modal.hidden = true; modal.style.display = 'none';
         }
       } catch(e){}
     }
-
-    // Direct bindings
-    if (btnNew) btnNew.addEventListener('click', function(){ showModal(true); });
-    if (modal){
-      var closeBtn = modal.querySelector('.mtg-close');
-      var cancelBtn = modal.querySelector('.mtg-cancel');
-      if (closeBtn) closeBtn.addEventListener('click', function(){ showModal(false); });
-      if (cancelBtn) cancelBtn.addEventListener('click', function(){ showModal(false); });
-    }
-
-    // Delegation fallback (if buttons are rendered later)
-    document.addEventListener('click', function(e){
-      var t = e.target;
-      if (t.closest && t.closest('#btn-new-meeting')){ showModal(true); }
-      if (t.closest && t.closest('.mtg-close')){ showModal(false); }
-      if (t.closest && t.closest('.mtg-cancel')){ showModal(false); }
-      if (t.closest && t.closest('#mtg-save')){
-        e.preventDefault();
-        if (!btnSave) btnSave = t.closest('#mtg-save');
-        doSave();
-      }
-    });
 
     function doSave(){
       var title = (titleEl && titleEl.value || '').trim();
@@ -176,15 +178,25 @@
         });
     }
 
+    // Bindings (direct)
+    if (btnNew) btnNew.addEventListener('click', function(){ showModal(true); });
     if (btnSave) btnSave.addEventListener('click', function(e){ e.preventDefault(); doSave(); });
+    if (modal){
+      var closeBtn = modal.querySelector('.mtg-close');
+      var cancelBtn = modal.querySelector('.mtg-cancel');
+      if (closeBtn) closeBtn.addEventListener('click', function(){ showModal(false); });
+      if (cancelBtn) cancelBtn.addEventListener('click', function(){ showModal(false); });
+    }
 
-    // Initial load
+    // Delegation (fallback)
+    document.addEventListener('click', function(e){
+      var t = e.target;
+      if (t.closest && (t.closest('#btn-new-meeting') || t.closest('.btn-new-meeting') || t.closest('[data-action="new-meeting"]'))){ showModal(true); }
+      if (t.closest && t.closest('#mtg-save')){ e.preventDefault(); doSave(); }
+      if (t.closest && (t.closest('.mtg-close') || t.closest('.mtg-cancel'))){ showModal(false); }
+    });
+
+    // Kick off
     load();
-
-    // Re-attach after a short delay in case DOM was injected late
-    setTimeout(function(){
-      if (!btnNew){ btnNew = document.getElementById('btn-new-meeting'); if (btnNew) btnNew.addEventListener('click', function(){ showModal(true); }); }
-      if (!btnSave){ btnSave = document.getElementById('mtg-save'); if (btnSave) btnSave.addEventListener('click', function(e){ e.preventDefault(); doSave(); }); }
-    }, 300);
   });
 })();
