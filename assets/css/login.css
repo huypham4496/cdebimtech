@@ -5,7 +5,9 @@
   --primary-color: #fca415;
   --bg-overlay: rgba(0,0,0,0.6);
 }
-
+body {
+  overflow-y: hidden; /* Ẩn cuộn dọc */
+}
 /* Reset và font chung */
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body {
