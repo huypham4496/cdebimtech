@@ -7,7 +7,7 @@
   padding: 12px 14px;
   border: 1px solid #f0c36d;
   background: #fff8e1;
-  border-radius: 10px;
+  border-radius: 12px;
   color: #7a5b00;
 }
 
@@ -29,37 +29,38 @@
 
 .mt-search input[type="text"],
 .mt-search input[type="date"] {
-  height: 36px;
+  height: 38px;
   padding: 6px 10px;
-  border: 1px solid #e3e3e8;
-  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
   outline: none;
+  background: #fff;
 }
 .mt-search input[type="text"]:focus,
 .mt-search input[type="date"]:focus {
-  border-color: #8ab4f8;
-  box-shadow: 0 0 0 3px rgba(138,180,248,.25);
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 3px rgba(147,197,253,.25);
 }
 
 button.primary {
   background: #2563eb;
   color: #fff;
   border: none;
-  padding: 8px 12px;
-  border-radius: 10px;
+  padding: 9px 14px;
+  border-radius: 12px;
   cursor: pointer;
-  height: 36px;
+  height: 38px;
 }
 button.primary:hover { background: #1e4ed8; }
 
 button.ghost {
   background: transparent;
-  color: #333;
+  color: #374151;
   border: 1px solid #d1d5db;
-  padding: 7px 12px;
-  border-radius: 10px;
+  padding: 8px 12px;
+  border-radius: 12px;
   cursor: pointer;
-  height: 36px;
+  height: 38px;
 }
 button.ghost:hover { background: #f8fafc; }
 
@@ -74,52 +75,61 @@ button.link.danger { color: #dc2626; }
 
 .mt-tilde { opacity: 0.7; }
 
-.mt-table-wrap { width: 100%; overflow: auto; border: 1px solid #eee; border-radius: 12px; }
-.mt-table { width: 100%; border-collapse: collapse; }
-.mt-table th, .mt-table td {
-  padding: 10px 12px;
-  border-bottom: 1px solid #f1f5f9;
-  text-align: left;
-  vertical-align: middle;
-}
+.mt-table-wrap { width: 100%; overflow: auto; border: 1px solid #eef2f7; border-radius: 14px; }
+.mt-table { width: 100%; border-collapse: separate; border-spacing: 0; }
 .mt-table thead th {
+  position: sticky; top: 0;
   background: #f8fafc;
+  text-align: left;
+  padding: 12px 14px;
   font-weight: 600;
+  color: #111827;
+  border-bottom: 1px solid #e5e7eb;
+}
+.mt-table tbody td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
 }
 .mt-table tbody tr:hover { background: #fafafa; }
 .mt-table .muted { color: #6b7280; text-align: center; }
 .mt-table .error { color: #b91c1c; text-align: center; }
-.mt-title { font-weight: 600; text-decoration: none; color: #111827; }
+.mt-title { font-weight: 600; text-decoration: none; color: #0f172a; }
 .mt-title:hover { text-decoration: underline; }
 
 .mt-actions { white-space: nowrap; display: flex; gap: 12px; }
 
+.sortable { user-select: none; cursor: pointer; }
+.sortable .sort-indicator { margin-left: 4px; opacity: .7; }
+
+/* Modal */
 .mt-modal.hidden { display: none; }
 .mt-modal {
-  position: fixed; inset: 0; background: rgba(0,0,0,.35);
+  position: fixed; inset: 0; background: rgba(15,23,42,.45);
   display: flex; align-items: center; justify-content: center;
   z-index: 1000;
+  backdrop-filter: blur(2px);
 }
 .mt-modal-dialog {
-  width: min(700px, 92vw);
+  width: min(720px, 94vw);
   background: #fff;
   border-radius: 16px;
-  box-shadow: 0 10px 30px rgba(0,0,0,.2);
+  box-shadow: 0 20px 50px rgba(0,0,0,.25);
   overflow: hidden;
-  animation: mtPop .15s ease-out;
+  animation: mtPop .18s ease-out;
 }
-@keyframes mtPop { from { transform: scale(.98); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes mtPop { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
 .mt-modal-header, .mt-modal-footer {
-  padding: 14px 16px;
+  padding: 16px 18px;
   background: #f8fafc;
   display: flex; align-items: center; justify-content: space-between;
 }
 .mt-modal-header h3 { margin: 0; font-size: 18px; }
 .mt-modal-close {
-  background: transparent; border: none; font-size: 20px; cursor: pointer; line-height: 1;
+  background: transparent; border: none; font-size: 22px; cursor: pointer; line-height: 1;
 }
-.mt-modal-body { padding: 16px; display: grid; gap: 12px; }
+.mt-modal-body { padding: 18px; display: grid; gap: 12px; }
 .mt-field { display: grid; gap: 6px; }
 .mt-field.two { grid-template-columns: 1fr 1fr; gap: 12px; }
 .mt-field label { font-size: 13px; color: #374151; }
@@ -127,8 +137,8 @@ button.link.danger { color: #dc2626; }
 .mt-field input[type="url"],
 .mt-field input[type="datetime-local"],
 .mt-field textarea {
-  border: 1px solid #e5e7eb; border-radius: 10px; padding: 8px 10px;
-  outline: none;
+  border: 1px solid #e5e7eb; border-radius: 12px; padding: 9px 11px;
+  outline: none; background: #fff;
 }
 .mt-field input:focus, .mt-field textarea:focus {
   border-color: #93c5fd; box-shadow: 0 0 0 3px rgba(147,197,253,.25);
