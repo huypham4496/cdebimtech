@@ -370,6 +370,7 @@ $monthName = strtolower($current->format('F'));
 // — Render UI —
 include $root . '/includes/header.php';
 ?>
+  <link rel="stylesheet" href="../assets/fonts/font_inter.css?v=<?php echo filemtime('../assets/fonts/font_inter.css'); ?>">
   <link rel="stylesheet" href="../assets/css/sidebar.css?v=<?php echo filemtime('../assets/css/sidebar.css'); ?>">
   <link rel="stylesheet" href="../assets/css/work_diary.css?v=<?php echo filemtime('../assets/css/work_diary.css'); ?>">
   <link rel="stylesheet" href="../assets/css/all.min.css?v=<?php echo filemtime('../assets/css/all.min.css'); ?>">
