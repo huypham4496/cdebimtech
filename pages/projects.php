@@ -210,10 +210,8 @@ $projects = $stm->fetchAll(PDO::FETCH_ASSOC) ?: [];
   <title>Projects</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <!-- Font Awesome 5 -->
-  <link rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
-        integrity="sha512-dynvDxJ5aVF6oU1i6zfoalvVYvNvKcJste/0q5u+P/gPm4jG3E5s3UeJ8V+RaH59RUW2YCiMzZ6pyRrg58F3CA=="
-        crossorigin="anonymous" referrerpolicy="no-referrer" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" crossorigin="anonymous" />
+
   <!-- Your CSS (flat light theme) -->
   <link rel="stylesheet" href="../assets/css/projects.css">
   <link rel="stylesheet" href="../assets/css/sidebar.css?v=<?php echo time(); ?>">
