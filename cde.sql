@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Aug 19, 2025 at 04:04 AM
+-- Generation Time: Aug 20, 2025 at 11:56 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -629,6 +629,64 @@ INSERT INTO `project_material_out` (`id`, `project_id`, `name`, `code`, `qty_out
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `project_meetings`
+--
+
+CREATE TABLE `project_meetings` (
+  `id` int(11) NOT NULL,
+  `project_id` int(11) NOT NULL,
+  `title` varchar(255) NOT NULL,
+  `short_desc` varchar(500) DEFAULT NULL,
+  `online_link` varchar(500) DEFAULT NULL,
+  `location` varchar(255) DEFAULT NULL,
+  `start_time` datetime NOT NULL,
+  `created_by` int(11) NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `project_meetings`
+--
+
+INSERT INTO `project_meetings` (`id`, `project_id`, `title`, `short_desc`, `online_link`, `location`, `start_time`, `created_by`, `created_at`) VALUES
+(1, 6, 'Hướng dẫn sử dụng CDE', 'Sử dụng CDE trên hệ thống Bimtech', '#', 'Quảng Ninh', '2025-08-20 16:55:00', 1, '2025-08-20 16:55:20'),
+(2, 6, 'Demo2', 'Text nhanh', 'https://www.facebook.com/', 'NCC', '2025-08-30 16:55:00', 1, '2025-08-20 16:55:58');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `project_meeting_attendees`
+--
+
+CREATE TABLE `project_meeting_attendees` (
+  `id` int(11) NOT NULL,
+  `meeting_id` int(11) NOT NULL,
+  `user_id` int(11) DEFAULT NULL,
+  `external_name` varchar(255) DEFAULT NULL,
+  `external_email` varchar(255) DEFAULT NULL,
+  `is_external` tinyint(1) NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `project_meeting_notifications`
+--
+
+CREATE TABLE `project_meeting_notifications` (
+  `id` int(11) NOT NULL,
+  `project_id` int(11) NOT NULL,
+  `meeting_id` int(11) NOT NULL,
+  `sender_id` int(11) NOT NULL,
+  `receiver_id` int(11) NOT NULL,
+  `message` varchar(500) NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `is_read` tinyint(1) NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `project_members`
 --
 
@@ -963,6 +1021,8 @@ INSERT INTO `work_diary_entries` (`user_id`, `entry_date`, `period`, `content`, 
 (1, '2025-08-19', 'morning', 'Sửa kè Vincom\r\nCập nhật lại tính năng tạo văn bản cuộc họp trên CDE', NULL, '2025-08-19 02:04:01', '2025-08-19 02:04:01'),
 (1, '2025-08-19', 'afternoon', 'Sửa kè Vincom', NULL, '2025-08-19 02:04:02', '2025-08-19 02:04:02'),
 (1, '2025-08-19', 'evening', 'Nghỉ', NULL, '2025-08-19 02:04:02', '2025-08-19 02:04:02'),
+(1, '2025-08-20', 'morning', 'Sửa kè Vincom', NULL, '2025-08-20 04:29:18', '2025-08-20 04:29:18'),
+(1, '2025-08-20', 'evening', 'Nghỉ', NULL, '2025-08-20 04:29:18', '2025-08-20 04:29:18'),
 (12, '2025-07-01', 'morning', 'làm', NULL, '2025-08-07 04:29:54', '2025-08-07 04:29:54'),
 (12, '2025-07-01', 'afternoon', 'làm', NULL, '2025-08-07 04:29:54', '2025-08-07 04:29:54'),
 (12, '2025-07-02', 'morning', 'làm', NULL, '2025-08-07 04:30:01', '2025-08-07 04:30:01'),
@@ -1306,10 +1366,10 @@ INSERT INTO `work_diary_entries` (`user_id`, `entry_date`, `period`, `content`, 
 (16, '2025-07-16', 'afternoon', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:34:03', '2025-08-07 09:34:03'),
 (16, '2025-07-16', 'evening', 'Nghỉ', NULL, '2025-08-07 09:34:03', '2025-08-07 09:34:03'),
 (16, '2025-07-17', 'morning', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:34:06', '2025-08-07 09:34:06'),
-(16, '2025-07-17', 'afternoon', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:34:06', '2025-08-07 09:34:06'),
-(16, '2025-07-17', 'evening', 'Nghỉ', NULL, '2025-08-07 09:34:06', '2025-08-07 09:34:06'),
-(16, '2025-07-18', 'morning', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:34:10', '2025-08-07 09:34:10');
+(16, '2025-07-17', 'afternoon', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:34:06', '2025-08-07 09:34:06');
 INSERT INTO `work_diary_entries` (`user_id`, `entry_date`, `period`, `content`, `note`, `created_at`, `updated_at`) VALUES
+(16, '2025-07-17', 'evening', 'Nghỉ', NULL, '2025-08-07 09:34:06', '2025-08-07 09:34:06'),
+(16, '2025-07-18', 'morning', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:34:10', '2025-08-07 09:34:10'),
 (16, '2025-07-18', 'afternoon', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:34:10', '2025-08-07 09:34:10'),
 (16, '2025-07-18', 'evening', 'Nghỉ', NULL, '2025-08-07 09:34:10', '2025-08-07 09:34:10'),
 (16, '2025-07-19', 'morning', 'Nghỉ', NULL, '2025-08-07 09:34:15', '2025-08-07 09:34:15'),
@@ -1920,6 +1980,33 @@ ALTER TABLE `project_material_out`
   ADD KEY `out_date` (`out_date`);
 
 --
+-- Indexes for table `project_meetings`
+--
+ALTER TABLE `project_meetings`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_prj` (`project_id`),
+  ADD KEY `idx_start` (`start_time`),
+  ADD KEY `fk_pm_user` (`created_by`);
+
+--
+-- Indexes for table `project_meeting_attendees`
+--
+ALTER TABLE `project_meeting_attendees`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_meeting` (`meeting_id`),
+  ADD KEY `idx_user` (`user_id`);
+
+--
+-- Indexes for table `project_meeting_notifications`
+--
+ALTER TABLE `project_meeting_notifications`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_project` (`project_id`),
+  ADD KEY `idx_meeting` (`meeting_id`),
+  ADD KEY `idx_receiver` (`receiver_id`),
+  ADD KEY `fk_pmn_sender` (`sender_id`);
+
+--
 -- Indexes for table `project_members`
 --
 ALTER TABLE `project_members`
@@ -2108,6 +2195,24 @@ ALTER TABLE `project_material_out`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
+-- AUTO_INCREMENT for table `project_meetings`
+--
+ALTER TABLE `project_meetings`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
+-- AUTO_INCREMENT for table `project_meeting_attendees`
+--
+ALTER TABLE `project_meeting_attendees`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `project_meeting_notifications`
+--
+ALTER TABLE `project_meeting_notifications`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `project_naming_rules`
 --
 ALTER TABLE `project_naming_rules`
@@ -2178,6 +2283,29 @@ ALTER TABLE `organization_member_profiles`
 --
 ALTER TABLE `project_color_items`
   ADD CONSTRAINT `fk_color_group` FOREIGN KEY (`group_id`) REFERENCES `project_color_groups` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `project_meetings`
+--
+ALTER TABLE `project_meetings`
+  ADD CONSTRAINT `fk_pm_prj` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_pm_user` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `project_meeting_attendees`
+--
+ALTER TABLE `project_meeting_attendees`
+  ADD CONSTRAINT `fk_pma_meeting` FOREIGN KEY (`meeting_id`) REFERENCES `project_meetings` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_pma_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `project_meeting_notifications`
+--
+ALTER TABLE `project_meeting_notifications`
+  ADD CONSTRAINT `fk_pmn_meeting` FOREIGN KEY (`meeting_id`) REFERENCES `project_meetings` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_pmn_prj` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_pmn_receiver` FOREIGN KEY (`receiver_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_pmn_sender` FOREIGN KEY (`sender_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `subscription_orders`
