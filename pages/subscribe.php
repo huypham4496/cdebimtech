@@ -87,9 +87,9 @@ $pay = $pdo->query('SELECT * FROM payment_settings WHERE id = 1')->fetch(PDO::FE
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Subscribe - <?= htmlspecialchars($sub['name']) ?></title>
-  <link rel="stylesheet" href="../assets/css/subscribe.css?v=<?php echo filemtime('../assets/css/subscribe.css'); ?>">
-  <link rel="stylesheet" href="../assets/css/dashboard.css?v=<?php echo filemtime('../assets/css/dashboard.css'); ?>">
+  <link rel="stylesheet" href="../assets/fonts/font_inter.css?v=<?php echo filemtime('../assets/fonts/font_inter.css'); ?>">
   <link rel="stylesheet" href="../assets/css/sidebar.css?v=<?php echo filemtime('../assets/css/sidebar.css'); ?>">
+  <link rel="stylesheet" href="../assets/css/subscribe.css?v=<?php echo filemtime('../assets/css/subscribe.css'); ?>">
   <link rel="stylesheet" href="../assets/css/all.min.css?v=<?php echo filemtime('../assets/css/all.min.css'); ?>">
   <style>
     .voucher-message { margin:1rem 0; color:#d9534f; font-weight:500; }
