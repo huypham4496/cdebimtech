@@ -31,16 +31,6 @@ $currentSub = (int)$stmt->fetchColumn();
 $stmt = $pdo->query('SELECT id, name, price, description FROM subscriptions ORDER BY id ASC');
 $subscriptions = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Cache-bust CSS
-$verSub = file_exists(__DIR__ . '/../assets/css/subscriptions.css')
-    ? filemtime(__DIR__ . '/../assets/css/subscriptions.css')
-    : time();
-$verSidebar = file_exists(__DIR__ . '/../assets/css/sidebar.css')
-    ? filemtime(__DIR__ . '/../assets/css/sidebar.css')
-    : time();
-$verDash = file_exists(__DIR__ . '/../assets/css/dashboard.css')
-    ? filemtime(__DIR__ . '/../assets/css/dashboard.css')
-    : time();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -48,17 +38,11 @@ $verDash = file_exists(__DIR__ . '/../assets/css/dashboard.css')
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Subscriptions | CDE Bimtech</title>
-
-  <!-- Font Awesome -->
-  <link rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
-        integrity="sha512-dynvDxJ5aVF6oU1i6zfoalvVYvNvKcJste/0q5u+P%2FgPm4jG3E5s3UeJ8V+RaH59RUW2YCiMzZ6pyRrg58F3CA=="
-        crossorigin="anonymous" referrerpolicy="no-referrer" />
-
   <!-- Page CSS -->
-  <link rel="stylesheet" href="../assets/css/subscriptions.css?v=<?= $verSub ?>">
-  <link rel="stylesheet" href="../assets/css/sidebar.css?v=<?= $verSidebar ?>">
-
+  <link rel="stylesheet" href="../assets/fonts/font_inter.css?v=<?php echo filemtime('../assets/fonts/font_inter.css'); ?>">
+  <link rel="stylesheet" href="../assets/css/all.min.css?v=<?php echo filemtime('../assets/css/all.min.css'); ?>">
+  <link rel="stylesheet" href="../assets/css/sidebar.css?v=<?php echo filemtime('../assets/css/sidebar.css'); ?>">
+  <link rel="stylesheet" href="../assets/css/subscriptions.css?v=<?php echo filemtime('../assets/css/subscriptions.css'); ?>">
 </head>
 <body>
   <?php include __DIR__ . '/sidebar.php'; ?>
