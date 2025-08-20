@@ -368,18 +368,11 @@ $dayNum    = $current->format('j');
 $monthName = strtolower($current->format('F'));
 
 // — Render UI —
-$vS = filemtime(__DIR__ . '/../assets/css/sidebar.css');
-$vD = filemtime(__DIR__ . '/../assets/css/work_diary.css');
 include $root . '/includes/header.php';
 ?>
-  <link rel="stylesheet"
-        href="../assets/css/sidebar.css?v=<?php echo filemtime('../assets/css/sidebar.css'); ?>">
-  <link rel="stylesheet"
-        href="../assets/css/work_diary.css?v=<?php echo filemtime('../assets/css/work_diary.css'); ?>">
-  <link rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
-        integrity="sha512-dynvDxJ5aVF6oU1i6zfoalvVYvNvKcJste/0q5u+P%2FgPm4jG3E5s3UeJ8V+RaH59RUW2YCiMzZ6pyRrg58F3CA=="
-        crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link rel="stylesheet" href="../assets/css/sidebar.css?v=<?php echo filemtime('../assets/css/sidebar.css'); ?>">
+  <link rel="stylesheet" href="../assets/css/work_diary.css?v=<?php echo filemtime('../assets/css/work_diary.css'); ?>">
+  <link rel="stylesheet" href="../assets/css/all.min.css?v=<?php echo filemtime('../assets/css/all.min.css'); ?>">
 <?php include __DIR__ . '/sidebar.php'; ?>
 
 <?php if (!empty($saveMsg)): ?>
