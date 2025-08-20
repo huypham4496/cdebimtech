@@ -81,8 +81,8 @@ else {
   <title>Home | CDE Bimtech</title>
   <link rel="stylesheet" href="../assets/fonts/font_inter.css?v=<?php echo filemtime('../assets/fonts/font_inter.css'); ?>">
   <link rel="stylesheet" href="../assets/css/all.min.css?v=<?php echo filemtime('../assets/css/all.min.css'); ?>">
-  <link rel="stylesheet" href="../assets/css/dashboard.css?v=<?php echo filemtime('../assets/css/dashboard.css'); ?>">
   <link rel="stylesheet" href="../assets/css/sidebar.css?v=<?php echo filemtime('../assets/css/sidebar.css'); ?>">
+  <link rel="stylesheet" href="../assets/css/dashboard.css?v=<?php echo filemtime('../assets/css/dashboard.css'); ?>">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="../assets/js/dashboard.js?v=<?php echo filemtime('../assets/js/dashboard.js'); ?>" defer></script>
 </head>
