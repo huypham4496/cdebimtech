@@ -290,13 +290,10 @@ if ($membersOrgId > 0) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Organization Management</title>
-  <link rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
-        integrity="sha512-dynvDxJ5aVF6oU1i6zfoalvVYvNvKcJste/0q5u+P%2FgPm4jG3E5s3UeJ8V+RaH59RUW2YCiMzZ6pyRrg58F3CA=="
-        crossorigin="anonymous" referrerpolicy="no-referrer" />
-  <link rel="stylesheet" href="../assets/css/sidebar.css?v=<?php echo filemtime(__DIR__.'/../assets/css/sidebar.css'); ?>">
-  <link rel="stylesheet" href="../assets/css/organization_manage.css?v=<?php echo filemtime(__DIR__.'/../assets/css/organization_manage.css'); ?>">
-  <link rel="stylesheet" href="../assets/css/org_manage.css">
+  <link rel="stylesheet" href="../assets/css/all.min.css?v=<?php echo filemtime('../assets/css/all.min.css'); ?>">
+  <link rel="stylesheet" href="../assets/css/sidebar.css?v=<?php echo filemtime('../assets/css/sidebar.css'); ?>">
+  <link rel="stylesheet" href="../assets/css/organization_manage.css?v=<?php echo filemtime('../assets/css/organization_manage.css'); ?>">
+  <link rel="stylesheet" href="../assets/css/org_manage.css?v=<?php echo filemtime('../assets/css/org_manage.css'); ?>">
 </head>
 <body>
   <?php include __DIR__ . '/sidebar.php'; ?>
