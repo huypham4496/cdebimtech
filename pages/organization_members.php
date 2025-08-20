@@ -99,14 +99,9 @@ $members = $stmt->fetchAll();
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Members & Profiles</title>
   <!-- CSS gốc -->
-  <link rel="stylesheet" href="../assets/css/sidebar.css?v=<?php echo filemtime(__DIR__.'/../assets/css/sidebar.css'); ?>">
-  <link rel="stylesheet" href="../assets/css/organization.css?v=<?php echo filemtime(__DIR__.'/../assets/css/organization.css'); ?>">
-
-  <!-- Font Awesome -->
-  <link rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
-        crossorigin="anonymous" referrerpolicy="no-referrer" />
-
+  <link rel="stylesheet" href="../assets/css/sidebar.css?v=<?php echo filemtime('../assets/css/sidebar.css'); ?>">
+  <link rel="stylesheet" href="../assets/css/organization.css?v=<?php echo filemtime('../assets/css/organization.css'); ?>">
+  <link rel="stylesheet" href="../assets/css/all.min.css?v=<?php echo filemtime('../assets/css/all.min.css'); ?>">
 </head>
 <body>
   <?php include __DIR__ . '/sidebar.php'; ?>
