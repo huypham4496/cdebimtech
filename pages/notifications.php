@@ -43,11 +43,11 @@ $q->execute([':uid' => $userId]);
 $notes = $q->fetchAll();
 
 // — Header & Sidebar & CSS —
-$verCSS = filemtime(__DIR__ . '/../assets/css/notifications.css');
 include dirname(__DIR__) . '/includes/header.php';
 ?>
-<link rel="stylesheet" href="../assets/css/sidebar.css?v=<?= $verCSS ?>">
-<link rel="stylesheet" href="../assets/css/notifications.css?v=<?= $verCSS ?>">
+  <link rel="stylesheet" href="../assets/css/sidebar.css?v=<?php echo filemtime('../assets/css/sidebar.css'); ?>">
+  <link rel="stylesheet" href="../assets/css/all.min.css?v=<?php echo filemtime('../assets/css/all.min.css'); ?>">
+  <link rel="stylesheet" href="../assets/css/notifications.css?v=<?php echo filemtime('../assets/css/notifications.css'); ?>">
 <?php include __DIR__ . '/sidebar.php'; ?>
 
 <main class="main-content">
