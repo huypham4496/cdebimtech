@@ -31,7 +31,7 @@
   background: var(--bg);
   position: relative;
   z-index: 1;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Inter', sans-serif;
   color: var(--text);
 }
 
@@ -134,7 +134,7 @@ button.btn-action {
   transition: transform .04s ease, background .2s ease, border-color .2s ease, box-shadow .2s ease;
   line-height: 1;
   font-weight: 600;
-  font-family: inherit;
+  font-family: 'Inter', sans-serif;
 }
 .btn-action i { font-size: .95rem; }
 
