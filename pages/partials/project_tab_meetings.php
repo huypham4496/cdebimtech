@@ -75,13 +75,17 @@ if ($isAjax) {
       $date_from = trim((string)($_POST['date_from'] ?? $_GET['date_from'] ?? ''));
       $date_to   = trim((string)($_POST['date_to'] ?? $_GET['date_to'] ?? ''));
 
-      $params = [$projectId];
+      $sortDir = strtoupper(trim((string)($_POST['sort'] ?? $_GET['sort'] ?? 'ASC')));
+      if ($sortDir !== 'DESC') { $sortDir = 'ASC'; }
+
+$params = [$projectId];
       $where = " WHERE m.project_id = ? ";
 
       if ($q !== '') {
-        $where .= " AND (m.title LIKE ? OR m.short_desc LIKE ?) ";
+        $where .= " AND (m.title LIKE ? OR m.short_desc LIKE ? OR m.location LIKE ? OR m.online_link LIKE ? OR DATE_FORMAT(m.start_time, '%Y-%m-%d %H:%i') LIKE ? OR DATE_FORMAT(m.created_at, '%Y-%m-%d %H:%i') LIKE ? OR DATE_FORMAT(m.start_time, '%d-%m-%Y %H:%i') LIKE ? OR DATE_FORMAT(m.created_at, '%d-%m-%Y %H:%i') LIKE ?) ";
         $like = "%$q%";
-        $params[] = $like; $params[] = $like;
+        $params[] = $like; $params[] = $like; $params[] = $like; $params[] = $like;
+        $params[] = $like; $params[] = $like; $params[] = $like; $params[] = $like;
       }
       if ($date_from !== '') { $where .= " AND DATE(m.start_time) >= ? "; $params[] = $date_from; }
       if ($date_to   !== '') { $where .= " AND DATE(m.start_time) <= ? "; $params[] = $date_to; }
@@ -91,7 +95,7 @@ if ($isAjax) {
               FROM project_meetings m
               LEFT JOIN users u ON u.id = m.created_by
               $where
-              ORDER BY m.start_time DESC, m.created_at DESC
+              ORDER BY m.start_time {$sortDir}, m.created_at {$sortDir}
               LIMIT 500";
       $stmt = $pdo->prepare($sql);
       $stmt->execute($params);
@@ -219,13 +223,7 @@ $jsVer   = is_file($jsPath)  ? filemtime($jsPath)  : time();
     <!-- Area 1: Search + Create -->
     <div class="mt-toolbar">
       <div class="mt-search">
-        <input type="text" id="mt-q" placeholder="Search by title or description..." />
-        <input type="date" id="mt-date-from" />
-        <span class="mt-tilde">~</span>
-        <input type="date" id="mt-date-to" />
-        <button id="mt-btn-search"><i class="fas fa-search"></i> Search</button>
-        <button id="mt-btn-reset" class="ghost">Reset</button>
-      </div>
+        <input type="text" id="mt-q" placeholder="Search by title or description..." /> <span class="mt-tilde">~</span>  </div>
       <?php if ($canControl): ?>
         <button id="mt-btn-create" class="primary"><i class="fas fa-plus"></i> Tạo cuộc họp</button>
       <?php endif; ?>
@@ -236,15 +234,16 @@ $jsVer   = is_file($jsPath)  ? filemtime($jsPath)  : time();
       <table class="mt-table">
         <thead>
           <tr>
-            <th>Tên cuộc họp</th>
-            <th>Người tạo</th>
-            <th>Ngày tạo</th>
-            <th>Địa điểm</th>
+            <th>Title</th>
+            <th id="mt-th-start">Start Time</th>
+            <th>Location</th>
+            <th>Online Link</th>
+            <th>Creator</th>
             <th>Actions</th>
           </tr>
         </thead>
         <tbody id="mt-tbody">
-          <tr><td colspan="5" class="muted">Loading...</td></tr>
+          <tr><td colspan="6" class="muted">Loading...</td></tr>
         </tbody>
       </table>
     </div>
