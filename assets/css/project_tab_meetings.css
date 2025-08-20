@@ -1,0 +1,136 @@
+/* Meetings Tab CSS - modern, clean, consistent */
+
+.mt-container { display: block; }
+
+.mt-access-denied {
+  margin: 16px 0;
+  padding: 12px 14px;
+  border: 1px solid #f0c36d;
+  background: #fff8e1;
+  border-radius: 10px;
+  color: #7a5b00;
+}
+
+.mt-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.mt-search {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.mt-search input[type="text"],
+.mt-search input[type="date"] {
+  height: 36px;
+  padding: 6px 10px;
+  border: 1px solid #e3e3e8;
+  border-radius: 10px;
+  outline: none;
+}
+.mt-search input[type="text"]:focus,
+.mt-search input[type="date"]:focus {
+  border-color: #8ab4f8;
+  box-shadow: 0 0 0 3px rgba(138,180,248,.25);
+}
+
+button.primary {
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  height: 36px;
+}
+button.primary:hover { background: #1e4ed8; }
+
+button.ghost {
+  background: transparent;
+  color: #333;
+  border: 1px solid #d1d5db;
+  padding: 7px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  height: 36px;
+}
+button.ghost:hover { background: #f8fafc; }
+
+button.link {
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: #2563eb;
+  cursor: pointer;
+}
+button.link.danger { color: #dc2626; }
+
+.mt-tilde { opacity: 0.7; }
+
+.mt-table-wrap { width: 100%; overflow: auto; border: 1px solid #eee; border-radius: 12px; }
+.mt-table { width: 100%; border-collapse: collapse; }
+.mt-table th, .mt-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #f1f5f9;
+  text-align: left;
+  vertical-align: middle;
+}
+.mt-table thead th {
+  background: #f8fafc;
+  font-weight: 600;
+}
+.mt-table tbody tr:hover { background: #fafafa; }
+.mt-table .muted { color: #6b7280; text-align: center; }
+.mt-table .error { color: #b91c1c; text-align: center; }
+.mt-title { font-weight: 600; text-decoration: none; color: #111827; }
+.mt-title:hover { text-decoration: underline; }
+
+.mt-actions { white-space: nowrap; display: flex; gap: 12px; }
+
+.mt-modal.hidden { display: none; }
+.mt-modal {
+  position: fixed; inset: 0; background: rgba(0,0,0,.35);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000;
+}
+.mt-modal-dialog {
+  width: min(700px, 92vw);
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.2);
+  overflow: hidden;
+  animation: mtPop .15s ease-out;
+}
+@keyframes mtPop { from { transform: scale(.98); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+.mt-modal-header, .mt-modal-footer {
+  padding: 14px 16px;
+  background: #f8fafc;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.mt-modal-header h3 { margin: 0; font-size: 18px; }
+.mt-modal-close {
+  background: transparent; border: none; font-size: 20px; cursor: pointer; line-height: 1;
+}
+.mt-modal-body { padding: 16px; display: grid; gap: 12px; }
+.mt-field { display: grid; gap: 6px; }
+.mt-field.two { grid-template-columns: 1fr 1fr; gap: 12px; }
+.mt-field label { font-size: 13px; color: #374151; }
+.mt-field input[type="text"],
+.mt-field input[type="url"],
+.mt-field input[type="datetime-local"],
+.mt-field textarea {
+  border: 1px solid #e5e7eb; border-radius: 10px; padding: 8px 10px;
+  outline: none;
+}
+.mt-field input:focus, .mt-field textarea:focus {
+  border-color: #93c5fd; box-shadow: 0 0 0 3px rgba(147,197,253,.25);
+}
+.req { color: #dc2626; }
