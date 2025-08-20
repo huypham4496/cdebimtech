@@ -63,7 +63,7 @@ if ($userId) {
       <li class="<?= $current=== 'home.php' ? 'active' : '' ?>">
         <a href="home.php"><i class="fas fa-home"></i> Home</a>
       </li>
-      <li class="<?= $isProjectsCtx ? 'active' : '' ?>">
+      <li class="<?= in_array($current, ['projects.php','project_view.php']) ? 'active' : '' ?>">
         <a href="projects.php"><i class="fas fa-project-diagram"></i> Projects</a>
       </li>
       <li class="<?= $current=== 'work_diary.php' ? 'active' : '' ?>">
