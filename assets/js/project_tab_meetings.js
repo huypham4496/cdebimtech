@@ -115,7 +115,7 @@
       const online = r.online_link
         ? `<a href="${esc(r.online_link)}" class="mt-link-plain" target="_blank" rel="noopener">Link</a>`
         : `<span class="mt-muted">—</span>`;
-      const title = `<a href="./project_meeting_detail.php?project_id=${encodeURIComponent(projectId)}&id=${encodeURIComponent(r.id)}" class="mt-title">${esc(r.title || '(no title)')}</a>`;
+      const title = `<a href="../pages/partials/project_tab_meetings_detail.php?project_id=${encodeURIComponent(projectId)}&meeting_id=${encodeURIComponent(r.id)}" class="mt-title">${esc(r.title || '(no title)')}</a>`;
       return `<tr data-row-id="${r.id}">
         <td>${title}${r.short_desc ? `<div class="mt-muted">${esc(r.short_desc)}</div>` : ''}</td>
         <td>${esc(start)}</td>
