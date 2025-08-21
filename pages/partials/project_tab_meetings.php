@@ -212,6 +212,8 @@ $jsPath  = __DIR__ . '/../../assets/js/project_tab_meetings.js';
 $cssVer  = is_file($cssPath) ? filemtime($cssPath) : time();
 $jsVer   = is_file($jsPath)  ? filemtime($jsPath)  : time();
 ?>
+<link rel="stylesheet" href="../assets/fonts/font_inter.css?v=<?php echo filemtime('../assets/fonts/font_inter.css'); ?>">
+<link rel="stylesheet" href="../assets/css/all.min.css?v=<?php echo filemtime('../assets/css/all.min.css'); ?>">
 <link rel="stylesheet" href="../assets/css/project_tab_meetings.css?v=<?= htmlspecialchars((string)$cssVer) ?>">
 <div id="meetings-root" class="mt-container" data-project="<?= htmlspecialchars((string)$projectId) ?>" data-can-control="<?= $canControl ? '1' : '0' ?>">
 
@@ -223,7 +225,7 @@ $jsVer   = is_file($jsPath)  ? filemtime($jsPath)  : time();
     <!-- Area 1: Search + Create -->
     <div class="mt-toolbar">
       <div class="mt-search">
-        <input type="text" id="mt-q" placeholder="Search by title or description..." /> <span class="mt-tilde">~</span>  </div>
+        <input type="text" id="mt-q" placeholder="Search by title or description..." /> <span class="mt-tilde"></span>  </div>
       <?php if ($canControl): ?>
         <button id="mt-btn-create" class="primary"><i class="fas fa-plus"></i> Tạo cuộc họp</button>
       <?php endif; ?>
