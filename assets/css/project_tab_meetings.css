@@ -11,7 +11,7 @@
   --muted: #64748b;           /* slate-500 */
   --border: #e5e7eb;          /* gray-200 */
   --ring: #60a5fa;            /* blue-400 */
-  --accent: #2563eb;          /* blue-600 */
+  --accent: #fca415;          /* blue-600 */
   --accent-600: #1d4ed8;      /* blue-700 */
   --accent-soft: #eaf2ff;
   --danger: #ef4444;
@@ -79,7 +79,7 @@
 
 /* Search icon via pseudo (no extra markup needed) */
 .mt-search::before {
-  content: "\\f002"; /* FA magnifier */
+  content: "\f002"; /* FA magnifier */
   font-family: "Font Awesome 5 Free"; font-weight: 900;
   position: absolute;
   left: 14px; top: 50%;
