@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Aug 20, 2025 at 11:56 AM
+-- Generation Time: Aug 21, 2025 at 12:08 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -650,7 +650,7 @@ CREATE TABLE `project_meetings` (
 
 INSERT INTO `project_meetings` (`id`, `project_id`, `title`, `short_desc`, `online_link`, `location`, `start_time`, `created_by`, `created_at`) VALUES
 (1, 6, 'Hướng dẫn sử dụng CDE', 'Sử dụng CDE trên hệ thống Bimtech', '#', 'Quảng Ninh', '2025-08-20 16:55:00', 1, '2025-08-20 16:55:20'),
-(2, 6, 'Demo2', 'Text nhanh', 'https://www.facebook.com/', 'NCC', '2025-08-30 16:55:00', 1, '2025-08-20 16:55:58');
+(2, 6, 'Demo1', 'Text nhanh', 'https://www.facebook.com/', 'NCC', '2025-08-30 16:55:00', 1, '2025-08-20 16:55:58');
 
 -- --------------------------------------------------------
 
@@ -665,6 +665,19 @@ CREATE TABLE `project_meeting_attendees` (
   `external_name` varchar(255) DEFAULT NULL,
   `external_email` varchar(255) DEFAULT NULL,
   `is_external` tinyint(1) NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `project_meeting_details`
+--
+
+CREATE TABLE `project_meeting_details` (
+  `meeting_id` int(11) NOT NULL,
+  `content_html` longtext DEFAULT NULL,
+  `updated_by` int(11) DEFAULT NULL,
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -1021,8 +1034,12 @@ INSERT INTO `work_diary_entries` (`user_id`, `entry_date`, `period`, `content`, 
 (1, '2025-08-19', 'morning', 'Sửa kè Vincom\r\nCập nhật lại tính năng tạo văn bản cuộc họp trên CDE', NULL, '2025-08-19 02:04:01', '2025-08-19 02:04:01'),
 (1, '2025-08-19', 'afternoon', 'Sửa kè Vincom', NULL, '2025-08-19 02:04:02', '2025-08-19 02:04:02'),
 (1, '2025-08-19', 'evening', 'Nghỉ', NULL, '2025-08-19 02:04:02', '2025-08-19 02:04:02'),
-(1, '2025-08-20', 'morning', 'Sửa kè Vincom', NULL, '2025-08-20 04:29:18', '2025-08-20 04:29:18'),
-(1, '2025-08-20', 'evening', 'Nghỉ', NULL, '2025-08-20 04:29:18', '2025-08-20 04:29:18'),
+(1, '2025-08-20', 'morning', 'Sửa kè Vincom', NULL, '2025-08-21 10:08:50', '2025-08-21 10:08:50'),
+(1, '2025-08-20', 'afternoon', 'Cập nhật tính năng tạo văn bản cuộc họp trong dự án CDE', NULL, '2025-08-21 10:08:50', '2025-08-21 10:08:50'),
+(1, '2025-08-20', 'evening', '17:00-19:30: Nghỉ', NULL, '2025-08-21 10:08:50', '2025-08-21 10:08:50'),
+(1, '2025-08-21', 'morning', 'Cập nhật tính năng tạo văn bản cuộc họp trong dự án CDE', NULL, '2025-08-21 10:08:48', '2025-08-21 10:08:48'),
+(1, '2025-08-21', 'afternoon', 'Trình bày bản vẽ bình đồ, trắc dọc DA 344 - 340', NULL, '2025-08-21 10:08:48', '2025-08-21 10:08:48'),
+(1, '2025-08-21', 'evening', '17:00-19:30: Nghỉ', NULL, '2025-08-21 10:08:48', '2025-08-21 10:08:48'),
 (12, '2025-07-01', 'morning', 'làm', NULL, '2025-08-07 04:29:54', '2025-08-07 04:29:54'),
 (12, '2025-07-01', 'afternoon', 'làm', NULL, '2025-08-07 04:29:54', '2025-08-07 04:29:54'),
 (12, '2025-07-02', 'morning', 'làm', NULL, '2025-08-07 04:30:01', '2025-08-07 04:30:01'),
@@ -1361,13 +1378,13 @@ INSERT INTO `work_diary_entries` (`user_id`, `entry_date`, `period`, `content`, 
 (16, '2025-07-14', 'evening', 'Nghỉ', NULL, '2025-08-07 09:33:48', '2025-08-07 09:33:48'),
 (16, '2025-07-15', 'morning', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:33:57', '2025-08-07 09:33:57'),
 (16, '2025-07-15', 'afternoon', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:33:57', '2025-08-07 09:33:57'),
-(16, '2025-07-15', 'evening', 'Nghỉ', NULL, '2025-08-07 09:33:57', '2025-08-07 09:33:57'),
+(16, '2025-07-15', 'evening', 'Nghỉ', NULL, '2025-08-07 09:33:57', '2025-08-07 09:33:57');
+INSERT INTO `work_diary_entries` (`user_id`, `entry_date`, `period`, `content`, `note`, `created_at`, `updated_at`) VALUES
 (16, '2025-07-16', 'morning', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:34:03', '2025-08-07 09:34:03'),
 (16, '2025-07-16', 'afternoon', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:34:03', '2025-08-07 09:34:03'),
 (16, '2025-07-16', 'evening', 'Nghỉ', NULL, '2025-08-07 09:34:03', '2025-08-07 09:34:03'),
 (16, '2025-07-17', 'morning', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:34:06', '2025-08-07 09:34:06'),
-(16, '2025-07-17', 'afternoon', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:34:06', '2025-08-07 09:34:06');
-INSERT INTO `work_diary_entries` (`user_id`, `entry_date`, `period`, `content`, `note`, `created_at`, `updated_at`) VALUES
+(16, '2025-07-17', 'afternoon', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:34:06', '2025-08-07 09:34:06'),
 (16, '2025-07-17', 'evening', 'Nghỉ', NULL, '2025-08-07 09:34:06', '2025-08-07 09:34:06'),
 (16, '2025-07-18', 'morning', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:34:10', '2025-08-07 09:34:10'),
 (16, '2025-07-18', 'afternoon', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:34:10', '2025-08-07 09:34:10'),
@@ -1997,6 +2014,13 @@ ALTER TABLE `project_meeting_attendees`
   ADD KEY `idx_user` (`user_id`);
 
 --
+-- Indexes for table `project_meeting_details`
+--
+ALTER TABLE `project_meeting_details`
+  ADD PRIMARY KEY (`meeting_id`),
+  ADD KEY `fk_pmd_user` (`updated_by`);
+
+--
 -- Indexes for table `project_meeting_notifications`
 --
 ALTER TABLE `project_meeting_notifications`
@@ -2198,7 +2222,7 @@ ALTER TABLE `project_material_out`
 -- AUTO_INCREMENT for table `project_meetings`
 --
 ALTER TABLE `project_meetings`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `project_meeting_attendees`
@@ -2297,6 +2321,13 @@ ALTER TABLE `project_meetings`
 ALTER TABLE `project_meeting_attendees`
   ADD CONSTRAINT `fk_pma_meeting` FOREIGN KEY (`meeting_id`) REFERENCES `project_meetings` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `fk_pma_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `project_meeting_details`
+--
+ALTER TABLE `project_meeting_details`
+  ADD CONSTRAINT `fk_pmd_meeting` FOREIGN KEY (`meeting_id`) REFERENCES `project_meetings` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_pmd_user` FOREIGN KEY (`updated_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
 
 --
 -- Constraints for table `project_meeting_notifications`
