@@ -227,7 +227,7 @@ $jsVer   = is_file($jsPath)  ? filemtime($jsPath)  : time();
       <div class="mt-search">
         <input type="text" id="mt-q" placeholder="Search by title or description..." /> <span class="mt-tilde"></span>  </div>
       <?php if ($canControl): ?>
-        <button id="mt-btn-create" class="primary"><i class="fas fa-plus"></i> Tạo cuộc họp</button>
+        <button id="mt-btn-create" class="primary"><i class="fas fa-plus"></i> Create Meeting</button>
       <?php endif; ?>
     </div>
 
@@ -254,7 +254,7 @@ $jsVer   = is_file($jsPath)  ? filemtime($jsPath)  : time();
     <div id="mt-modal" class="mt-modal hidden" aria-hidden="true">
       <div class="mt-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="mt-modal-title">
         <div class="mt-modal-header">
-          <h3 id="mt-modal-title">Tạo cuộc họp</h3>
+          <h3 id="mt-modal-title">Create Meeting</h3>
           <button class="mt-modal-close" aria-label="Close">&times;</button>
         </div>
         <div class="mt-modal-body">
