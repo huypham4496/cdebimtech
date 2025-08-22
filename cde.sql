@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Aug 21, 2025 at 12:08 PM
+-- Generation Time: Aug 22, 2025 at 11:44 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -667,6 +667,16 @@ CREATE TABLE `project_meeting_attendees` (
   `is_external` tinyint(1) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `project_meeting_attendees`
+--
+
+INSERT INTO `project_meeting_attendees` (`id`, `meeting_id`, `user_id`, `external_name`, `external_email`, `is_external`) VALUES
+(46, 2, 20, NULL, NULL, 0),
+(47, 2, 1, NULL, NULL, 0),
+(48, 2, NULL, 'Hoàng Vũ A', '', 1),
+(49, 2, NULL, 'Mai Hoàng B', '1213@gmail.com', 1);
+
 -- --------------------------------------------------------
 
 --
@@ -679,6 +689,13 @@ CREATE TABLE `project_meeting_details` (
   `updated_by` int(11) DEFAULT NULL,
   `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `project_meeting_details`
+--
+
+INSERT INTO `project_meeting_details` (`meeting_id`, `content_html`, `updated_by`, `updated_at`) VALUES
+(2, 'stgrsgdrf<div><br></div>', 1, '2025-08-22 15:19:08');
 
 -- --------------------------------------------------------
 
@@ -696,6 +713,39 @@ CREATE TABLE `project_meeting_notifications` (
   `created_at` datetime NOT NULL DEFAULT current_timestamp(),
   `is_read` tinyint(1) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `project_meeting_notifications`
+--
+
+INSERT INTO `project_meeting_notifications` (`id`, `project_id`, `meeting_id`, `sender_id`, `receiver_id`, `message`, `created_at`, `is_read`) VALUES
+(1, 6, 2, 1, 20, 'Bạn đã được thêm vào cuộc họp: Demo1', '2025-08-22 14:19:41', 0),
+(2, 6, 2, 1, 1, 'Bạn đã được thêm vào cuộc họp: Demo1', '2025-08-22 14:19:41', 0),
+(3, 6, 2, 1, 14, 'Bạn đã được thêm vào cuộc họp: Demo1', '2025-08-22 14:19:41', 0),
+(4, 6, 2, 1, 20, 'Bạn đã được thêm vào cuộc họp: Demo1', '2025-08-22 14:20:02', 0),
+(5, 6, 2, 1, 1, 'Bạn đã được thêm vào cuộc họp: Demo1', '2025-08-22 14:20:02', 0),
+(6, 6, 2, 1, 14, 'Bạn đã được thêm vào cuộc họp: Demo1', '2025-08-22 14:20:02', 0),
+(7, 6, 2, 1, 20, 'Bạn đã được thêm vào cuộc họp: Demo1', '2025-08-22 14:21:19', 0),
+(8, 6, 2, 1, 1, 'Bạn đã được thêm vào cuộc họp: Demo1', '2025-08-22 14:21:19', 0),
+(9, 6, 2, 1, 20, 'Bạn đã được thêm vào cuộc họp: Demo1', '2025-08-22 14:21:53', 0),
+(10, 6, 2, 1, 1, 'Bạn đã được thêm vào cuộc họp: Demo1', '2025-08-22 14:21:53', 0),
+(11, 6, 2, 1, 20, 'Bạn đã được thêm vào cuộc họp: Demo1', '2025-08-22 15:02:05', 0),
+(12, 6, 2, 1, 1, 'Bạn đã được thêm vào cuộc họp: Demo1', '2025-08-22 15:02:05', 0),
+(13, 6, 2, 1, 14, 'Bạn đã được thêm vào cuộc họp: Demo1', '2025-08-22 15:02:05', 0),
+(14, 6, 2, 1, 20, 'Bạn đã được thêm vào cuộc họp: Demo1', '2025-08-22 15:03:27', 0),
+(15, 6, 2, 1, 1, 'Bạn đã được thêm vào cuộc họp: Demo1', '2025-08-22 15:03:27', 0),
+(16, 6, 2, 1, 14, 'Bạn đã được thêm vào cuộc họp: Demo1', '2025-08-22 15:03:27', 0),
+(17, 6, 2, 1, 20, 'Bạn đã được thêm vào cuộc họp: Demo1', '2025-08-22 15:08:26', 0),
+(18, 6, 2, 1, 1, 'Bạn đã được thêm vào cuộc họp: Demo1', '2025-08-22 15:08:26', 0),
+(19, 6, 2, 1, 20, 'Bạn đã được thêm vào cuộc họp: Demo1', '2025-08-22 15:08:36', 0),
+(20, 6, 2, 1, 1, 'Bạn đã được thêm vào cuộc họp: Demo1', '2025-08-22 15:08:36', 0),
+(21, 6, 2, 1, 14, 'Bạn đã được thêm vào cuộc họp: Demo1', '2025-08-22 15:08:36', 0),
+(22, 6, 2, 1, 20, 'Bạn đã được thêm vào cuộc họp: Demo1', '2025-08-22 15:17:18', 0),
+(23, 6, 2, 1, 1, 'Bạn đã được thêm vào cuộc họp: Demo1', '2025-08-22 15:17:18', 0),
+(24, 6, 2, 1, 20, 'Bạn đã được thêm vào cuộc họp: Demo1', '2025-08-22 15:17:52', 0),
+(25, 6, 2, 1, 1, 'Bạn đã được thêm vào cuộc họp: Demo1', '2025-08-22 15:17:52', 0),
+(26, 6, 2, 1, 20, 'Bạn đã được thêm vào cuộc họp: Demo1', '2025-08-22 15:19:08', 0),
+(27, 6, 2, 1, 1, 'Bạn đã được thêm vào cuộc họp: Demo1', '2025-08-22 15:19:08', 0);
 
 -- --------------------------------------------------------
 
@@ -1040,6 +1090,9 @@ INSERT INTO `work_diary_entries` (`user_id`, `entry_date`, `period`, `content`, 
 (1, '2025-08-21', 'morning', 'Cập nhật tính năng tạo văn bản cuộc họp trong dự án CDE', NULL, '2025-08-21 10:08:48', '2025-08-21 10:08:48'),
 (1, '2025-08-21', 'afternoon', 'Trình bày bản vẽ bình đồ, trắc dọc DA 344 - 340', NULL, '2025-08-21 10:08:48', '2025-08-21 10:08:48'),
 (1, '2025-08-21', 'evening', '17:00-19:30: Nghỉ', NULL, '2025-08-21 10:08:48', '2025-08-21 10:08:48'),
+(1, '2025-08-22', 'morning', 'Mất điện', NULL, '2025-08-22 07:11:57', '2025-08-22 07:11:57'),
+(1, '2025-08-22', 'afternoon', 'Cập nhật tính năng tạo văn bản cuộc họp trong dự án CDE', NULL, '2025-08-22 07:11:57', '2025-08-22 07:11:57'),
+(1, '2025-08-22', 'evening', '17:00-19:30: Nghỉ', NULL, '2025-08-22 07:11:57', '2025-08-22 07:11:57'),
 (12, '2025-07-01', 'morning', 'làm', NULL, '2025-08-07 04:29:54', '2025-08-07 04:29:54'),
 (12, '2025-07-01', 'afternoon', 'làm', NULL, '2025-08-07 04:29:54', '2025-08-07 04:29:54'),
 (12, '2025-07-02', 'morning', 'làm', NULL, '2025-08-07 04:30:01', '2025-08-07 04:30:01'),
@@ -1375,11 +1428,11 @@ INSERT INTO `work_diary_entries` (`user_id`, `entry_date`, `period`, `content`, 
 (16, '2025-07-13', 'evening', 'Nghỉ', NULL, '2025-08-07 09:33:26', '2025-08-07 09:33:26'),
 (16, '2025-07-14', 'morning', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:33:48', '2025-08-07 09:33:48'),
 (16, '2025-07-14', 'afternoon', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:33:48', '2025-08-07 09:33:48'),
-(16, '2025-07-14', 'evening', 'Nghỉ', NULL, '2025-08-07 09:33:48', '2025-08-07 09:33:48'),
+(16, '2025-07-14', 'evening', 'Nghỉ', NULL, '2025-08-07 09:33:48', '2025-08-07 09:33:48');
+INSERT INTO `work_diary_entries` (`user_id`, `entry_date`, `period`, `content`, `note`, `created_at`, `updated_at`) VALUES
 (16, '2025-07-15', 'morning', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:33:57', '2025-08-07 09:33:57'),
 (16, '2025-07-15', 'afternoon', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:33:57', '2025-08-07 09:33:57'),
-(16, '2025-07-15', 'evening', 'Nghỉ', NULL, '2025-08-07 09:33:57', '2025-08-07 09:33:57');
-INSERT INTO `work_diary_entries` (`user_id`, `entry_date`, `period`, `content`, `note`, `created_at`, `updated_at`) VALUES
+(16, '2025-07-15', 'evening', 'Nghỉ', NULL, '2025-08-07 09:33:57', '2025-08-07 09:33:57'),
 (16, '2025-07-16', 'morning', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:34:03', '2025-08-07 09:34:03'),
 (16, '2025-07-16', 'afternoon', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:34:03', '2025-08-07 09:34:03'),
 (16, '2025-07-16', 'evening', 'Nghỉ', NULL, '2025-08-07 09:34:03', '2025-08-07 09:34:03'),
@@ -2228,13 +2281,13 @@ ALTER TABLE `project_meetings`
 -- AUTO_INCREMENT for table `project_meeting_attendees`
 --
 ALTER TABLE `project_meeting_attendees`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=50;
 
 --
 -- AUTO_INCREMENT for table `project_meeting_notifications`
 --
 ALTER TABLE `project_meeting_notifications`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=28;
 
 --
 -- AUTO_INCREMENT for table `project_naming_rules`
