@@ -168,6 +168,7 @@ a:hover{text-decoration:underline}
 .md-attendees{
   display:flex;flex-direction:column;min-height:100%;
   overflow-x:hidden;  /* chặn tràn ngang khi có ô nhập dài */
+  min-width: 550px;
 }
 
 /* nội dung có thể cuộn, giữ nút footer luôn thấy */
