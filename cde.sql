@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Aug 22, 2025 at 11:44 AM
+-- Generation Time: Aug 24, 2025 at 01:22 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -675,7 +675,8 @@ INSERT INTO `project_meeting_attendees` (`id`, `meeting_id`, `user_id`, `externa
 (46, 2, 20, NULL, NULL, 0),
 (47, 2, 1, NULL, NULL, 0),
 (48, 2, NULL, 'Hoàng Vũ A', '', 1),
-(49, 2, NULL, 'Mai Hoàng B', '1213@gmail.com', 1);
+(49, 2, NULL, 'Mai Hoàng B', '1213@gmail.com', 1),
+(50, 1, NULL, 'Test User', 'dovietduc18utc@gmail.com', 1);
 
 -- --------------------------------------------------------
 
@@ -695,6 +696,7 @@ CREATE TABLE `project_meeting_details` (
 --
 
 INSERT INTO `project_meeting_details` (`meeting_id`, `content_html`, `updated_by`, `updated_at`) VALUES
+(1, '', 1, '2025-08-23 15:17:09'),
 (2, 'stgrsgdrf<div><br></div>', 1, '2025-08-22 15:19:08');
 
 -- --------------------------------------------------------
@@ -1093,6 +1095,18 @@ INSERT INTO `work_diary_entries` (`user_id`, `entry_date`, `period`, `content`, 
 (1, '2025-08-22', 'morning', 'Mất điện', NULL, '2025-08-22 07:11:57', '2025-08-22 07:11:57'),
 (1, '2025-08-22', 'afternoon', 'Cập nhật tính năng tạo văn bản cuộc họp trong dự án CDE', NULL, '2025-08-22 07:11:57', '2025-08-22 07:11:57'),
 (1, '2025-08-22', 'evening', '17:00-19:30: Nghỉ', NULL, '2025-08-22 07:11:57', '2025-08-22 07:11:57'),
+(1, '2025-08-23', 'morning', 'Bản vẽ BTC - Bình đồ cầu Quảng Chính', NULL, '2025-08-23 08:06:31', '2025-08-23 08:06:31'),
+(1, '2025-08-23', 'afternoon', 'Bản vẽ BTC - Bình đồ cầu Quảng Chính', NULL, '2025-08-23 08:06:31', '2025-08-23 08:06:31'),
+(1, '2025-08-23', 'evening', 'Nghỉ', NULL, '2025-08-23 08:06:31', '2025-08-23 08:06:31'),
+(1, '2025-08-24', 'morning', 'Bình đồ - BTC cầu Mảy Nháu', NULL, '2025-08-24 11:18:40', '2025-08-24 11:18:40'),
+(1, '2025-08-24', 'afternoon', 'Bình đồ - BTC cầu Mảy Nháu', NULL, '2025-08-24 11:18:40', '2025-08-24 11:18:40'),
+(1, '2025-08-24', 'evening', '17:00-19:00: Bình đồ - BTC cầu Mảy Nháu', NULL, '2025-08-24 11:18:40', '2025-08-24 11:18:40'),
+(1, '2025-08-30', 'morning', 'Nghỉ', NULL, '2025-08-23 08:07:44', '2025-08-23 08:07:44'),
+(1, '2025-08-30', 'afternoon', 'Nghỉ', NULL, '2025-08-23 08:07:44', '2025-08-23 08:07:44'),
+(1, '2025-08-30', 'evening', 'Nghỉ', NULL, '2025-08-23 08:07:44', '2025-08-23 08:07:44'),
+(1, '2025-08-31', 'morning', 'Nghỉ', NULL, '2025-08-23 08:07:40', '2025-08-23 08:07:40'),
+(1, '2025-08-31', 'afternoon', 'Nghỉ', NULL, '2025-08-23 08:07:40', '2025-08-23 08:07:40'),
+(1, '2025-08-31', 'evening', 'Nghỉ', NULL, '2025-08-23 08:07:40', '2025-08-23 08:07:40'),
 (12, '2025-07-01', 'morning', 'làm', NULL, '2025-08-07 04:29:54', '2025-08-07 04:29:54'),
 (12, '2025-07-01', 'afternoon', 'làm', NULL, '2025-08-07 04:29:54', '2025-08-07 04:29:54'),
 (12, '2025-07-02', 'morning', 'làm', NULL, '2025-08-07 04:30:01', '2025-08-07 04:30:01'),
@@ -1416,7 +1430,8 @@ INSERT INTO `work_diary_entries` (`user_id`, `entry_date`, `period`, `content`, 
 (16, '2025-07-09', 'evening', 'Nghỉ', NULL, '2025-08-07 09:33:02', '2025-08-07 09:33:02'),
 (16, '2025-07-10', 'morning', 'Nghỉ', NULL, '2025-08-07 09:32:59', '2025-08-07 09:32:59'),
 (16, '2025-07-10', 'afternoon', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:32:59', '2025-08-07 09:32:59'),
-(16, '2025-07-10', 'evening', 'Nghỉ', NULL, '2025-08-07 09:32:59', '2025-08-07 09:32:59'),
+(16, '2025-07-10', 'evening', 'Nghỉ', NULL, '2025-08-07 09:32:59', '2025-08-07 09:32:59');
+INSERT INTO `work_diary_entries` (`user_id`, `entry_date`, `period`, `content`, `note`, `created_at`, `updated_at`) VALUES
 (16, '2025-07-11', 'morning', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:33:16', '2025-08-07 09:33:16'),
 (16, '2025-07-11', 'afternoon', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:33:16', '2025-08-07 09:33:16'),
 (16, '2025-07-11', 'evening', 'Nghỉ', NULL, '2025-08-07 09:33:16', '2025-08-07 09:33:16'),
@@ -1428,8 +1443,7 @@ INSERT INTO `work_diary_entries` (`user_id`, `entry_date`, `period`, `content`, 
 (16, '2025-07-13', 'evening', 'Nghỉ', NULL, '2025-08-07 09:33:26', '2025-08-07 09:33:26'),
 (16, '2025-07-14', 'morning', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:33:48', '2025-08-07 09:33:48'),
 (16, '2025-07-14', 'afternoon', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:33:48', '2025-08-07 09:33:48'),
-(16, '2025-07-14', 'evening', 'Nghỉ', NULL, '2025-08-07 09:33:48', '2025-08-07 09:33:48');
-INSERT INTO `work_diary_entries` (`user_id`, `entry_date`, `period`, `content`, `note`, `created_at`, `updated_at`) VALUES
+(16, '2025-07-14', 'evening', 'Nghỉ', NULL, '2025-08-07 09:33:48', '2025-08-07 09:33:48'),
 (16, '2025-07-15', 'morning', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:33:57', '2025-08-07 09:33:57'),
 (16, '2025-07-15', 'afternoon', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:33:57', '2025-08-07 09:33:57'),
 (16, '2025-07-15', 'evening', 'Nghỉ', NULL, '2025-08-07 09:33:57', '2025-08-07 09:33:57'),
@@ -2281,7 +2295,7 @@ ALTER TABLE `project_meetings`
 -- AUTO_INCREMENT for table `project_meeting_attendees`
 --
 ALTER TABLE `project_meeting_attendees`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=50;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=51;
 
 --
 -- AUTO_INCREMENT for table `project_meeting_notifications`
