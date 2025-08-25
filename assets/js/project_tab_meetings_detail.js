@@ -46,7 +46,7 @@
 
   /* --------- Toast ---------- */
   const toast = (msg, type = "info") => {
-    let t = document.createElement("div");
+    const t = document.createElement("div");
     t.className = `md-toast ${type}`;
     t.textContent = msg;
     document.body.appendChild(t);
@@ -215,7 +215,7 @@
       btnRedo.addEventListener('click', () => quill.history.redo());
       grp.appendChild(btnRedo);
 
-      // Insert Table (opens grid picker)
+      // Insert Table (grid picker)
       const btnTable = document.createElement('button');
       btnTable.type = 'button';
       btnTable.className = 'ql-custom-btn ql-insert-table';
@@ -239,6 +239,7 @@
         hidePicker();
       });
       document.body.appendChild(picker.el);
+
       function showPickerNear(btn) {
         const r = btn.getBoundingClientRect();
         picker.el.style.left = (window.scrollX + r.left) + 'px';
@@ -246,14 +247,33 @@
         picker.el.style.display = 'block';
       }
       function hidePicker() { picker.el.style.display = 'none'; }
+      const isPickerOpen = () => picker.el.style.display === 'block';
 
-      btnTable.addEventListener('click', (e) => {
-        e.preventDefault();
-        if (picker.el.style.display === 'block') hidePicker();
-        else showPickerNear(btnTable);
+      // Hover-to-open + click-to-toggle for Insert Table
+      let overBtn = false, overPicker = false, hideTimer = null;
+      const scheduleHide = () => {
+        clearTimeout(hideTimer);
+        hideTimer = setTimeout(() => {
+          if (!overBtn && !overPicker) hidePicker();
+        }, 180);
+      };
+      btnTable.addEventListener('mouseenter', () => {
+        overBtn = true;
+        if (!isPickerOpen()) showPickerNear(btnTable);
       });
+      btnTable.addEventListener('mouseleave', () => { overBtn = false; scheduleHide(); });
+      btnTable.addEventListener('focus', () => { if (!isPickerOpen()) showPickerNear(btnTable); });
+      btnTable.addEventListener('blur', () => { scheduleHide(); });
+      btnTable.addEventListener('click', (e) => {
+        e.preventDefault(); e.stopPropagation();
+        if (isPickerOpen()) hidePicker(); else showPickerNear(btnTable);
+      });
+
+      picker.el.addEventListener('mouseenter', () => { overPicker = true; });
+      picker.el.addEventListener('mouseleave', () => { overPicker = false; scheduleHide(); });
+
       document.addEventListener('click', (e) => {
-        if (!picker.el.contains(e.target) && e.target !== btnTable) hidePicker();
+        if (!picker.el.contains(e.target) && !btnTable.contains(e.target)) hidePicker();
       });
 
       btnBorders.addEventListener('click', toggleBordersAtSelection);
@@ -304,9 +324,50 @@
     return { el };
   }
 
+  // ---- Helpers: robust HTML insertion ----
+  function insertHTMLAtCursor(html) {
+    try {
+      quill.focus();
+      let sel = window.getSelection();
+      const root = quill.root;
+      if (!sel || sel.rangeCount === 0 || !root.contains(sel.anchorNode)) {
+        // đặt caret cuối tài liệu nếu đang ngoài editor
+        quill.setSelection(quill.getLength(), 0);
+        sel = window.getSelection();
+      }
+      if (!sel || sel.rangeCount === 0) {
+        // fallback clipboard nếu vẫn không có range
+        const idx = (quill.getSelection(true) && quill.getSelection(true).index) || quill.getLength();
+        quill.clipboard.dangerouslyPasteHTML(idx, html, 'user');
+        return true;
+      }
+      const range = sel.getRangeAt(0);
+      range.deleteContents();
+      const container = document.createElement('div');
+      container.innerHTML = html;
+      const frag = document.createDocumentFragment();
+      let node, lastNode = null;
+      while ((node = container.firstChild)) { lastNode = frag.appendChild(node); }
+      range.insertNode(frag);
+      if (lastNode) {
+        const newRange = document.createRange();
+        newRange.setStartAfter(lastNode);
+        newRange.setEndAfter(lastNode);
+        sel.removeAllRanges();
+        sel.addRange(newRange);
+      }
+      return true;
+    } catch (e) {
+      console.warn('insertHTMLAtCursor fallback:', e.message);
+      return false;
+    }
+  }
+
   // ---- Helpers: table ops ----
   function insertTable(rows, cols){
     if (!quill) return;
+
+    // 1) Try plugin first
     try {
       const mod = quill.getModule('better-table');
       if (mod && typeof mod.insertTable === 'function') {
@@ -315,22 +376,31 @@
       }
     } catch(_) {}
 
-    // Fallback HTML
-    let html = '<table><tbody>';
-    for (let r=0;r<rows;r++){
-      html += '<tr>';
-      for (let c=0;c<cols;c++){ html += '<td>&nbsp;</td>'; }
-      html += '</tr>';
-    }
-    html += '</tbody></table>';
+    // 2) Native DOM insertion of a <table>, avoiding Quill's sanitize path
+    const html = (() => {
+      let s = '<table class="md-table"><tbody>';
+      for (let r=0;r<rows;r++){
+        s += '<tr>';
+        for (let c=0;c<cols;c++){ s += '<td>&nbsp;</td>'; }
+        s += '</tr>';
+      }
+      s += '</tbody></table>';
+      return s;
+    })();
+
+    if (insertHTMLAtCursor(html)) return;
+
+    // 3) Clipboard fallback
+    const before = quill.getLength();
     const range = quill.getSelection(true);
-    quill.clipboard.dangerouslyPasteHTML(range ? range.index : quill.getLength(), html, 'user');
+    const index = range ? range.index : before;
+    quill.clipboard.dangerouslyPasteHTML(index, html, 'user');
   }
 
   function findAncestor(node, tag) {
-    tag = tag.toUpperCase();
+    const t = String(tag || '').toUpperCase();
     while (node && node !== quill.root) {
-      if (node.tagName === tag) return node;
+      if (node.tagName === t) return node;
       node = node.parentNode;
     }
     return null;
@@ -339,7 +409,8 @@
     if (!quill) return null;
     const sel = quill.getSelection(true);
     if (!sel) return null;
-    const [leaf] = quill.getLeaf(sel.index);
+    const leafTuple = quill.getLeaf(sel.index);
+    const leaf = leafTuple && leafTuple[0];
     if (!leaf || !leaf.domNode) return null;
     return findAncestor(leaf.domNode, 'TABLE');
   }
@@ -407,7 +478,7 @@
   // init
   const init = async () => {
     await loadAll();
-    editorWrap && editorWrap.classList.add("editor-a4");
+    if (editorWrap) editorWrap.classList.add("editor-a4");
     const initialHTML = window.getEditorHTML();
     await initQuill(initialHTML);
   };
