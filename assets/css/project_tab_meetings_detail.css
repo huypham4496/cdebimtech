@@ -1,56 +1,61 @@
-/* =========================================================
-   Project Meetings Detail — Light & Calm UI (FINAL)
-   - KV1 + KV2 (left), KV3 (right, same height as KV1+KV2)
-   - Toolbar wraps (no overflow), lighter typography
-   - Attendees panel: never overflows; inputs don’t push layout
-   - Sticky footer button (Save) always visible
-   - A4 editor preview and print-friendly
-   ========================================================= */
 
-/* ---------- THEME TOKENS ---------- */
+/* =====================================================================
+   CDE — Project Meetings Detail (Modern Light UI)
+   - Focus: đẹp, hiện đại, tông sáng, đồng bộ giao diện ứng dụng
+   - Hoạt động tốt với Quill editor + custom Table Picker + Borders toggle
+   - Không đụng chạm HTML/JS (chỉ CSS); các class/id phổ biến được giữ nguyên
+   ===================================================================== */
+
+/* ------------------------- Color System & Tokens ------------------------- */
 :root{
-  --bg:#f6f8fc;
-  --bg-soft:#f1f5fb;
-  --card:#ffffff;
-  --text:#0f172a;
-  --muted:#64748b;
-  --brand:#2563eb;
-  --brand-weak:#e8f0fe;
-  --border:#e5e7eb;
-  --ring:#93c5fd;
-  --danger:#ef4444;
-  --success:#10b981;
+  /* Surfaces */
+  --bg: #f6f8fc;
+  --bg-soft: #f1f5fb;
+  --card: #ffffff;
 
-  --radius-lg:16px; --radius-md:12px; --radius-sm:10px;
-  --gap:14px; --gap-lg:18px; --gap-xl:24px;
+  /* Text & Accents */
+  --text: #0f172a;         /* slate-900 */
+  --muted: #64748b;        /* slate-500 */
+  --brand: #2563eb;        /* blue-600 */
+  --brand-weak: #e8f0fe;   /* light brand tint */
 
-  --shadow-1:0 6px 16px rgba(15,23,42,.06);
-  --shadow-2:0 12px 28px rgba(15,23,42,.10);
+  /* Borders & Effects */
+  --border: #e5e7eb;       /* gray-200 */
+  --ring: #93c5fd;         /* blue-300 */
 
-  --toolbar-h:50px;
-  --editor-pad-x:22px; --editor-pad-y:18px;
+  /* Status */
+  --danger: #ef4444;
+  --success: #10b981;
+  --warning: #f59e0b;
+
+  /* Rounds & Spacing */
+  --radius-lg: 16px; --radius-md: 12px; --radius-sm: 10px;
+  --gap-xs: 8px; --gap: 14px; --gap-lg: 18px; --gap-xl: 24px;
+
+  /* Shadows */
+  --shadow-1: 0 6px 16px rgba(15,23,42,.06);
+  --shadow-2: 0 12px 28px rgba(15,23,42,.10);
 }
 
-/* ---------- BASE ---------- */
+/* ------------------------------ Base & Layout ------------------------------ */
 *{box-sizing:border-box}
 html,body{min-height:100%}
 body.md-body{
   background:
-    radial-gradient(1100px 700px at 10% -10%, var(--brand-weak), transparent 60%),
+    radial-gradient(1200px 800px at 10% -10%, var(--brand-weak), transparent 55%),
     linear-gradient(180deg, var(--bg-soft), var(--bg));
   color:var(--text);
   font: 400 15px/1.65 "Inter",system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
-  margin:0; -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+  margin:0;
+  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
 }
 a{color:var(--brand);text-decoration:none}
 a:hover{text-decoration:underline}
 
-.md-container{max-width:1200px;margin:0 auto;padding:22px 18px 120px}
-
-/* ---------- GRID 2 COLUMNS ---------- */
+.md-container{max-width:1440px;margin:0 auto;padding:22px 18px 120px}
 .md-grid{
   display:grid;
-  grid-template-columns:minmax(0,2fr) minmax(320px,1fr);
+  grid-template-columns:minmax(0,3.25fr) minmax(340px,1fr);
   grid-auto-rows:auto;
   gap:var(--gap-xl);
   align-items:start;
@@ -59,7 +64,7 @@ a:hover{text-decoration:underline}
 .md-editor{grid-column:1;grid-row:2}
 .md-attendees{grid-column:2;grid-row:1 / span 2}
 
-/* ---------- CARD ---------- */
+/* ------------------------------ Cards & Header ------------------------------ */
 .card{
   background:var(--card);
   border:1px solid var(--border);
@@ -78,26 +83,31 @@ a:hover{text-decoration:underline}
 .card-head h1{font-size:21px}
 .card-head h2{font-size:17px}
 
-/* ---------- BUTTONS ---------- */
+/* ------------------------------- Buttons & Badges ------------------------------- */
 .actions{display:flex;gap:10px;flex-wrap:wrap}
 .btn{
   appearance:none;cursor:pointer;
   border:1px solid var(--border);border-radius:var(--radius-md);
   background:#fff;color:var(--text);padding:8px 12px;
   font-weight:600;letter-spacing:.2px;
-  transition:transform .12s ease, box-shadow .2s ease, border-color .2s ease, background .2s ease;
+  transition:transform .12s ease, box-shadow .2s ease, border-color .2s ease, background .2s ease, opacity .2s ease;
 }
 .btn:hover{transform:translateY(-1px);border-color:color-mix(in oklab,var(--border),var(--brand) 28%)}
 .btn:active{transform:translateY(0)}
 .btn:focus-visible{outline:none;box-shadow:0 0 0 3px var(--ring)}
 .btn.primary{background:var(--brand);color:#fff;border-color:var(--brand)}
 .btn.secondary{background:var(--brand-weak);color:var(--brand);border-color:transparent}
+.btn.ghost{background:transparent}
 .btn.small{padding:6px 10px;font-size:13px}
 .btn.icon{padding:6px 10px}
 .btn.danger{background:#fee2e2;color:#b91c1c;border-color:#fecaca}
 .btn.loading{opacity:.7;pointer-events:none}
 
-/* ---------- KV1 SUMMARY ---------- */
+.badge{display:inline-flex;align-items:center;height:22px;border-radius:999px;padding:0 8px;font-size:12px;font-weight:700}
+.badge-success{background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0}
+.badge-muted{background:#f3f4f6;color:#374151;border:1px solid #e5e7eb}
+
+/* -------------------------------- Meta (KV1) -------------------------------- */
 .meta{
   display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
   gap:var(--gap);padding:12px 16px 16px
@@ -106,122 +116,137 @@ a:hover{text-decoration:underline}
 .meta .value{margin-top:4px;font-weight:600;word-break:break-word}
 .meta .full{grid-column:1 / -1}
 
-/* ---------- KV2 EDITOR + TOOLBAR ---------- */
-.md-editor .card-head{position:sticky;top:0;z-index:5;background:#fff}
+/* --------------------------- Editor (KV2 — Quill) --------------------------- */
 
-.toolbar{
-  min-height:var(--toolbar-h);
-  display:flex;align-items:center;gap:8px;
-  padding:8px 10px;border-bottom:1px solid var(--border);
-  overflow-x:auto;overscroll-behavior-x:contain;flex-wrap:wrap
+/* Đặt toolbar ngay TRONG khung soạn thảo, trước vùng nhập */
+.md-editor .ql-toolbar.ql-snow{
+  border:none;border-bottom:1px solid var(--border);
+  padding:8px 10px; overflow-x:auto; background:#fff;
 }
-.toolbar::-webkit-scrollbar{height:8px}
-.toolbar::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:8px}
-.toolbar .sep{width:1px;height:24px;background:var(--border);margin:0 2px;border-radius:999px}
+/* Cho toolbar có bóng nhẹ khi cuộn trong card */
+.md-editor .ql-toolbar.ql-snow{box-shadow:0 1px 0 rgba(15,23,42,.02)}
 
-.toolbar button,
-.toolbar select,
-.toolbar .color-pick{
-  border:1px solid var(--border);background:#fff;color:var(--text);
-  padding:6px 10px;border-radius:var(--radius-sm);cursor:pointer;
-  font-size:13px;font-weight:500;line-height:1.25;white-space:nowrap;
-  transition:border-color .15s ease, background .15s ease, transform .12s ease;
+/* Quill container */
+#editor{background:#fff}
+#editor .ql-container.ql-snow{border:none;min-height:420px}
+#editor .ql-editor{
+  padding:16px 18px; line-height:1.7; color:#0f172a;
+  /* Dán sát đỉnh, tránh "lơ lửng" */
 }
-.toolbar button:hover,.toolbar select:hover,.toolbar .color-pick:hover{
-  border-color:color-mix(in oklab,var(--border),var(--brand) 24%)
-}
-.toolbar button i{min-width:14px;text-align:center}
-.toolbar .color-pick{display:inline-flex;align-items:center;gap:6px}
-.toolbar .color-pick input[type="color"]{
-  border:none;padding:0;width:24px;height:24px;background:transparent;cursor:pointer
-}
+#editor .ql-editor > *:first-child{ margin-top:0 }
 
-/* Editor */
-.editor{
-  min-height:420px;
-  padding:var(--editor-pad-y) var(--editor-pad-x) 26px;
-  line-height:1.7;
-  outline:none;color:var(--text);
-  font-size:15px;background:#fff
-}
-.editor.editor-a4{
-  max-width:794px;margin:16px auto 22px;background:#fff;color:#0f172a;
+/* Chế độ A4 để soạn thảo đẹp khi cần in */
+#editor.editor-a4 .ql-editor{
+  max-width:794px;margin:12px auto 22px;background:#fff;color:#0f172a;
   border-radius:12px;box-shadow:0 8px 20px rgba(15,23,42,.06);
-  padding:26mm 22mm
+  padding:18mm 18mm;
 }
-@media (max-width:880px){.editor.editor-a4{padding:20mm 16mm}}
-@media (max-width:720px){.editor.editor-a4{padding:14mm 12mm}}
-.editor:focus{box-shadow:0 0 0 3px var(--ring)}
-.editor h1,.editor h2,.editor h3{font-weight:600;color:#0f172a;margin:14px 0 8px}
-.editor h1{font-size:26px}.editor h2{font-size:22px}.editor h3{font-size:18px}
-.editor p{margin:10px 0}
-.editor a{color:var(--brand)}
-.editor table.md-table{
-  width:100%;border-collapse:collapse;margin:14px 0;
-  font-size:14px;color:#0f172a;background:#fff;border-radius:10px;overflow:hidden;
+@media (max-width:880px){ #editor.editor-a4 .ql-editor{ padding:14mm 14mm } }
+@media (max-width:720px){ #editor.editor-a4 .ql-editor{ padding:12mm 10mm } }
+
+/* Bảng trong nội dung Quill */
+#editor .ql-editor table{
+  width:100%;border-collapse:collapse;margin:14px 0;font-size:14px;
+  color:#0f172a;background:#fff;border-radius:10px;overflow:hidden;
   border:1px solid var(--border)
 }
-.editor table.md-table th{text-align:left;background:#f3f6fb;font-weight:600;color:#0f172a}
-.editor table.md-table td,.editor table.md-table th{border:1px solid var(--border);padding:10px;vertical-align:top}
+#editor .ql-editor th{ text-align:left;background:#f3f6fb;font-weight:600;color:#0f172a }
+#editor .ql-editor td,#editor .ql-editor th{ border:1px solid var(--border);padding:10px;vertical-align:top }
+#editor .ql-editor td:empty::after{content:"\00a0";}
 
-/* ---------- KV3 ATTENDEES (RIGHT COLUMN) ---------- */
-.md-attendees{
-  display:flex;flex-direction:column;min-height:100%;
-  overflow-x:hidden;  /* chặn tràn ngang khi có ô nhập dài */
-  min-width: 550px;
+/* Toggle no-borders (JS thêm class .no-borders trên <table>) */
+#editor .ql-editor table.no-borders,
+#editor .ql-editor table.no-borders td,
+#editor .ql-editor table.no-borders th{ border:0 !important }
+
+/* Ảnh và figure */
+#editor .ql-editor img{max-width:100%;height:auto;border-radius:10px;box-shadow:0 6px 14px rgba(15,23,42,.06)}
+#editor .ql-editor figure{margin:12px 0}
+#editor .ql-editor blockquote{
+  border-left:3px solid var(--brand); background:#f8fafc; margin:10px 0; padding:10px 12px; border-radius:10px;
 }
 
-/* nội dung có thể cuộn, giữ nút footer luôn thấy */
+/* Màu icon của Quill đậm hơn để không bị mờ */
+.ql-snow .ql-stroke{stroke:#1f2937}
+.ql-snow .ql-fill{fill:#1f2937}
+.ql-snow .ql-picker{color:#1f2937}
+
+/* Custom buttons trong toolbar (Undo, Redo, Insert Table, Toggle Borders) */
+.ql-toolbar .ql-formats .ql-custom-btn{
+  width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;
+  border:0;background:transparent;padding:0;cursor:pointer;border-radius:8px
+}
+.ql-toolbar .ql-formats .ql-custom-btn svg{width:18px;height:18px}
+.ql-toolbar .ql-formats .ql-custom-btn:hover{background:#f3f4f6}
+
+/* ---- Table Size Picker (đi kèm JS) ---- */
+.ql-table-picker{
+  position:absolute; z-index:1000; background:#fff; border:1px solid var(--border);
+  border-radius:12px; box-shadow:var(--shadow-2); padding:10px; display:none;
+}
+.ql-table-picker .grid{
+  display:grid; grid-template-columns: repeat(10, 18px); grid-auto-rows:18px; gap:4px;
+}
+.ql-table-picker .cell{
+  width:18px;height:18px;border:1px solid var(--border); border-radius:4px; background:#f9fafb;
+  transition:background .15s ease, border-color .15s ease;
+}
+.ql-table-picker .cell.active{ background:var(--brand-weak); border-color:#c7d2fe }
+.ql-table-picker .hint{font-size:12px;color:var(--muted);margin-top:8px;text-align:center}
+
+/* ------------------------------ Attendees (KV3) ------------------------------ */
+.md-attendees{
+  display:flex;flex-direction:column;min-height:100%;
+  overflow-x:hidden;min-width: 420px;
+}
 .att-grid{
-  flex:1 1 auto;
-  min-height:0;          /* cho phép con cuộn */
-  overflow:auto;
-  display:grid;
-  grid-template-rows:auto 1fr;
-  gap:var(--gap-lg);
+  flex:1 1 auto;min-height:0;overflow:auto;
+  display:grid;grid-template-rows:auto 1fr;gap:var(--gap-lg);
   padding:12px 16px 16px;
 }
 .att-block h3{margin:0 0 8px;font-size:15px;font-weight:600;color:var(--text)}
-
-/* member rows */
 .member-list{display:grid;gap:8px;grid-template-columns:1fr}
 .mem-row{
-  display:grid;grid-template-columns:26px minmax(0,1fr) minmax(0,1fr); /* co giãn đúng */
+  display:grid;grid-template-columns:26px minmax(0,1fr) minmax(0,1fr);
   gap:10px;align-items:center;
   border:1px solid var(--border);border-radius:var(--radius-md);padding:8px 10px;background:#fff;
   transition:border-color .15s ease, box-shadow .2s ease, transform .15s ease
 }
 .mem-row:hover{border-color:color-mix(in oklab,var(--border),var(--brand) 22%);transform:translateY(-1px);box-shadow:0 6px 14px rgba(15,23,42,.06)}
 .mem-row input{margin:0 auto;transform:translateY(1px)}
-.mem-name,.mem-email{min-width:0}               /* tránh tràn */
+.mem-name,.mem-email{min-width:0}
 .mem-name{font-weight:600}
 .mem-email{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
-/* external invite rows */
 .external-list{display:grid;gap:10px;padding-right:2px}
 .ext-row{
-  display:grid;
-  grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto; /* co giãn, không đẩy tràn */
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;
   gap:10px;align-items:center
 }
 .ext-row input{
-  min-width:0; width:100%;                   /* FIX: không đẩy layout tràn ngang */
+  min-width:0;width:100%;
   border:1px solid var(--border);background:#fff;color:var(--text);
   border-radius:var(--radius-md);padding:10px 12px;font-size:14px;outline:none;
   transition:border-color .15s ease, box-shadow .15s ease
 }
 .ext-row input:focus{border-color:var(--ring);box-shadow:0 0 0 3px var(--ring)}
 
-/* sticky footer actions in attendees card */
 .md-attendees .actions{
-  position:sticky;bottom:0;
-  padding:12px 16px;
+  position:sticky;bottom:0;padding:12px 16px;
   background:linear-gradient(180deg, transparent, #fff 55%);
-  border-top:1px solid var(--border);
-  justify-content:flex-end;z-index:1
+  border-top:1px solid var(--border);justify-content:flex-end;z-index:1
 }
 
-/* ---------- TOAST ---------- */
+/* ------------------------------ Forms & Fields ------------------------------ */
+.field{display:grid;grid-template-columns:160px 1fr;gap:10px;align-items:center}
+.label{font-size:13px;color:var(--muted);font-weight:600}
+.input, .select, .textarea{
+  border:1px solid var(--border);border-radius:var(--radius-md);padding:10px 12px;background:#fff;color:var(--text);
+}
+.input:focus, .select:focus, .textarea:focus{outline:none;border-color:var(--ring);box-shadow:0 0 0 3px var(--ring)}
+.textarea{min-height:120px}
+
+/* ------------------------------ Toast ------------------------------ */
 .md-toast{
   position:fixed;left:50%;transform:translateX(-50%) translateY(10px);
   bottom:24px;padding:12px 16px;border-radius:12px;color:#fff;
@@ -233,23 +258,63 @@ a:hover{text-decoration:underline}
 .md-toast.success{background:var(--success)}
 .md-toast.error{background:var(--danger)}
 
-/* ---------- PRINT (A4) ---------- */
+/* ------------------------------ Utilities ------------------------------ */
+.muted{color:var(--muted)}
+.hr{height:1px;background:var(--border);margin:10px 0}
+.table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.table th,.table td{padding:10px;border-bottom:1px solid var(--border)}
+.table thead th{background:#f8fafc;text-align:left;font-weight:700}
+.table tbody tr:last-child td{border-bottom:0}
+
+/* ------------------------------ Responsive ------------------------------ */
+@media (max-width:1100px){
+  .md-grid{grid-template-columns:1fr}
+  .md-summary,.md-editor,.md-attendees{grid-column:1;grid-row:auto}
+  .md-attendees{min-width:0}
+  .meta{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:560px){
+  .mem-row{grid-template-columns:22px minmax(0,1fr)}
+  .mem-email{display:none}
+  .field{grid-template-columns:1fr;gap:6px}
+}
+
+/* ------------------------------ Print ------------------------------ */
 @media print{
   @page{size:A4;margin:20mm}
   body.md-body{background:#fff}
-  .card,.editor.editor-a4{box-shadow:none !important;background:#fff}
-  .toolbar,.actions,.md-toast{display:none !important}
+  .card,#editor.editor-a4 .ql-editor{box-shadow:none !important;background:#fff}
+  .md-attendees,.actions,.md-toast,.ql-toolbar{display:none !important}
 }
 
-/* ---------- RESPONSIVE ---------- */
-@media (max-width:1080px){.meta{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media (max-width:900px){
-  .md-grid{grid-template-columns:1fr}
-  .md-summary,.md-editor,.md-attendees{grid-column:1;grid-row:auto}
+/* --- Widen editor column & content on larger screens --- */
+@media (min-width: 1360px){
+  .md-container{ max-width: 1500px; }
+  .md-grid{ grid-template-columns: minmax(0,3.6fr) minmax(340px,1fr); }
+  #editor.editor-a4 .ql-editor{ max-width: 920px; }
 }
-@media (max-width:560px){
-  .toolbar{gap:6px}
-  .toolbar select{font-size:12px}
-  .mem-row{grid-template-columns:22px minmax(0,1fr)}
-  .mem-email{display:none}
+@media (min-width: 1536px){
+  .md-container{ max-width: 1600px; }
+  .md-grid{ grid-template-columns: minmax(0,3.8fr) minmax(340px,1fr); }
+  #editor.editor-a4 .ql-editor{ max-width: 980px; }
+}
+
+/* --- Wider editor column (extra) --- */
+.md-grid{ grid-template-columns: minmax(0,4fr) minmax(320px,1fr); }
+.md-attendees{ min-width: 340px !important; }
+
+@media (min-width: 1360px){
+  .md-container{ max-width: 1680px; }
+  .md-grid{ grid-template-columns: minmax(0,4.2fr) minmax(320px,1fr); }
+  #editor.editor-a4 .ql-editor{ max-width: 1040px; }
+}
+@media (min-width: 1536px){
+  .md-container{ max-width: 1760px; }
+  .md-grid{ grid-template-columns: minmax(0,4.5fr) minmax(320px,1fr); }
+  #editor.editor-a4 .ql-editor{ max-width: 1120px; }
+}
+@media (min-width: 1800px){
+  .md-container{ max-width: 1920px; }
+  .md-grid{ grid-template-columns: minmax(0,5fr) minmax(320px,1fr); }
+  #editor.editor-a4 .ql-editor{ max-width: 1200px; }
 }
