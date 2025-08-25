@@ -99,6 +99,7 @@ $tabs = [
   'history'=>'History'
 ];
 $tab = $_GET['tab'] ?? 'overview';
+$meetingId  = isset($_GET['meeting_id']) ? (int)$_GET['meeting_id'] : 0;
 if (!isset($tabs[$tab])) $tab = 'overview';
 
 $statusClass = ($project['status'] ?? 'active') === 'completed' ? 'completed' : 'active';
@@ -141,9 +142,17 @@ $statusClass = ($project['status'] ?? 'active') === 'completed' ? 'completed' : 
     <span class="pv-tab-indicator"></span>
   </nav>
 
-  <section class="pv-content">
-    <?php include $ROOT . '/pages/partials/project_tab_' . $tab . '.php'; ?>
-  </section>
+<section class="pv-content">
+  <?php
+    if ($tab === 'meetings' && $meetingId > 0) {
+      // Khi có meeting_id → hiển thị trang chi tiết cuộc họp
+      include $ROOT . '/pages/partials/project_tab_meetings_detail.php';
+    } else {
+      // Mặc định: hiển thị partial theo tab
+      include $ROOT . '/pages/partials/project_tab_' . $tab . '.php';
+    }
+  ?>
+</section>
 </main>
 
 <script>
