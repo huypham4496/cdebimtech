@@ -322,7 +322,6 @@ if ($ajax) {
 
     // Load content_html
     $content_html = '';
-    
     try {
         $stm2 = $pdo->prepare("SELECT content_html FROM project_meeting_details WHERE meeting_id=? LIMIT 1");
         $stm2->execute([$meeting_id]);
@@ -378,7 +377,60 @@ if ($ajax) {
         }
     }
 
-    // Inline local images as data URIs
+    // ---- BEGIN: CLEAN & INLINE PREP (remove fixed sizes, add fit-to-page styles & width attr) ----
+if (!empty($content_html)) {
+    // Remove width/height attributes on <img>
+    $content_html = preg_replace(
+        '/\s(width|height)\s*=\s*("[^"]*"|\'[^\']*\'|\S+)/i',
+        '',
+        $content_html
+    );
+
+    // Remove width/height in inline style of <img>
+    $content_html = preg_replace_callback(
+        '#<img\b[^>]*\bstyle\s*=\s*("|\')(.*?)\1[^>]*>#i',
+        function($m){
+            $q = $m[1];
+            $style = $m[2];
+            // strip any width/height from style
+            $style = preg_replace('/\b(width|height)\s*:\s*[^;]+;?/i', '', $style);
+            // collapse redundant semicolons/spaces
+            $style = trim(preg_replace('/\s*;+\s*/', '; ', $style), " ;");
+            // replace original style
+            $tag = $m[0];
+            return preg_replace('/\bstyle\s*=\s*("|\')(.*?)\1/i', 'style='.$q.$style.$q, $tag, 1);
+        },
+        $content_html
+    );
+
+    // Ensure every <img> fits within ~650px and has width attr so Word enforces it
+    $content_html = preg_replace_callback(
+        '#<img\b([^>]*)>#i',
+        function($m){
+            $attrs = $m[1];
+            // remove old width/height attrs
+            $attrs = preg_replace('/\s(width|height)\s*=\s*("[^"]*"|\'[^\']*\'|\S+)/i', '', $attrs);
+            if (stripos($attrs, 'style=') !== false) {
+                $attrs = preg_replace_callback('/style=("|\')(.*?)\1/si', function($mm){
+                    $q = $mm[1];
+                    $v = trim($mm[2]);
+                    if ($v !== '' && substr($v, -1) !== ';') { $v .= ';'; }
+                    $v .= ' max-width:650px; height:auto; display:block;';
+                    return 'style=' . $q . trim($v) . $q;
+                }, $attrs, 1);
+            } else {
+                $attrs .= ' style="max-width:650px; height:auto; display:block;"';
+            }
+            // add width attr to enforce in Word
+            $attrs .= ' width="650"';
+            return '<img' . $attrs . '>';
+        },
+        $content_html
+    );
+}
+// ---- END: CLEAN & INLINE PREP ----
+
+// Inline local images as data URIs
     libxml_use_internal_errors(true);
     $dom = new DOMDocument();
     $dom->loadHTML('<?xml encoding="utf-8" ?>' . $content_html, LIBXML_HTML_NODEFDTD | LIBXML_HTML_NOIMPLIED);
@@ -400,7 +452,174 @@ if ($ajax) {
         }
     }
     $content_html_inlined = $dom->saveHTML();
+// ---- POST-INLINE FIT: ensure inlined <img> still constrained & width enforced ----
+if (!empty($content_html_inlined)) {
+    $content_html_inlined = preg_replace_callback(
+        '#<img\b([^>]*)>#i',
+        function($m){
+            $attrs = $m[1];
+            // remove old width/height attrs
+            $attrs = preg_replace('/\s(width|height)\s*=\s*("[^"]*"|\'[^\']*\'|\S+)/i', '', $attrs);
+            if (stripos($attrs, 'style=') !== false) {
+                $attrs = preg_replace_callback('/style=("|\')(.*?)\1/si', function($mm){
+                    $q = $mm[1];
+                    $v = trim($mm[2]);
+                    if ($v !== '' && substr($v, -1) !== ';') { $v .= ';'; }
+                    $v .= ' max-width:650px; height:auto; display:block;';
+                    return 'style=' . $q . trim($v) . $q;
+                }, $attrs, 1);
+            } else {
+                $attrs .= ' style="max-width:650px; height:auto; display:block;"';
+            }
+            // add width attr to enforce in Word
+            $attrs .= ' width="650"';
+            return '<img' . $attrs . '>';
+        },
+        $content_html_inlined
+    );
+}
+// ---- END POST-INLINE FIT ----
     libxml_clear_errors();
+
+// === BEGIN: Build $attendees_table (copied logic from templete.php style) ===
+$attendees_table = '';
+
+// 1) Load attendees: join users để có first_name, last_name, email cho nội bộ
+$att_list = [];
+try {
+    $q = $pdo->prepare("
+        SELECT a.*,
+               u.first_name, u.last_name, u.email AS user_email
+        FROM project_meeting_attendees a
+        LEFT JOIN users u ON u.id = a.user_id
+        WHERE a.meeting_id=?
+        ORDER BY a.id ASC
+    ");
+    $q->execute([$meeting_id]);
+    $att_list = $q->fetchAll(PDO::FETCH_ASSOC);
+} catch (Throwable $e) {
+    $att_list = [];
+}
+
+// 2) Build rows: theo mẫu templete.php (#, Name, Email, Type)
+$rows = [];
+$idx  = 1;
+foreach ($att_list as $a) {
+    $isExt = (int)($a['is_external'] ?? 0) === 1;
+
+    // Name
+    if ($isExt) {
+        $name = trim((string)($a['external_name'] ?? ''));
+    } else {
+        $fn = trim((string)($a['first_name'] ?? ''));
+        $ln = trim((string)($a['last_name'] ?? ''));
+        $name = trim($fn . ' ' . $ln);
+        if ($name === '') {
+            // fallback nếu không tách first/last trong DB
+            $name = trim((string)($a['name'] ?? ''));
+        }
+    }
+    // Email
+    $email = $isExt
+        ? trim((string)($a['external_email'] ?? ''))
+        : trim((string)($a['user_email'] ?? ($a['email'] ?? '')));
+
+    $type  = $isExt ? 'External' : 'Project Member';
+
+    $name  = htmlspecialchars($name,  ENT_QUOTES, 'UTF-8');
+    $email = htmlspecialchars($email, ENT_QUOTES, 'UTF-8');
+    $type  = htmlspecialchars($type,  ENT_QUOTES, 'UTF-8');
+
+    $rows[] = '<tr>'
+            . '<td style="text-align:center;">' . ($idx++) . '</td>'
+            . '<td>' . $name . '</td>'
+            . '<td>' . $email . '</td>'
+            . '<td style="text-align:center;">' . $type . '</td>'
+            . '</tr>';
+}
+
+// 3) Compose table if any
+if (!empty($rows)) {
+    $attendees_table  = '<div class="section-title" style="margin:12pt 0 6pt 0;"><b>Attendees</b></div>';
+    $attendees_table .= '<table class="attendees-table" style="width:100%;border-collapse:collapse;table-layout:fixed;">';
+    $attendees_table .= '<thead><tr><th>#</th><th>Name</th><th>Email</th><th>Type</th></tr></thead>';
+    $attendees_table .= '<tbody>' . implode('', $rows) . '</tbody></table>';
+}
+// === END: Build $attendees_table ===
+
+
+
+
+// === BEGIN: Build Attendees & External Guests block ===
+$internal = [];
+$external = [];
+
+// Try external participants table if exists
+$external_guests = [];
+try {
+    $stmtExt = $pdo->query("SHOW TABLES LIKE 'project_meeting_external_participants'");
+    if ($stmtExt && $stmtExt->fetch()) {
+        $qExt = $pdo->prepare("SELECT name, role, organization, email, phone FROM project_meeting_external_participants WHERE meeting_id=? ORDER BY id ASC");
+        $qExt->execute([$meeting_id]);
+        $external_guests = $qExt->fetchAll(PDO::FETCH_ASSOC);
+    }
+} catch (Throwable $e) {}
+
+if (!empty($external_guests)) {
+    $external = $external_guests;
+    $internal = isset($attendees) && is_array($attendees) ? $attendees : [];
+} else {
+    if (!isset($attendees) || !is_array($attendees)) { $attendees = []; }
+    foreach ($attendees as $r) {
+        $isExt = false;
+        if (isset($r['is_external']) && (int)$r['is_external'] === 1) $isExt = true;
+        if (isset($r['type']) && strtolower((string)$r['type']) === 'external') $isExt = true;
+        if (isset($r['source']) && strtolower((string)$r['source']) === 'external') $isExt = true;
+        if (!$isExt && empty($r['user_id'] ?? null) && empty($r['member_id'] ?? null)
+            && ( !empty($r['email'] ?? '') || !empty($r['phone'] ?? '') )
+        ) $isExt = true;
+
+        if ($isExt) $external[] = $r; else $internal[] = $r;
+    }
+}
+
+if (!function_exists('mt_format_person_line')) {
+    function mt_format_person_line($r) {
+        $parts = [];
+        $name  = trim((string)($r['name'] ?? ''));
+        $role  = trim((string)($r['role'] ?? ''));
+        $org   = trim((string)($r['organization'] ?? ''));
+        $email = trim((string)($r['email'] ?? ''));
+        $phone = trim((string)($r['phone'] ?? ''));
+
+        if ($name !== '')  $parts[] = htmlspecialchars($name,  ENT_QUOTES, 'UTF-8');
+        if ($role !== '')  $parts[] = htmlspecialchars($role,  ENT_QUOTES, 'UTF-8');
+        if ($org  !== '')  $parts[] = htmlspecialchars($org,   ENT_QUOTES, 'UTF-8');
+        if ($email!== '')  $parts[] = htmlspecialchars($email, ENT_QUOTES, 'UTF-8');
+        if ($phone!== '')  $parts[] = htmlspecialchars($phone, ENT_QUOTES, 'UTF-8');
+
+        if (empty($parts)) return '';
+        return '<li>'.implode(' – ', $parts).'</li>';
+    }
+}
+
+$liInt = []; foreach ($internal as $r) { $ln = mt_format_person_line($r); if ($ln!=='') $liInt[] = $ln; }
+$liExt = []; foreach ($external as $r) { $ln = mt_format_person_line($r); if ($ln!=='') $liExt[] = $ln; }
+
+$attHtmlBlock = '';
+if (!empty($liInt) || !empty($liExt)) {
+    $attHtmlBlock .= '<div class="mt-attendees-block" style="margin:12pt 0 10pt 0;">';
+    if (!empty($liInt)) {
+        $attHtmlBlock .= '<div style="font-weight:bold;margin:4pt 0 2pt 0;">Thành viên tham gia:</div>'
+                       . '<ul style="margin:0 0 6pt 16pt; padding:0;">'.implode('', $liInt).'</ul>';
+    }
+    if (!empty($liExt)) {
+        $attHtmlBlock .= '<div style="font-weight:bold;margin:4pt 0 2pt 0;">Khách mời bên ngoài:</div>'
+                       . '<ul style="margin:0 0 0 16pt; padding:0;">'.implode('', $liExt).'</ul>';
+    }
+    $attHtmlBlock .= '</div>';
+}
+// === END: Build Attendees & External Guests block ===
 
     // Build minimal Word-friendly HTML
     $title = trim((string)($meeting['title'] ?? 'Meeting'));
@@ -415,7 +634,8 @@ $doc = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>'
           table { border-collapse:collapse; }
           table, td, th { border:1px solid #333; }
           td, th { padding:4px 6px; }
-        </style>'
+        
+img{max-width:170mm;height:auto;display:block;}</style>'
      . '</head><body>';
 
     $doc .= '<h2>' . htmlspecialchars($title, ENT_QUOTES, 'UTF-8') . '</h2>';
@@ -433,10 +653,18 @@ $doc = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>'
         $doc .= '<div><b>Online link:</b> <a href="'.$ol.'">'.$ol.'</a></div>';
     }
     if (!empty($meeting['short_desc'])) {
-        $doc .= '<div><b>Short description:</b> ' . htmlspecialchars($meeting['short_desc'], ENT_QUOTES, 'UTF-8') . '</div>';
-    }
+    $doc .= '<div><b>Short description:</b> '
+          . htmlspecialchars($meeting['short_desc'], ENT_QUOTES, 'UTF-8')
+          . '</div>';
+}
 
-    $doc .= $content_html_inlined;
+// luôn luôn chèn attendees nếu có
+if (!empty($attendees_table)) {
+    $doc .= $attendees_table;
+}
+
+// rồi mới tới phần nội dung chi tiết đã inline ảnh
+$doc .= $content_html_inlined;
     $doc .= '</body></html>';
 
     // Output as .doc
