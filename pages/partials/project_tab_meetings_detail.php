@@ -300,87 +300,153 @@ if ($ajax) {
     }
   }
   elseif ($ajax==='export_doc') {
-    while (ob_get_level()) { ob_end_clean(); }
-// --- Build safe filename: "title_start_time.doc" ---
-$rawTitle = $meeting['title'] ?? ('Meeting-'.$meeting_id);
-$rawStart = $meeting['start_time'] ?? '';
+    // --- FIXED export_doc: inline images + safe filename, keep other code untouched ---
+    $meeting_id = isset($_GET['meeting_id']) ? (int)$_GET['meeting_id'] : 0;
+    if ($meeting_id <= 0) {
+        header('Content-Type: text/plain; charset=utf-8'); http_response_code(400);
+        echo "Missing meeting_id"; exit;
+    }
 
-// Loại ký tự đặc biệt khỏi title để an toàn tên file (Windows/macOS/Linux)
-$safeTitle = preg_replace('/[^A-Za-z0-9_\-]+/', '_', trim($rawTitle));
+    // Load meeting & project
+    try {
+        $stm = $pdo->prepare("SELECT m.*, p.name AS project_name FROM project_meetings m JOIN projects p ON p.id=m.project_id WHERE m.id=? LIMIT 1");
+        $stm->execute([$meeting_id]);
+        $meeting = $stm->fetch(PDO::FETCH_ASSOC);
+    } catch (Throwable $e) {
+        $meeting = null;
+    }
+    if (!$meeting) {
+        header('Content-Type: text/plain; charset=utf-8'); http_response_code(404);
+        echo "Meeting not found"; exit;
+    }
 
-// Định dạng thời gian không chứa dấu ":" (tránh lỗi tên file trên Windows)
-$timePart = $rawStart ? date('Y-m-d_Hi', strtotime($rawStart)) : date('Y-m-d');
+    // Load content_html
+    $content_html = '';
+    
+    try {
+        $stm2 = $pdo->prepare("SELECT content_html FROM project_meeting_details WHERE meeting_id=? LIMIT 1");
+        $stm2->execute([$meeting_id]);
+        $row2 = $stm2->fetch(PDO::FETCH_ASSOC);
+        if ($row2 && isset($row2['content_html'])) $content_html = (string)$row2['content_html'];
+    } catch (Throwable $e) {}
 
-$filename = $safeTitle . '_' . $timePart . '.doc';
+    // Ensure <img> do not overflow when opened in Word
+    $content_html = preg_replace_callback('#<img\b([^>]*)>#i', function($m){
+        $attrs = $m[1];
+        if (stripos($attrs, 'style=') !== false) {
+            $attrs = preg_replace('/style=("|\')(.*?)\1/si', function($mm){
+                $q = $mm[1]; $v = $mm[2];
+                if (stripos($v, 'max-width') === false) $v .= ' max-width:100%;';
+                if (stripos($v, 'height:') === false)   $v .= ' height:auto;';
+                return 'style=' . $q . trim($v) . $q;
+            }, $attrs, 1);
+        } else {
+            $attrs .= ' style="max-width:100%; height:auto;"';
+        }
+        return '<img' . $attrs . '>';
+    }, $content_html);
 
-// --- Gửi header sau khi có $filename ---
-header("Content-Type: application/msword; charset=utf-8");
-header('Cache-Control: no-store');
-header('Content-Disposition: attachment; filename="' . $filename . '"');
+    if (!function_exists('mt_guess_mime')) {
+        function mt_guess_mime($path) {
+            $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+            return match ($ext) {
+                'jpg','jpeg' => 'image/jpeg',
+                'png'        => 'image/png',
+                'gif'        => 'image/gif',
+                'webp'       => 'image/webp',
+                'bmp'        => 'image/bmp',
+                'svg'        => 'image/svg+xml',
+                default      => 'application/octet-stream',
+            };
+        }
+    }
+    if (!function_exists('mt_public_to_fs')) {
+        function mt_public_to_fs($url) {
+            $url = explode('?', $url, 2)[0];
+            $url = explode('#', $url, 2)[0];
+            if (strpos($url, '/uploads/') !== 0) return null;
+            // Prefer DOCUMENT_ROOT if present
+            if (!empty($_SERVER['DOCUMENT_ROOT'])) {
+                $p = rtrim($_SERVER['DOCUMENT_ROOT'], '/\\') . $url;
+                if (is_file($p)) return $p;
+            }
+            // Fallback: relative to this file
+            $base = realpath(__DIR__ . '/../../uploads');
+            if (!$base) $base = __DIR__ . '/../../uploads';
+            $rel  = substr($url, strlen('/uploads/'));
+            return $base . '/' . str_replace(['..','\\'], ['','/'], $rel);
+        }
+    }
 
-    $st=$pdo->prepare("SELECT pm.*, p.name AS project_name
-                       FROM project_meetings pm
-                       JOIN projects p ON p.id=pm.project_id
-                       WHERE pm.id=?");
-    $st->execute([$meeting_id]); $meeting=$st->fetch(PDO::FETCH_ASSOC) ?: [];
+    // Inline local images as data URIs
+    libxml_use_internal_errors(true);
+    $dom = new DOMDocument();
+    $dom->loadHTML('<?xml encoding="utf-8" ?>' . $content_html, LIBXML_HTML_NODEFDTD | LIBXML_HTML_NOIMPLIED);
+    $imgs = $dom->getElementsByTagName('img');
+    foreach ($imgs as $img) {
+        $src = $img->getAttribute('src');
+        if (!$src || stripos($src, 'data:') === 0) continue;
+        if (stripos($src, 'http://') === 0 || stripos($src, 'https://') === 0) {
+            // keep remote images as-is
+            continue;
+        }
+        $fs = mt_public_to_fs($src);
+        if ($fs && is_file($fs)) {
+            $bin = @file_get_contents($fs);
+            if ($bin !== false) {
+                $mime = mt_guess_mime($fs);
+                $img->setAttribute('src', 'data:' . $mime . ';base64,' . base64_encode($bin));
+            }
+        }
+    }
+    $content_html_inlined = $dom->saveHTML();
+    libxml_clear_errors();
 
-    $att=$pdo->prepare("SELECT a.*, u.first_name, u.last_name, u.email
-                        FROM project_meeting_attendees a
-                        LEFT JOIN users u ON u.id=a.user_id
-                        WHERE a.meeting_id=? ORDER BY a.id ASC");
-    $att->execute([$meeting_id]); $attendees=$att->fetchAll(PDO::FETCH_ASSOC);
+    // Build minimal Word-friendly HTML
+    $title = trim((string)($meeting['title'] ?? 'Meeting'));
+    if ($title === '') $title = 'Meeting';
+    $safeTitle = preg_replace('/[^\p{L}\p{N}\-_. ]/u', '_', $title);
 
-    $content_html='';
-    try{ $q=$pdo->prepare("SELECT content_html FROM project_meeting_details WHERE meeting_id=?");
-         $q->execute([$meeting_id]); $row=$q->fetch(PDO::FETCH_ASSOC);
-         if ($row) $content_html=$row['content_html'] ?? ''; } catch(Throwable $e) {}
+$doc = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>'
+     . htmlspecialchars($title, ENT_QUOTES, 'UTF-8') . '</title>'
+     . '<style>
+          body { font-family:"Times New Roman",serif; font-size:12pt; }
+          img { max-width:100mm; height:auto; display:block; }
+          table { border-collapse:collapse; }
+          table, td, th { border:1px solid #333; }
+          td, th { padding:4px 6px; }
+        </style>'
+     . '</head><body>';
 
-    ?>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <title>Meeting Minutes</title>
-      <style>
-        @page { size: A4; margin: 20mm; }
-        body { font-family: 'Times New Roman', serif; }
-        h1 { font-size: 22pt; margin-bottom: 6pt; }
-        .meta { margin-bottom: 12pt; font-size: 11pt; }
-        .meta strong { display:inline-block; width: 120px; }
-        .section-title { font-weight: bold; font-size: 12pt; margin: 14pt 0 6pt; }
-        table { border-collapse: collapse; width: 100%; font-size: 11pt; }
-        th, td { border: 1px solid #000; padding: 6pt; }
-      </style>
-    </head>
-    <body>
-      <h1>Meeting Minutes</h1>
-      <div class="meta">
-        <div><strong>Project:</strong> <?= htmlspecialchars($meeting['project_name'] ?? '') ?></div>
-        <div><strong>Title:</strong> <?= htmlspecialchars($meeting['title'] ?? '') ?></div>
-        <div><strong>Start Time:</strong> <?= htmlspecialchars($meeting['start_time'] ?? '') ?></div>
-        <div><strong>Location:</strong> <?= htmlspecialchars($meeting['location'] ?? '') ?></div>
-        <div><strong>Online Link:</strong> <?= htmlspecialchars($meeting['online_link'] ?? '') ?></div>
-      </div>
-      <div class="section-title">Attendees</div>
-      <table>
-        <thead><tr><th>#</th><th>Name</th><th>Email</th><th>Type</th></tr></thead>
-        <tbody>
-          <?php foreach ($attendees as $i=>$a): ?>
-          <tr>
-            <td><?= $i+1 ?></td>
-            <td><?= $a['is_external'] ? htmlspecialchars($a['external_name']) : htmlspecialchars(trim(($a['first_name']??'').' '.($a['last_name']??''))) ?></td>
-            <td><?= $a['is_external'] ? htmlspecialchars($a['external_email']) : htmlspecialchars($a['email']??'') ?></td>
-            <td><?= $a['is_external'] ? 'External' : 'Project Member' ?></td>
-          </tr>
-          <?php endforeach; ?>
-        </tbody>
-      </table>
-      <div class="section-title">Details</div>
-      <div><?= $content_html ?></div>
-    </body>
-    </html>
-    <?php
+    $doc .= '<h2>' . htmlspecialchars($title, ENT_QUOTES, 'UTF-8') . '</h2>';
+    if (!empty($meeting['project_name'])) {
+        $doc .= '<div><b>Project:</b> ' . htmlspecialchars($meeting['project_name'], ENT_QUOTES, 'UTF-8') . '</div>';
+    }
+    if (!empty($meeting['start_time'])) {
+        $doc .= '<div><b>Start time:</b> ' . htmlspecialchars($meeting['start_time'], ENT_QUOTES, 'UTF-8') . '</div>';
+    }
+    if (!empty($meeting['location'])) {
+        $doc .= '<div><b>Location:</b> ' . htmlspecialchars($meeting['location'], ENT_QUOTES, 'UTF-8') . '</div>';
+    }
+    if (!empty($meeting['online_link'])) {
+        $ol = htmlspecialchars($meeting['online_link'], ENT_QUOTES, 'UTF-8');
+        $doc .= '<div><b>Online link:</b> <a href="'.$ol.'">'.$ol.'</a></div>';
+    }
+    if (!empty($meeting['short_desc'])) {
+        $doc .= '<div><b>Short description:</b> ' . htmlspecialchars($meeting['short_desc'], ENT_QUOTES, 'UTF-8') . '</div>';
+    }
+
+    $doc .= $content_html_inlined;
+    $doc .= '</body></html>';
+
+    // Output as .doc
+    $fname = $safeTitle . '_' . date('Y-m-d_His') . '.doc';
+    while (ob_get_level()) ob_end_clean();
+    header('Content-Type: application/msword; charset=utf-8');
+    header('Content-Disposition: attachment; filename="'.$fname.'"');
+    echo $doc;
     exit;
-  }
+}
   else {
     md_json(['error'=>'Unknown action'], 400);
   }
