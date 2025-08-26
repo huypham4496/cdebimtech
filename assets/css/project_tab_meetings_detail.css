@@ -379,3 +379,119 @@ a:hover{text-decoration:underline}
 @media (min-width: 1800px){
   #editor.editor-a4 .ql-editor{ max-width: 1080px; }
 }
+
+
+
+/* ===== TinyMCE adjustments (inline mode) ===== */
+#editor{ min-height: 420px; background:#fff; }
+#editor.editor-a4{
+  max-width:794px;margin:12px auto 22px;background:#fff;color:#0f172a;
+  border-radius:12px;box-shadow:0 8px 20px rgba(15,23,42,.06);
+  padding:18mm 18mm;
+}
+@media (max-width:880px){ #editor.editor-a4{ padding:14mm 14mm } }
+@media (max-width:720px){ #editor.editor-a4{ padding:12mm 10mm } }
+
+/* Tiny UI polish */
+.tox.tox-tinymce-aux .tox-toolbar,
+.tox.tox-tinymce .tox-toolbar{ border-bottom:1px solid var(--border) }
+
+/* Print: hide TinyMCE toolbars */
+@media print{
+  .tox.tox-tinymce-aux, .tox.tox-tinymce, .tox-toolbar, .tox-editor-header{ display:none !important }
+}
+
+
+/* KV2 TinyMCE toolbar anchored inside the editor card */
+#kv2-toolbar{
+  background:#fff;
+  border-bottom:0;
+  border-radius:12px 12px 0 0;
+  padding:6px 8px;
+  box-shadow:0 1px 0 rgba(15,23,42,.02);
+  margin-bottom:0;
+}
+/* TinyMCE will inject its own .tox toolbar inside this host */
+#kv2-toolbar .tox-tbtn{ height:auto }
+
+
+/* ======================= TinyMCE (FINAL OVERRIDES) ======================= */
+/* Put toolbar directly under the card header line and inside the white box */
+#editor{ background:#fff; min-height:420px; margin-top:0; padding-top:0; }
+#editor.editor-a4{ padding:0; } /* no inner padding on host; content area is framed below */
+
+/* Toolbar host is the first child of #editor */
+#kv2-toolbar{
+  background:#fff;
+  border-bottom:0;
+  border-radius:12px 12px 0 0;
+  padding:8px 10px 6px;
+  margin:0;
+  box-shadow:0 1px 0 rgba(15,23,42,.02);
+}
+
+/* Make Tiny header/toolbar seamless within our host */
+#editor .tox .tox-editor-header{ border:0; box-shadow:none }
+#editor .tox .tox-toolbar__primary{ border:0; box-shadow:none }
+
+/* Frame the editable area right below the toolbar (no extra gap) */
+#editor .tox.tox-tinymce-inline .tox-editor-container{
+  margin:0;
+  border-top:0;
+  border-radius:0 0 12px 12px;
+  overflow:hidden;
+  background:#fff;
+}
+#editor .tox .tox-edit-area__iframe{ background:#fff; }
+
+/* Content polish */
+.tox .mce-content-body table{ width:100%; border-collapse:collapse; border-radius:10px; overflow:hidden; }
+.tox .mce-content-body td, .tox .mce-content-body th{ border:1px solid var(--border); padding:10px; vertical-align:top }
+.tox .mce-content-body th{ background:#f3f6fb; text-align:left; font-weight:600 }
+.tox .mce-content-body img{ max-width:100%; height:auto; border-radius:10px; box-shadow:0 6px 14px rgba(15,23,42,.06) }
+
+/* Print: hide TinyMCE chrome */
+@media print{
+  #kv2-toolbar, .tox-editor-header, .tox-toolbar, .tox.tox-tinymce-inline{ display:none !important; }
+}
+
+
+/* Force show TinyMCE toolbar inside editor */
+#kv2-toolbar{ display:block !important; visibility:visible !important; z-index:1; }
+#kv2-toolbar *{ visibility:visible !important; }
+
+
+/* === Always-visible toolbar with classic (iframe) mode === */
+#kv2-toolbar{
+  background:#fff;
+  border-bottom:0;
+  border-radius:12px 12px 0 0;
+  padding:8px 10px 6px;
+  margin:0;
+}
+/* Frame the TinyMCE container right below the toolbar host */
+#kv2-toolbar + .tox.tox-tinymce{
+  border:1px solid #e5e7eb;
+  border-top:0;
+  border-radius:0 0 12px 12px;
+  overflow:hidden;
+  box-shadow:0 8px 20px rgba(15,23,42,.06);
+}
+#kv2-toolbar + .tox.tox-tinymce .tox-edit-area__iframe{ background:#fff; }
+
+/* Ensure toolbar is always visible */
+#kv2-toolbar{ display:block !important; visibility:visible !important; z-index:1; }
+#kv2-toolbar *{ visibility:visible !important; }
+
+/* Print */
+@media print{
+  #kv2-toolbar, .tox-editor-header, .tox-toolbar, .tox.tox-tinymce-inline, .tox.tox-tinymce{ display:none !important; }
+}
+.tox-promotion{ display: none !important; }
+/* Force-hide TinyMCE Fullscreen button (toolbar & menus) */
+.tox .tox-tbtn[data-mce-name="fullscreen"],
+.tox .tox-tbtn[aria-label="Fullscreen"],
+.tox .tox-collection__item[title="Fullscreen"],
+.tox .tox-collection__item[aria-label="Fullscreen"]{
+  display: none !important;
+}
