@@ -8,7 +8,7 @@ if (empty($_SESSION['user']['id'])) {
     exit;
 }
 
-$autoload = __DIR__ . '/../vendor/autoload.php';
+$autoload = __DIR__ . '/../phpspreadsheet/autoload.php';
 if (!file_exists($autoload)) {
     die('<p>Chưa cài PhpSpreadsheet. Vui lòng chạy <code>composer require phpoffice/phpspreadsheet</code></p>');
 }
