@@ -16,6 +16,18 @@
   var mdOnline   = $("#md-online");
   var mdShort    = $("#md-short");
 
+  // ---------- Extract PROJECT_ID from current URL (?id=...) ----------
+  var PROJECT_ID = (function () {
+    try {
+      if (typeof window.PROJECT_ID === "number") return window.PROJECT_ID;
+      var idStr = new URLSearchParams(window.location.search).get("id");
+      var n = parseInt(idStr, 10);
+      return isNaN(n) ? 0 : n;
+    } catch (e) {
+      return 0;
+    }
+  })();
+
   // ---------- Track dirty state (unsaved changes) ----------
   var isDirty = false;
 
@@ -168,7 +180,7 @@
   }
   if (btnAddExternal) btnAddExternal.addEventListener("click", function(){ 
     addExternalRow("", ""); 
-    // Don't mark dirty until user actually types; but it's fine if we do
+    // Mark dirty when user actually types (inputs already have listeners)
   });
 
   // ---------- Toolbar host BEFORE editor so it always stays visible ----------
@@ -220,6 +232,49 @@
         "td,th{border:1px solid #e5e7eb;padding:10px;vertical-align:top}"+
         "blockquote{border-left:3px solid #2563eb;background:#f8fafc;margin:10px 0;padding:10px 12px;border-radius:10px;}"+
         "img{max-width:100%;height:auto;border-radius:10px;box-shadow:0 6px 14px rgba(15,23,42,.06)}",
+      // ---- Upload images directly to server (robust handler) ----
+      automatic_uploads: true,
+      images_upload_credentials: true,
+      paste_data_images: true,
+      images_reuse_filename: false,
+      convert_urls: false,
+      images_file_types: "jpg,jpeg,png,gif,webp",
+      images_upload_handler: function (blobInfo, progress) {
+        return new Promise(function(resolve, reject){
+          var base = (window.MEETING_ENDPOINT_BASE || "./");
+          // POST body only (no query string) — some servers reject query on multipart
+          var url  = base + "project_tab_meetings_detail.php";
+
+          var fd = new FormData();
+          fd.append("file", blobInfo.blob(), blobInfo.filename());
+          fd.append("ajax", "upload_image");
+          fd.append("meeting_id", MEETING_ID);
+          fd.append("project_id", PROJECT_ID); // <-- so PHP can build PRJxxxxx without DB
+          // Optional CSRF token
+          var meta = document.querySelector('meta[name="csrf-token"]');
+          if (meta && meta.content) { fd.append("csrf_token", meta.content); }
+
+          var xhr = new XMLHttpRequest();
+          xhr.open("POST", url, true);
+          xhr.withCredentials = true;
+          xhr.upload.onprogress = function (e){ if (e.lengthComputable) progress(e.loaded / e.total * 100); };
+          xhr.onload = function(){
+            var body = xhr.responseText || "";
+            if (xhr.status < 200 || xhr.status >= 300) {
+              var msg = "HTTP " + xhr.status;
+              try { var j = JSON.parse(body); if (j && (j.error || j.message)) msg += " - " + (j.error || j.message); } catch(e){}
+              reject(msg);
+              return;
+            }
+            var json;
+            try { json = JSON.parse(body); } catch(e){ reject("Invalid JSON from server"); return; }
+            if (!json || !(json.location || json.url)) { reject((json && (json.error||json.message)) || "Invalid response"); return; }
+            resolve(json.location || json.url);
+          };
+          xhr.onerror = function(){ reject("Network error"); };
+          xhr.send(fd);
+        });
+      },
       setup: function(ed){
         ed.on("init", function(){
           if (typeof initialHTML === "string") ed.setContent(initialHTML || "");
