@@ -210,6 +210,9 @@
     // Classic mode (iframe) to keep toolbar always visible
     window.tinymce.remove();
     window.tinymce.init({
+      readonly: (window.MEETING_CAN_EDIT === false),          // hoặc: !window.MEETING_CAN_EDIT
+menubar:  window.MEETING_CAN_EDIT ? "file edit view insert format tools table help" : false,
+toolbar:  window.MEETING_CAN_EDIT ? "undo redo | blocks fontfamily fontsize | bold italic underline strikethrough subscript superscript | forecolor backcolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link image media table | charmap emoticons insertdatetime | removeformat | code fullscreen | searchreplace" : false,
       selector: "#editor",
       inline: false,
       fixed_toolbar_container: "#kv2-toolbar",
@@ -355,3 +358,4 @@
     toast("Load failed: " + e.message, "error");
   });
 })();
+
