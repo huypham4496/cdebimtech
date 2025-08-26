@@ -1,4 +1,85 @@
 <?php
+$__upload_ajax = $_GET['ajax'] ?? $_POST['ajax'] ?? null;
+$__is_multipart = isset($_SERVER['CONTENT_TYPE']) && stripos($_SERVER['CONTENT_TYPE'], 'multipart/form-data') !== false;
+$__is_image_upload = ($__upload_ajax === 'upload_image') || (
+    $_SERVER['REQUEST_METHOD'] === 'POST' && $__is_multipart && isset($_FILES['file'])
+);
+
+if ($__is_image_upload) {
+    // Trả JSON và dừng tại đây để không “rơi” xuống phần HTML/logic khác
+    while (ob_get_level()) { ob_end_clean(); }
+    header('Content-Type: application/json; charset=utf-8');
+
+    // 1) Lấy meeting_id từ GET/POST (không đụng gì thêm)
+    $meeting_id = (int)($_GET['meeting_id'] ?? $_POST['meeting_id'] ?? 0);
+    if (!$meeting_id) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Missing meeting_id']); exit;
+    }
+
+    // 2) Kiểm tra có nhận file không
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_FILES['file']) || !is_uploaded_file($_FILES['file']['tmp_name'])) {
+        http_response_code(405);
+        echo json_encode(['error' => 'Use POST multipart/form-data (field "file")']); exit;
+    }
+    try {
+ // Lấy project_id từ POST (JS gửi kèm) hoặc fallback từ Referer (?id=...) / GET
+        $project_id = (int)($_POST['project_id'] ?? $_GET['project_id'] ?? 0);
+        if (!$project_id && !empty($_SERVER['HTTP_REFERER'])) {
+            $refQuery = parse_url($_SERVER['HTTP_REFERER'], PHP_URL_QUERY);
+            if ($refQuery) {
+                parse_str($refQuery, $refArr);
+                if (!empty($refArr['id'])) {
+                    $project_id = (int)$refArr['id'];
+                }
+            }
+        }
+        if ($project_id <= 0) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing project_id (send via POST project_id hoặc URL referer có ?id=...)']); exit;
+        }
+
+        // Quy tắc thư mục PRJxxxxx theo id project
+        $projCode = 'PRJ' . str_pad((string)$project_id, 5, '0', STR_PAD_LEFT);
+        $projCode = preg_replace('/[^A-Za-z0-9_\-]/', '_', $projCode);
+
+        // 4) Thư mục lưu ảnh: /uploads/PRJxxxxx/meetings_img/
+        // uploads nằm NGANG HÀNG thư mục pages => __DIR__ . '/../../uploads'
+        $uploadsRoot = realpath(__DIR__ . '/../../uploads') ?: (__DIR__ . '/../../uploads');
+        $targetDir   = $uploadsRoot . '/' . $projCode . '/meetings_img';
+
+        if (!is_dir($targetDir) && !@mkdir($targetDir, 0775, true)) {
+            http_response_code(500);
+            echo json_encode(['error' => 'Cannot create uploads folder', 'dir' => $targetDir]); exit;
+        }
+
+        // 5) Validate & tạo tên file an toàn
+        $orig = $_FILES['file']['name'] ?? 'image';
+        $ext  = strtolower(pathinfo($orig, PATHINFO_EXTENSION) ?: 'jpg');
+        if (!in_array($ext, ['jpg','jpeg','png','gif','webp'], true)) $ext = 'jpg';
+
+        // Giới hạn size 20MB (tuỳ chỉnh)
+        $size = (int)($_FILES['file']['size'] ?? 0);
+        if ($size <= 0) { http_response_code(400); echo json_encode(['error'=>'Empty file']); exit; }
+        if ($size > 20*1024*1024) { http_response_code(413); echo json_encode(['error'=>'File too large (max 20MB)']); exit; }
+
+        $fname = 'img_' . date('Ymd_His') . '_' . bin2hex(random_bytes(3)) . '.' . $ext;
+        $dst   = $targetDir . '/' . $fname;
+
+        if (!move_uploaded_file($_FILES['file']['tmp_name'], $dst)) {
+            http_response_code(500);
+            echo json_encode(['error' => 'Failed to move uploaded file']); exit;
+        }
+
+        // 6) URL public để TinyMCE dùng lại (giữ nguyên mapping /uploads -> thư mục uploads)
+        $publicUrl = '/uploads/' . rawurlencode($projCode) . '/meetings_img/' . rawurlencode($fname);
+        echo json_encode(['ok' => true, 'location' => $publicUrl]); exit;
+
+    } catch (Throwable $e) {
+        http_response_code(500);
+        echo json_encode(['error' => $e->getMessage()]); exit;
+    }
+}
 // pages/partials/project_tab_meetings_detail.php
 if (session_status() === PHP_SESSION_NONE) session_start();
 
