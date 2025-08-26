@@ -18,7 +18,6 @@ a{color:#b86203;text-decoration:none}
 a:hover{text-decoration:underline}
 .container{max-width:1240px;margin:0 auto;padding:16px 20px}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
-.card + .card{margin-top:12px}
 .btn{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 14px;border-radius:12px;border:1px solid var(--border);background:#111827;color:#fff;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.06);transition:transform .05s ease, box-shadow .2s ease, background .2s ease}
 .btn:active{transform:translateY(1px)}
 .btn[disabled]{opacity:.55;cursor:not-allowed}
