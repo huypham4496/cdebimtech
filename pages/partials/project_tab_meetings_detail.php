@@ -220,9 +220,22 @@ if ($ajax) {
   }
   elseif ($ajax==='export_doc') {
     while (ob_get_level()) { ob_end_clean(); }
-    header("Content-Type: application/msword; charset=utf-8");
-    header("Content-Disposition: attachment; filename=\"Meeting-Minutes-{$meeting_id}.doc\"");
-    header('Cache-Control: no-store');
+// --- Build safe filename: "title_start_time.doc" ---
+$rawTitle = $meeting['title'] ?? ('Meeting-'.$meeting_id);
+$rawStart = $meeting['start_time'] ?? '';
+
+// Loại ký tự đặc biệt khỏi title để an toàn tên file (Windows/macOS/Linux)
+$safeTitle = preg_replace('/[^A-Za-z0-9_\-]+/', '_', trim($rawTitle));
+
+// Định dạng thời gian không chứa dấu ":" (tránh lỗi tên file trên Windows)
+$timePart = $rawStart ? date('Y-m-d_Hi', strtotime($rawStart)) : date('Y-m-d');
+
+$filename = $safeTitle . '_' . $timePart . '.doc';
+
+// --- Gửi header sau khi có $filename ---
+header("Content-Type: application/msword; charset=utf-8");
+header('Cache-Control: no-store');
+header('Content-Disposition: attachment; filename="' . $filename . '"');
 
     $st=$pdo->prepare("SELECT pm.*, p.name AS project_name
                        FROM project_meetings pm
