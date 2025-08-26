@@ -42,7 +42,15 @@ if ($__is_image_upload) {
         // Quy tắc thư mục PRJxxxxx theo id project
         $projCode = 'PRJ' . str_pad((string)$project_id, 5, '0', STR_PAD_LEFT);
         $projCode = preg_replace('/[^A-Za-z0-9_\-]/', '_', $projCode);
-
+        $stm = $pdo->prepare("SELECT created_by FROM project_meetings WHERE id=? LIMIT 1");
+$stm->execute([$meeting_id]);
+$m = $stm->fetch(PDO::FETCH_ASSOC);
+if (!$m) { http_response_code(404); echo json_encode(['error'=>'Meeting not found']); exit; }
+if ((int)$m['created_by'] !== $CURRENT_USER_ID) {
+  http_response_code(403);
+  echo json_encode(['error'=>'Bạn không có quyền upload ảnh (chỉ người tạo cuộc họp).']); 
+  exit;
+}
         // 4) Thư mục lưu ảnh: /uploads/PRJxxxxx/meetings_img/
         // uploads nằm NGANG HÀNG thư mục pages => __DIR__ . '/../../uploads'
         $uploadsRoot = realpath(__DIR__ . '/../../uploads') ?: (__DIR__ . '/../../uploads');
@@ -226,6 +234,9 @@ if ($ajax) {
     md_json(['meeting'=>$meeting,'detail'=>$detail,'attendees'=>$attendees,'members'=>$members]);
   }
   elseif ($ajax==='save') {
+    if (!$CAN_EDIT) {
+  md_json(['error' => 'Bạn không có quyền chỉnh sửa. Chỉ người tạo cuộc họp mới được cập nhật nội dung & Attendees.'], 403);
+}
     $payload = json_decode(file_get_contents('php://input'), true);
     if (!is_array($payload)) $payload = $_POST;
 
@@ -312,6 +323,7 @@ if ($ajax) {
         $stm = $pdo->prepare("SELECT m.*, p.name AS project_name FROM project_meetings m JOIN projects p ON p.id=m.project_id WHERE m.id=? LIMIT 1");
         $stm->execute([$meeting_id]);
         $meeting = $stm->fetch(PDO::FETCH_ASSOC);
+        $CAN_EDIT = ((int)($meeting['created_by'] ?? 0) === $CURRENT_USER_ID);
     } catch (Throwable $e) {
         $meeting = null;
     }
@@ -707,6 +719,7 @@ if (!$IN_PROJECT_VIEW) {
 
 $ASSETS_PREFIX   = "../assets";
 $ENDPOINT_PREFIX = "./partials";
+$CAN_EDIT = ((int)($meeting['created_by'] ?? 0) === $CURRENT_USER_ID);
 ?>
 <!-- Quill CSS (theme + table plugin) -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.snow.css" />
@@ -738,9 +751,10 @@ $ENDPOINT_PREFIX = "./partials";
       <div class="card-head">
         <h2><i class="fas fa-align-left"></i> Nội dung chi tiết</h2>
         <!-- Dùng làm nơi đặt toolbar của Quill (sau khi JS khởi tạo sẽ gắn vào đây) -->
-        <div class="toolbar" id="editor-toolbar"></div>
+        <div class="toolbar" id="editor-toolbar" <?= $CAN_EDIT ? '' : 'style="display:none;"' ?>></div>
       </div>
-      <div id="editor" class="editor editor-a4" spellcheck="false"></div>
+      <div id="editor" class="editor editor-a4" spellcheck="false" 
+     <?= $CAN_EDIT ? '' : 'data-readonly="1" style="pointer-events:none; opacity:.85;"' ?>></div>
     </section>
 
     <!-- KV3 -->
@@ -749,17 +763,26 @@ $ENDPOINT_PREFIX = "./partials";
       <div class="att-grid">
         <div class="att-block">
           <h3>Thành viên trong dự án</h3>
-          <div id="member-list" class="member-list"></div>
+          <div id="member-list" class="member-list" <?= $CAN_EDIT ? '' : 'style="pointer-events:none; opacity:.8;"' ?>></div>
         </div>
         <div class="att-block">
           <h3>Khách mời bên ngoài</h3>
-          <div id="external-list" class="external-list"></div>
-          <button id="btn-add-external" class="btn small"><i class="fas fa-user-plus"></i> Thêm</button>
+          <div id="external-list" class="external-list" <?= $CAN_EDIT ? '' : 'style="pointer-events:none; opacity:.8;"' ?>></div>
+
+          <?php if ($CAN_EDIT): ?>
+  <button id="btn-add-external" class="btn small"><i class="fas fa-user-plus"></i> Thêm</button>
+<?php else: ?>
+  <button class="btn small" disabled title="Chỉ người tạo cuộc họp mới thêm khách mời">Thêm</button>
+<?php endif; ?>
         </div>
       </div>
       <div class="actions">
-        <button id="btn-save" class="btn primary"><i class="far fa-save"></i> Lưu & gửi thông báo</button>
-      </div>
+  <?php if ($CAN_EDIT): ?>
+    <button id="btn-save" class="btn primary"><i class="far fa-save"></i> Lưu & gửi thông báo</button>
+  <?php else: ?>
+    <button class="btn" disabled title="Chỉ người tạo cuộc họp mới được lưu thay đổi">View only</button>
+  <?php endif; ?>
+</div>
     </section>
   </div>
 </div>
@@ -767,6 +790,7 @@ $ENDPOINT_PREFIX = "./partials";
 <script>
   window.MEETING_ID = <?= (int)$meeting_id ?>;
   window.MEETING_ENDPOINT_BASE = '<?= $ENDPOINT_PREFIX ?>/';
+  window.MEETING_CAN_EDIT = <?= $CAN_EDIT ? 'true' : 'false' ?>;
 </script>
 <link rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
