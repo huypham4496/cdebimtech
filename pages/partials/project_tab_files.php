@@ -147,6 +147,37 @@ function get_project_code($pdo, $project_id){
     return 'PRJ'.str_pad((string)$project_id, 5, '0', STR_PAD_LEFT);
 }
 
+
+function folder_segments($pdo, $project_id, $folder_id){
+    // Build array of folder names from ROOT(child of project) -> ... -> current (exclude root project code)
+    $segs = [];
+    if(!$folder_id) return $segs;
+    $root_id = ensure_root_folder($pdo, $project_id);
+    $cur = intval($folder_id);
+    while($cur){
+        $stmt = $pdo->prepare("SELECT id, parent_id, name FROM project_folders WHERE id=? AND project_id=?");
+        $stmt->execute([$cur, $project_id]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if(!$row) break;
+        if($row['parent_id'] === null){ // root folder (project code) -> do not include
+            break;
+        }
+        array_unshift($segs, sanitize_filename($row['name']));
+        $cur = $row['parent_id'] ? intval($row['parent_id']) : 0;
+    }
+    return $segs;
+}
+function folder_dir($pdo, $project_id, $folder_id){
+    $base = storage_base_path($pdo, $project_id); // uploads/PRJxxxxx/files
+    $segs = folder_segments($pdo, $project_id, $folder_id);
+    $dir = $base;
+    foreach($segs as $s){
+        $dir = path_join($dir, $s);
+        if(!is_dir($dir)) @mkdir($dir, 0775, true);
+    }
+    return $dir;
+}
+
 function storage_base_path($pdo, $project_id){
     $code = get_project_code($pdo, $project_id);
     $base = __DIR__ . "/../../uploads/" . $code . "/files";
@@ -365,7 +396,10 @@ if(isset($_GET['ajax'])){
         if($name==='') json_resp(false, ['error'=>'Tên thư mục không được để trống'], 422);
         $stmt = $pdo->prepare("INSERT INTO project_folders (project_id, parent_id, name, created_by) VALUES (?,?,?,?)");
         $stmt->execute([$project_id, $parent_id, $name, $user_id]);
-        json_resp(true, ['id'=>intval($pdo->lastInsertId())]);
+        $new_id = intval($pdo->lastInsertId());
+        // Ensure physical directory exists now
+        $dir = folder_dir($pdo, $project_id, $new_id);
+        json_resp(true, ['id'=>$new_id, 'dir_created'=>is_dir($dir)]);
     }
 
     // TOGGLE IMPORTANT
@@ -394,8 +428,7 @@ if(isset($_GET['ajax'])){
         if(!can_write($pdo, $project_id, $user_id)) json_resp(false, ['error'=>'Bạn không có quyền upload.'], 403);
         $folder_id = intval($_POST['folder_id'] ?? $root_folder_id);
         if(!isset($_FILES['files'])) json_resp(false, ['error'=>'Không có tệp nào được chọn'], 400);
-        $base = storage_base_path($pdo, $project_id);
-        $dest_dir = path_join($base, $folder_id);
+        $dest_dir = folder_dir($pdo, $project_id, $folder_id);
         if(!is_dir($dest_dir)) @mkdir($dest_dir, 0775, true);
 
         $out = [];
@@ -482,8 +515,7 @@ if(isset($_GET['ajax'])){
         $dest_folder_id = intval(require_param('dest_folder_id'));
         $op = $_POST['op'] ?? 'move'; // 'move' or 'copy'
         $items = json_decode($_POST['items'] ?? '[]', true) ?: [];
-        $base = storage_base_path($pdo, $project_id);
-        $dest_dir = path_join($base, $dest_folder_id);
+        $dest_dir = folder_dir($pdo, $project_id, $dest_folder_id);
         if(!is_dir($dest_dir)) @mkdir($dest_dir, 0775, true);
 
         foreach($items as $it){
