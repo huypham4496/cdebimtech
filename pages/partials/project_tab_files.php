@@ -397,6 +397,13 @@ if(isset($_GET['ajax'])){
         $files = $stmt2->fetchAll(PDO::FETCH_ASSOC);
         // Attach latest version info
         foreach($files as &$r){
+
+// Compute total_versions and normalize current_version
+$st2 = $pdo->prepare("SELECT COUNT(*) FROM file_versions WHERE file_id=?");
+$st2->execute([$r['id']]);
+$r['total_versions'] = (int)($st2->fetchColumn() ?: 0);
+$r['current_version'] = isset($r['current_version']) ? (int)$r['current_version'] : 0;
+
             $vi = latest_version_info($pdo, $r['id']);
             $r['version'] = $vi ? intval($vi['version']) : 0;
             $r['size_bytes'] = $vi ? intval($vi['size_bytes']) : 0;
@@ -425,8 +432,8 @@ if(isset($_GET['ajax'])){
             $patterns[] = '%';
         }
 
-        $sql = "SELECT f.id, f.folder_id, f.filename, f.tag, f.is_important, f.created_by, f.updated_at
-                FROM project_files f
+        $sql = "SELECT f.id, f.folder_id, f.filename, f.tag, f.is_important, f.created_by, f.updated_at, f.current_version
+         FROM project_files f
                 WHERE f.project_id=? AND f.is_deleted=0 AND (";
         $conds = [];
         $params = [$project_id];
@@ -754,42 +761,117 @@ if($action==='toggle_important'){
         readfile($full); exit;
     }
 
-    if($action==='download'){
-        $ids = isset($_POST['file_ids']) ? json_decode($_POST['file_ids'], true) : [];
-        if(!$ids || !is_array($ids)) json_resp(false, ['error'=>'No files selected'], 400);
-        if(count($ids)===1){
-            $fid = intval($ids[0]);
-            $vi = latest_version_info($pdo, $fid);
-            if(!$vi) json_resp(false, ['error'=>'File not found'], 404);
-            $full = to_abs($vi['storage_path']);
-            if(!is_file($full)) json_resp(false, ['error'=>'File not found'], 404);
-            $name = basename($full);
-            header('Content-Description: File Transfer');
-            header('Content-Type: application/octet-stream');
-            header('Content-Disposition: attachment; filename="'.$name.'"');
-            header('Content-Length: '.filesize($full));
-            readfile($full);
-            exit;
-        } else {
-            if(!class_exists('ZipArchive')) json_resp(false, ['error'=>'ZipArchive PHP extension chưa bật'], 500);
-            $tmpZip = sys_get_temp_dir() . '/cde_dl_' . uniqid() . '.zip';
-            $zip = new ZipArchive();
-            if($zip->open($tmpZip, ZipArchive::CREATE)!==TRUE){ json_resp(false, ['error'=>'Cannot create zip'], 500); }
-            foreach($ids as $fid){
-                $vi = latest_version_info($pdo, intval($fid));
-                if(!$vi) continue;
-                $full = to_abs($vi['storage_path']);
-                if(is_file($full)) $zip->addFile($full, basename($full));
-            }
-            $zip->close();
-            header('Content-Type: application/zip');
-            header('Content-Disposition: attachment; filename="download.zip"');
-            header('Content-Length: '.filesize($tmpZip));
-            readfile($tmpZip);
-            @unlink($tmpZip);
-            exit;
+    elseif ($action === 'download') {
+    $raw = $_POST['items'] ?? '[]';
+    $items = json_decode($raw, true);
+    if (!is_array($items)) $items = [];
+
+    if (empty($items)) {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['ok'=>false,'error'=>'Không có mục nào được chọn']);
+        exit;
+    }
+
+    if (!class_exists('ZipArchive')) {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['ok'=>false,'error'=>'ZipArchive PHP extension chưa bật']);
+        exit;
+    }
+
+    $getAllFilesInFolder = function($folderId) use ($pdo, &$getAllFilesInFolder) {
+        $fileIds = [];
+        $st = $pdo->prepare("SELECT id FROM project_files WHERE folder_id=?");
+        $st->execute([$folderId]);
+        foreach ($st->fetchAll(PDO::FETCH_COLUMN) as $fid) {
+            $fileIds[] = (int)$fid;
+        }
+        $st = $pdo->prepare("SELECT id FROM file_folders WHERE parent_id=?");
+        $st->execute([$folderId]);
+        foreach ($st->fetchAll(PDO::FETCH_COLUMN) as $subId) {
+            $fileIds = array_merge($fileIds, $getAllFilesInFolder((int)$subId));
+        }
+        return $fileIds;
+    };
+
+    $pickActiveVersion = function($fileId) use ($pdo) {
+        $st = $pdo->prepare("SELECT filename, current_version FROM project_files WHERE id=? LIMIT 1");
+        $st->execute([$fileId]);
+        $pf = $st->fetch(PDO::FETCH_ASSOC);
+        if (!$pf) return null;
+
+        $cur = (int)($pf['current_version'] ?? 0);
+        if ($cur <= 0) {
+            $st2 = $pdo->prepare("SELECT version FROM file_versions WHERE file_id=? ORDER BY version DESC LIMIT 1");
+            $st2->execute([$fileId]);
+            $cur = (int)($st2->fetchColumn() ?: 0);
+            if ($cur <= 0) return null;
+        }
+
+        $stm = $pdo->prepare("SELECT storage_path, size_bytes FROM file_versions WHERE file_id=? AND version=? LIMIT 1");
+        $stm->execute([$fileId, $cur]);
+        $v = $stm->fetch(PDO::FETCH_ASSOC);
+        if (!$v) return null;
+
+        return [
+            'abs_path' => $v['storage_path'],
+            'download_name' => $pf['filename'],
+            'size_bytes' => (int)$v['size_bytes'],
+        ];
+    };
+
+    $fileRecords = [];
+    foreach ($items as $it) {
+        $type = $it['type'] ?? '';
+        $id   = (int)($it['id'] ?? 0);
+        if ($id <= 0) continue;
+
+        if ($type === 'file') {
+            $fileRecords[] = $id;
+        } elseif ($type === 'folder') {
+            $fileRecords = array_merge($fileRecords, $getAllFilesInFolder($id));
         }
     }
+    $fileRecords = array_values(array_unique(array_map('intval', $fileRecords)));
+
+    if (empty($fileRecords)) {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['ok'=>false,'error'=>'Không có tệp nào trong mục đã chọn']);
+        exit;
+    }
+
+    $bundleName = 'CDE_Files_' . date('Ymd_His') . '.zip';
+    $zipPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . $bundleName;
+    @unlink($zipPath);
+    $zip = new ZipArchive();
+    if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['ok'=>false,'error'=>'Không tạo được file zip']);
+        exit;
+    }
+
+    foreach ($fileRecords as $fid) {
+        $info = $pickActiveVersion($fid);
+        if (!$info) continue;
+        if (is_readable($info['abs_path'])) {
+            $zip->addFile($info['abs_path'], $info['download_name']);
+        }
+    }
+    $zip->close();
+
+    if (!is_file($zipPath)) {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['ok'=>false,'error'=>'Zip thất bại']);
+        exit;
+    }
+
+    @ob_end_clean();
+    header('Content-Type: application/zip');
+    header('Content-Disposition: attachment; filename="'.$bundleName.'"; filename*=UTF-8\'\'' . rawurlencode($bundleName));
+    header('Content-Length: ' . filesize($zipPath));
+    readfile($zipPath);
+    @unlink($zipPath);
+    exit;
+}
     } catch (Throwable $e) {
         json_resp(false, ['error'=>'Server error', 'detail'=>$e->getMessage()], 500);
     }
