@@ -461,7 +461,46 @@ if(isset($_GET['ajax'])){
     }
 
     // TOGGLE IMPORTANT
-    if($action==='toggle_important'){
+    
+    // GET VERSIONS
+    
+    // RESTORE VERSION: copy <base>_vN.ext from old_version back to main as original name (no new version)
+    if($action==='restore_version' && $_SERVER['REQUEST_METHOD']==='POST'){
+        if(!can_write($pdo, $project_id, $user_id)) json_resp(false, ['error'=>'Bạn không có quyền khôi phục phiên bản.'], 403);
+        $file_id = intval(require_param('file_id'));
+        $version = intval(require_param('version'));
+        $frow = $pdo->prepare("SELECT folder_id, filename FROM project_files WHERE id=? AND is_deleted=0");
+        $frow->execute([$file_id]);
+        $fr = $frow->fetch(PDO::FETCH_ASSOC);
+        if(!$fr) json_resp(false, ['error'=>'File không tồn tại'], 404);
+
+        $dest = folder_dir($pdo, $project_id, intval($fr['folder_id'])) . DIRECTORY_SEPARATOR . $fr['filename'];
+        $ext = pathinfo($fr['filename'], PATHINFO_EXTENSION);
+        $base = pathinfo($fr['filename'], PATHINFO_FILENAME);
+        $from = old_versions_dir($pdo, $project_id) . DIRECTORY_SEPARATOR . $base . "_v" . $version . ($ext?(".".$ext):"");
+
+        if(!is_file($from)){
+            // fallback to DB-stored path
+            $stmt = $pdo->prepare("SELECT storage_path FROM file_versions WHERE file_id=? AND version=?");
+            $stmt->execute([$file_id, $version]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            if(!$row) json_resp(false, ['error'=>'Không tìm thấy phiên bản cần khôi phục'], 404);
+            $from = to_abs($row['storage_path']);
+            if(!is_file($from)) json_resp(false, ['error'=>'Không thể khôi phục tệp (thiếu file nguồn)'], 404);
+        }
+        if(!@copy($from, $dest)) json_resp(false, ['error'=>'Không thể khôi phục tệp'], 500);
+        $pdo->prepare("UPDATE project_files SET updated_at=NOW() WHERE id=?")->execute([$file_id]);
+        json_resp(true, ['restored'=>basename($dest)]);
+    }
+if($action==='get_versions'){
+        $file_id = isset($_GET['file_id'])?intval($_GET['file_id']): (isset($_POST['file_id'])?intval($_POST['file_id']):0);
+        if(!$file_id){ json_resp(true, ['versions'=>[]]); }
+        $stmt = $pdo->prepare("SELECT version, storage_path, size_bytes, uploaded_by, created_at FROM file_versions WHERE file_id=? ORDER BY version DESC");
+        $stmt->execute([$file_id]);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        json_resp(true, ['versions'=>$rows]);
+    }
+if($action==='toggle_important'){
         if(!can_write($pdo, $project_id, $user_id)) json_resp(false, ['error'=>'Bạn không có quyền thay đổi.'], 403);
         $file_id = intval(require_param('file_id'));
         $stmt = $pdo->prepare("UPDATE project_files SET is_important = 1 - is_important WHERE id=? AND project_id=?");
@@ -482,91 +521,118 @@ if(isset($_GET['ajax'])){
     }
 
     // UPLOAD (multi)
+    
+    // UPLOAD (keep original filename in main folder; archive copy as base_vN in old_version)
     if($action==='upload' && $_SERVER['REQUEST_METHOD']==='POST'){
         if(!can_write($pdo, $project_id, $user_id)) json_resp(false, ['error'=>'Bạn không có quyền upload.'], 403);
         $folder_id = intval($_POST['folder_id'] ?? $root_folder_id);
         if(!isset($_FILES['files'])) json_resp(false, ['error'=>'Không có tệp nào được chọn'], 400);
-        $dest_dir = folder_dir($pdo, $project_id, $folder_id);
-        if(!is_dir($dest_dir)) @mkdir($dest_dir, 0775, true);
+        $dest_dir = folder_dir($pdo, $project_id, $folder_id); ensure_dir($dest_dir);
+        $oldDir = old_versions_dir($pdo, $project_id); ensure_dir($oldDir);
 
-        $out = [];
-        foreach($_FILES['files']['name'] as $i=>$orig_name){
+        $uploaded = [];
+        foreach($_FILES['files']['name'] as $i=>$origName){
             $tmp = $_FILES['files']['tmp_name'][$i];
             $err = $_FILES['files']['error'][$i];
             $size = $_FILES['files']['size'][$i];
             if($err !== UPLOAD_ERR_OK){
-                $out[] = ['name'=>$orig_name, 'ok'=>false, 'error'=>"Upload error $err"];
+                $uploaded[] = ['name'=>$origName, 'ok'=>false, 'error'=>"Upload error $err"];
                 continue;
             }
-            $name = sanitize_filename($orig_name);
-            // find existing file entry
+            $origName = trim($origName);
+            $ext = pathinfo($origName, PATHINFO_EXTENSION);
+            $baseName = pathinfo($origName, PATHINFO_FILENAME);
+
+            // ensure DB row
             $stmt = $pdo->prepare("SELECT id FROM project_files WHERE project_id=? AND folder_id=? AND filename=? AND is_deleted=0 LIMIT 1");
-            $stmt->execute([$project_id, $folder_id, $name]);
-            $file_id = $stmt->fetchColumn();
-            if($file_id){
-                // next version
-                $vinfo = latest_version_info($pdo, $file_id);
-                if($vinfo){ move_version_to_old($pdo, $project_id, $file_id, $vinfo); }
-                $next = $vinfo ? intval($vinfo['version'])+1 : 1;
-            } else {
-                $ins = $pdo->prepare("INSERT INTO project_files (project_id, folder_id, filename, tag, is_important, is_deleted, created_by) VALUES (?,?,?,?,0,0,?)");
-                $ins->execute([$project_id, $folder_id, $name, 'WIP', $user_id]);
+            $stmt->execute([$project_id, $folder_id, $origName]);
+            $file_id = intval($stmt->fetchColumn());
+            if(!$file_id){
+                $pdo->prepare("INSERT INTO project_files (project_id, folder_id, filename, created_by) VALUES (?,?,?,?)")
+                    ->execute([$project_id, $folder_id, $origName, $user_id]);
                 $file_id = intval($pdo->lastInsertId());
-                $next = 1;
             }
-            // move file
-            $ext = pathinfo($name, PATHINFO_EXTENSION);
-            $baseNameOnly = pathinfo($name, PATHINFO_FILENAME);
-            $storedName = sanitize_filename($baseNameOnly) . "__v" . $next . ($ext?(".".$ext):"");
-            $full = path_join($dest_dir, $storedName);
-            if(!@move_uploaded_file($tmp, $full)){
-                // fallback copy
-                if(!@copy($tmp, $full)){
-                    $out[] = ['name'=>$orig_name, 'ok'=>false, 'error'=>'Không thể lưu tệp lên server'];
-                    continue;
-                }
+            // next version number
+            $vi = latest_version_info($pdo, $file_id);
+            $next = ($vi ? intval($vi['version']) : 0) + 1;
+
+            // 1) write MAIN (overwrite same name)
+            $toMain = $dest_dir . DIRECTORY_SEPARATOR . $origName;
+            if(!@move_uploaded_file($tmp, $toMain)){
+                @copy($tmp, $toMain);
             }
-            // record version
-            $relPath = str_replace(path_join(__DIR__, '../../'), '', $full);
-            $ins2 = $pdo->prepare("INSERT INTO file_versions (file_id, version, storage_path, size_bytes, uploaded_by) VALUES (?,?,?,?,?)");
-            $ins2->execute([$file_id, $next, $relPath, $size, $user_id]);
+
+            // 2) write ARCHIVE copy to old_version: base_vN.ext
+            $archivedName = $baseName . "_v" . $next . ($ext?(".".$ext):"");
+            $toArchive = $oldDir . DIRECTORY_SEPARATOR . $archivedName;
+            @copy($toMain, $toArchive);
+
+            // record version row pointing to archived copy
+            $rel = to_rel($toArchive);
+            $pdo->prepare("INSERT INTO file_versions (file_id, version, storage_path, size_bytes, uploaded_by) VALUES (?,?,?,?,?)")
+                ->execute([$file_id, $next, $rel, @filesize($toArchive) ?: $size, $user_id]);
             $pdo->prepare("UPDATE project_files SET updated_at=NOW() WHERE id=?")->execute([$file_id]);
-            $out[] = ['name'=>$orig_name, 'ok'=>true, 'file_id'=>$file_id, 'version'=>$next];
+
+            $uploaded[] = ['file_id'=>$file_id, 'version'=>$next, 'name'=>$origName];
         }
-        json_resp(true, ['results'=>$out]);
+        json_resp(true, ['uploaded'=>$uploaded]);
     }
 
-    // DELETE (mark deleted). Requires confirm text "DELETE"
-    if($action==='delete'){
+    
+    // DELETE (files & folders) - physical and DB
+    if($action==='delete' && $_SERVER['REQUEST_METHOD']==='POST'){
         if(!can_write($pdo, $project_id, $user_id)) json_resp(false, ['error'=>'Bạn không có quyền xóa.'], 403);
         $confirm = $_POST['confirm'] ?? '';
         if($confirm !== 'DELETE') json_resp(false, ['error'=>'Bạn phải nhập "DELETE" để xác nhận'], 422);
         $items = isset($_POST['items']) ? $_POST['items'] : '[]';
         $list = json_decode($items, true) ?: [];
-        foreach($list as $it){
-            if($it['type']==='file'){
-                $fid = intval($it['id']);
-                $pdo->prepare("UPDATE project_files SET is_deleted=1 WHERE id=? AND project_id=?")->execute([$fid, $project_id]);
-            } elseif($it['type']==='folder'){
-                $fid = intval($it['id']);
-                // mark files in folder (and subfolders) as deleted; delete folders
-                $stack = [$fid];
-                while($stack){
-                    $cur = array_pop($stack);
-                    // mark files
-                    $pdo->prepare("UPDATE project_files SET is_deleted=1 WHERE project_id=? AND folder_id=?")->execute([$project_id, $cur]);
-                    // enqueue children
-                    $q = $pdo->prepare("SELECT id FROM project_folders WHERE project_id=? AND parent_id=?");
-                    $q->execute([$project_id, $cur]);
-                    $children = $q->fetchAll(PDO::FETCH_COLUMN,0);
-                    foreach($children as $c) $stack[] = $c;
-                    // delete folder itself
-                    $pdo->prepare("DELETE FROM project_folders WHERE id=? AND project_id=?")->execute([$cur, $project_id]);
+
+        $deleted = ['files'=>0,'folders'=>0];
+
+        $delFile = function($fid) use ($pdo, $project_id, &$deleted){
+            $frow = $pdo->prepare("SELECT folder_id, filename FROM project_files WHERE id=?");
+            $frow->execute([$fid]);
+            $fr = $frow->fetch(PDO::FETCH_ASSOC);
+            if($fr){
+                $main = folder_dir($pdo, $project_id, intval($fr['folder_id'])) . DIRECTORY_SEPARATOR . $fr['filename'];
+                if(is_file($main)) @unlink($main);
+                $ext = pathinfo($fr['filename'], PATHINFO_EXTENSION);
+                $base = pathinfo($fr['filename'], PATHINFO_FILENAME);
+                $old = old_versions_dir($pdo, $project_id);
+                foreach(glob($old.DIRECTORY_SEPARATOR.$base."_v*".($ext?(".".$ext):"")) as $f){
+                    if(is_file($f)) @unlink($f);
                 }
             }
+            $stmt = $pdo->prepare("SELECT storage_path FROM file_versions WHERE file_id=?");
+            $stmt->execute([$fid]);
+            foreach($stmt->fetchAll(PDO::FETCH_ASSOC) as $r){
+                $full = to_abs($r['storage_path']); if(is_file($full)) @unlink($full);
+            }
+            $pdo->prepare("DELETE FROM file_versions WHERE file_id=?")->execute([$fid]);
+            $pdo->prepare("DELETE FROM project_files WHERE id=?")->execute([$fid]);
+            $deleted['files']++;
+        };
+
+        $delFolder = function($folder_id) use ($pdo, $project_id, &$deleted, &$delFile, &$delFolder){
+            $stmt = $pdo->prepare("SELECT id FROM project_files WHERE folder_id=? AND project_id=?");
+            $stmt->execute([$folder_id, $project_id]);
+            foreach($stmt->fetchAll(PDO::FETCH_ASSOC) as $r){ $delFile(intval($r['id'])); }
+            $stmt2 = $pdo->prepare("SELECT id FROM project_folders WHERE parent_id=? AND project_id=?");
+            $stmt2->execute([$folder_id, $project_id]);
+            foreach($stmt2->fetchAll(PDO::FETCH_ASSOC) as $r){ $delFolder(intval($r['id'])); }
+            $dir = folder_dir($pdo, $project_id, $folder_id);
+            if(is_dir($dir)) @rmdir($dir);
+            $pdo->prepare("DELETE FROM project_folders WHERE id=?")->execute([$folder_id]);
+            $deleted['folders']++;
+        };
+
+        foreach($list as $it){
+            if(($it['type'] ?? '')==='file'){ $delFile(intval($it['id'])); }
+            if(($it['type'] ?? '')==='folder'){ $delFolder(intval($it['id'])); }
         }
-        json_resp(true);
+        json_resp(true, ['deleted'=>$deleted]);
     }
+
 
     // MOVE or COPY
     if($action==='move_copy'){
