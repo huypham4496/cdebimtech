@@ -178,6 +178,13 @@ function folder_dir($pdo, $project_id, $folder_id){
     return $dir;
 }
 
+function old_versions_dir($pdo, $project_id){
+    $base = storage_base_path($pdo, $project_id);
+    $old = path_join($base, 'old_version');
+    if(!is_dir($old)) @mkdir($old, 0775, true);
+    return $old;
+}
+
 function storage_base_path($pdo, $project_id){
     $code = get_project_code($pdo, $project_id);
     $base = __DIR__ . "/../../uploads/" . $code . "/files";
@@ -185,6 +192,22 @@ function storage_base_path($pdo, $project_id){
         @mkdir($base, 0775, true);
     }
     return realpath($base) ?: $base;
+}
+
+function move_version_to_old($pdo, $project_id, $file_id, $vi){
+    if(!$vi || empty($vi['storage_path'])) return false;
+    $oldDir = old_versions_dir($pdo, $project_id);
+    $srcFull = path_join(__DIR__, '../../', $vi['storage_path']);
+    if(!is_file($srcFull)) return false;
+    $safe = sanitize_filename((string)$file_id).'__v'.intval($vi['version']).'__'.basename($srcFull);
+    $dstFull = path_join($oldDir, $safe);
+    if(@rename($srcFull, $dstFull) || @copy($srcFull, $dstFull)){
+        $rel = str_replace(path_join(__DIR__, '../../'), '', $dstFull);
+        $pdo->prepare("UPDATE file_versions SET storage_path=? WHERE file_id=? AND version=?")
+            ->execute([$rel, $file_id, intval($vi['version'])]);
+        return true;
+    }
+    return false;
 }
 
 function latest_version_info($pdo, $file_id){
@@ -297,6 +320,18 @@ if(isset($_GET['ajax'])){
             'can_admin'=>$can_admin
         ]);
     }
+    if($action==='peek'){
+        $folder_id = isset($_GET['folder_id']) ? intval($_GET['folder_id']) : $root_folder_id;
+        $dir = folder_dir($pdo, $project_id, $folder_id);
+        $stmt1 = $pdo->prepare("SELECT id, name FROM project_folders WHERE project_id=? AND (parent_id ".($folder_id?"= ?":"IS NULL").") ORDER BY name");
+        $folderParams = $folder_id ? [$project_id, $folder_id] : [$project_id];
+        $stmt1->execute($folderParams);
+        $folders = $stmt1->fetchAll(PDO::FETCH_ASSOC);
+        $stmt2 = $pdo->prepare("SELECT id, filename, tag FROM project_files WHERE project_id=? AND folder_id=? AND is_deleted=0 ORDER BY updated_at DESC");
+        $stmt2->execute([$project_id, $folder_id ?: $root_folder_id]);
+        $files = $stmt2->fetchAll(PDO::FETCH_ASSOC);
+        json_resp(true, ['folder_id'=>$folder_id, 'dir'=>$dir, 'folders'=>$folders, 'files'=>$files]);
+    }
 
     $action = $_GET['action'] ?? $_POST['action'] ?? '';
     if(!$project_id) json_resp(false, ['error'=>'Missing project_id'], 400);
@@ -339,9 +374,9 @@ if(isset($_GET['ajax'])){
 
     // SEARCH
     if($action==='search'){
-        $q = trim(require_param('q'));
+        $q = isset($_GET['q']) ? trim($_GET['q']) : '';
         $tag = isset($_GET['tag']) ? $_GET['tag'] : null;
-        $important = isset($_GET['important']) ? intval($_GET['important']) : null;
+        $important = (isset($_GET['important']) && $_GET['important'] !== '') ? intval($_GET['important']) : null;
 
         $patterns = [];
         if($q !== ''){
@@ -448,6 +483,7 @@ if(isset($_GET['ajax'])){
             if($file_id){
                 // next version
                 $vinfo = latest_version_info($pdo, $file_id);
+                if($vinfo){ move_version_to_old($pdo, $project_id, $file_id, $vinfo); }
                 $next = $vinfo ? intval($vinfo['version'])+1 : 1;
             } else {
                 $ins = $pdo->prepare("INSERT INTO project_files (project_id, folder_id, filename, tag, is_important, is_deleted, created_by) VALUES (?,?,?,?,0,0,?)");
@@ -547,6 +583,7 @@ if(isset($_GET['ajax'])){
                 } else {
                     // conflict: create new version at dest
                     $vi = latest_version_info($pdo, $dest_file_id);
+                    if($vi){ move_version_to_old($pdo, $project_id, $dest_file_id, $vi); }
                     $nextVersion = ($vi ? intval($vi['version']) : 0) + 1;
                 }
 
@@ -598,6 +635,48 @@ if(isset($_GET['ajax'])){
             safe_send_file($tmpZip, "download.zip");
             @unlink($tmpZip);
         }
+    }
+
+        // GET VERSIONS LIST
+    if($action==='get_versions'){
+        $file_id = intval(require_param('file_id', 'GET'));
+        $stmt = $pdo->prepare("SELECT version, storage_path, size_bytes, uploaded_by, created_at FROM file_versions WHERE file_id=? ORDER BY version DESC");
+        $stmt->execute([$file_id]);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        json_resp(true, ['versions'=>$rows]);
+    }
+
+    // RESTORE VERSION (creates a new top version from selected old one)
+    if($action==='restore_version' && $_SERVER['REQUEST_METHOD']==='POST'){
+        if(!can_write($pdo, $project_id, $user_id)) json_resp(false, ['error'=>'Bạn không có quyền khôi phục phiên bản.'], 403);
+        $file_id = intval(require_param('file_id'));
+        $version = intval(require_param('version'));
+        // find chosen version
+        $stmt = $pdo->prepare("SELECT storage_path, size_bytes FROM file_versions WHERE file_id=? AND version=?");
+        $stmt->execute([$file_id, $version]);
+        $src = $stmt->fetch(PDO::FETCH_ASSOC);
+        if(!$src) json_resp(false, ['error'=>'Không tìm thấy phiên bản cần khôi phục'], 404);
+        // next version
+        $vi = latest_version_info($pdo, $file_id);
+        if($vi){ move_version_to_old($pdo, $project_id, $file_id, $vi); }
+        $next = ($vi ? intval($vi['version']) : 0) + 1;
+        // copy bytes into current folder dir
+        $frow = $pdo->prepare("SELECT folder_id, filename FROM project_files WHERE id=?");
+        $frow->execute([$file_id]);
+        $fr = $frow->fetch(PDO::FETCH_ASSOC);
+        if(!$fr) json_resp(false, ['error'=>'File không tồn tại'], 404);
+        $dest_dir = folder_dir($pdo, $project_id, intval($fr['folder_id']));
+        $ext = pathinfo($fr['filename'], PATHINFO_EXTENSION);
+        $baseNameOnly = pathinfo($fr['filename'], PATHINFO_FILENAME);
+        $storedName = sanitize_filename($baseNameOnly) . "__v" . $next . ($ext?(".".$ext):"");
+        $toFull = path_join($dest_dir, $storedName);
+        $srcFull = path_join(__DIR__, '../../', $src['storage_path']);
+        if(!@copy($srcFull, $toFull)) json_resp(false, ['error'=>'Không thể khôi phục tệp'], 500);
+        $relPath = str_replace(path_join(__DIR__, '../../'), '', $toFull);
+        $pdo->prepare("INSERT INTO file_versions (file_id, version, storage_path, size_bytes, uploaded_by) VALUES (?,?,?,?,?)")
+            ->execute([$file_id, $next, $relPath, intval($src['size_bytes']), $user_id]);
+        $pdo->prepare("UPDATE project_files SET updated_at=NOW() WHERE id=?")->execute([$file_id]);
+        json_resp(true, ['restored_to'=>$next]);
     }
 
     // default
