@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Aug 26, 2025 at 12:00 PM
+-- Generation Time: Aug 27, 2025 at 11:52 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -47,6 +47,21 @@ CREATE TABLE `file_versions` (
   `uploaded_by` int(11) NOT NULL,
   `created_at` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `file_versions`
+--
+
+INSERT INTO `file_versions` (`id`, `file_id`, `version`, `storage_path`, `size_bytes`, `uploaded_by`, `created_at`) VALUES
+(26, 15, 1, 'uploads/PRJ00006/files/old_version/Read me_v1.docx', 13536, 1, '2025-08-27 11:21:17'),
+(27, 16, 1, 'uploads/PRJ00006/files/old_version/Bình do nut giao QL18B (1)_v1.pdf', 35924445, 1, '2025-08-27 11:21:26'),
+(28, 17, 1, 'uploads/PRJ00006/files/old_version/Binh Do QC_v1.dwg', 15373504, 1, '2025-08-27 11:21:26'),
+(29, 15, 2, 'uploads/PRJ00006/files/old_version/Read me_v2.docx', 13549, 1, '2025-08-27 11:21:48'),
+(30, 15, 3, 'uploads/PRJ00006/files/old_version/Read me_v3.docx', 13559, 1, '2025-08-27 11:25:12'),
+(31, 18, 1, 'uploads/PRJ00006/files/old_version/license_v1.txt', 19347, 1, '2025-08-27 11:37:36'),
+(32, 19, 1, 'uploads/PRJ00006/files/old_version/deny-ip-list_v1.txt', 823270, 1, '2025-08-27 15:59:59'),
+(33, 20, 1, 'uploads/PRJ00006/files/old_version/Screenshot 2025-06-06 184815_v1.png', 34404, 1, '2025-08-27 16:48:22'),
+(34, 21, 1, 'uploads/PRJ00006/files/old_version/DS IP Phòng cầu 2_v1.xlsx', 12025, 1, '2025-08-27 16:49:07');
 
 -- --------------------------------------------------------
 
@@ -454,8 +469,23 @@ CREATE TABLE `project_files` (
   `is_deleted` tinyint(1) NOT NULL DEFAULT 0,
   `created_by` int(11) NOT NULL,
   `created_at` datetime NOT NULL DEFAULT current_timestamp(),
-  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `current_version` int(11) DEFAULT NULL,
+  `total_versions` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `project_files`
+--
+
+INSERT INTO `project_files` (`id`, `project_id`, `folder_id`, `filename`, `tag`, `is_important`, `is_deleted`, `created_by`, `created_at`, `updated_at`, `current_version`, `total_versions`) VALUES
+(15, 6, 9, 'Read me.docx', 'Published', 0, 0, 1, '2025-08-27 11:21:17', '2025-08-27 14:27:11', 2, NULL),
+(16, 6, 9, 'Bình do nut giao QL18B (1).pdf', 'WIP', 1, 0, 1, '2025-08-27 11:21:26', '2025-08-27 11:28:40', 1, NULL),
+(17, 6, 9, 'Binh Do QC.dwg', 'Published', 0, 0, 1, '2025-08-27 11:21:26', '2025-08-27 11:28:51', 1, NULL),
+(18, 6, 10, 'license.txt', 'WIP', 0, 0, 1, '2025-08-27 11:37:36', '2025-08-27 11:37:36', 1, NULL),
+(19, 6, 11, 'deny-ip-list.txt', 'WIP', 0, 0, 1, '2025-08-27 15:59:59', '2025-08-27 15:59:59', 1, NULL),
+(20, 6, 9, 'Screenshot 2025-06-06 184815.png', 'WIP', 0, 0, 1, '2025-08-27 16:48:22', '2025-08-27 16:48:22', 1, NULL),
+(21, 6, 9, 'DS IP Phòng cầu 2.xlsx', 'WIP', 0, 0, 1, '2025-08-27 16:49:07', '2025-08-27 16:49:07', 1, NULL);
 
 -- --------------------------------------------------------
 
@@ -477,7 +507,11 @@ CREATE TABLE `project_folders` (
 --
 
 INSERT INTO `project_folders` (`id`, `project_id`, `parent_id`, `name`, `created_by`, `created_at`) VALUES
-(2, 6, NULL, 'PRJ00006', 1, '2025-08-14 11:24:45');
+(2, 6, NULL, 'PRJ00006', 1, '2025-08-14 11:24:45'),
+(9, 6, 2, 'TVTK', 1, '2025-08-27 11:21:03'),
+(10, 6, 9, 'beta', 1, '2025-08-27 11:37:13'),
+(11, 6, 9, 'alpha', 1, '2025-08-27 15:38:59'),
+(12, 6, 9, 'gama', 1, '2025-08-27 15:39:24');
 
 -- --------------------------------------------------------
 
@@ -524,7 +558,7 @@ CREATE TABLE `project_group_members` (
 INSERT INTO `project_group_members` (`id`, `project_id`, `group_id`, `user_id`, `role`, `created_at`) VALUES
 (6, 6, 4, 1, 'control', '2025-08-14 04:25:02'),
 (7, 6, 6, 14, 'control', '2025-08-14 04:25:13'),
-(8, 6, 5, 20, 'deploy', '2025-08-14 04:25:42'),
+(8, 6, 6, 20, 'deploy', '2025-08-14 04:25:42'),
 (9, 6, 4, 12, 'deploy', '2025-08-14 04:25:47');
 
 -- --------------------------------------------------------
@@ -1193,6 +1227,9 @@ INSERT INTO `work_diary_entries` (`user_id`, `entry_date`, `period`, `content`, 
 (1, '2025-08-26', 'morning', 'Hoàn thiện tính năng upload ảnh trong biên bản cuộc họp lên CDE BIM', NULL, '2025-08-26 09:51:09', '2025-08-26 09:51:09'),
 (1, '2025-08-26', 'afternoon', 'Phân quyền tính năng tạo biên bản họp trong CDE BIM', NULL, '2025-08-26 09:51:09', '2025-08-26 09:51:09'),
 (1, '2025-08-26', 'evening', 'Nghỉ', NULL, '2025-08-26 09:51:09', '2025-08-26 09:51:09'),
+(1, '2025-08-27', 'morning', 'Phát triern tính năng lưu file và quản lý file theo phiên bản trên CDE', NULL, '2025-08-27 03:14:57', '2025-08-27 03:14:57'),
+(1, '2025-08-27', 'afternoon', 'Phát triern tính năng lưu file và quản lý file theo phiên bản trên CDE', NULL, '2025-08-27 03:14:57', '2025-08-27 03:14:57'),
+(1, '2025-08-27', 'evening', 'Nghỉ', NULL, '2025-08-27 03:14:57', '2025-08-27 03:14:57'),
 (1, '2025-08-30', 'morning', 'Nghỉ', NULL, '2025-08-23 08:07:44', '2025-08-23 08:07:44'),
 (1, '2025-08-30', 'afternoon', 'Nghỉ', NULL, '2025-08-23 08:07:44', '2025-08-23 08:07:44'),
 (1, '2025-08-30', 'evening', 'Nghỉ', NULL, '2025-08-23 08:07:44', '2025-08-23 08:07:44'),
@@ -1511,12 +1548,12 @@ INSERT INTO `work_diary_entries` (`user_id`, `entry_date`, `period`, `content`, 
 (16, '2025-07-06', 'morning', 'Nghỉ', NULL, '2025-08-07 09:32:11', '2025-08-07 09:32:11'),
 (16, '2025-07-06', 'afternoon', 'Nghỉ', NULL, '2025-08-07 09:32:11', '2025-08-07 09:32:11'),
 (16, '2025-07-06', 'evening', 'Nghỉ', NULL, '2025-08-07 09:32:11', '2025-08-07 09:32:11'),
-(16, '2025-07-07', 'morning', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:33:07', '2025-08-07 09:33:07'),
+(16, '2025-07-07', 'morning', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:33:07', '2025-08-07 09:33:07');
+INSERT INTO `work_diary_entries` (`user_id`, `entry_date`, `period`, `content`, `note`, `created_at`, `updated_at`) VALUES
 (16, '2025-07-07', 'afternoon', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:33:07', '2025-08-07 09:33:07'),
 (16, '2025-07-07', 'evening', 'Nghỉ', NULL, '2025-08-07 09:33:07', '2025-08-07 09:33:07'),
 (16, '2025-07-08', 'morning', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:33:05', '2025-08-07 09:33:05'),
-(16, '2025-07-08', 'afternoon', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:33:05', '2025-08-07 09:33:05');
-INSERT INTO `work_diary_entries` (`user_id`, `entry_date`, `period`, `content`, `note`, `created_at`, `updated_at`) VALUES
+(16, '2025-07-08', 'afternoon', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:33:05', '2025-08-07 09:33:05'),
 (16, '2025-07-08', 'evening', 'Nghỉ', NULL, '2025-08-07 09:33:05', '2025-08-07 09:33:05'),
 (16, '2025-07-09', 'morning', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:33:02', '2025-08-07 09:33:02'),
 (16, '2025-07-09', 'afternoon', 'Đọc tiêu chuẩn đường ô tô', NULL, '2025-08-07 09:33:02', '2025-08-07 09:33:02'),
@@ -2255,7 +2292,7 @@ ALTER TABLE `companies`
 -- AUTO_INCREMENT for table `file_versions`
 --
 ALTER TABLE `file_versions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=35;
 
 --
 -- AUTO_INCREMENT for table `notifications`
@@ -2339,13 +2376,13 @@ ALTER TABLE `project_daily_notifications`
 -- AUTO_INCREMENT for table `project_files`
 --
 ALTER TABLE `project_files`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
 
 --
 -- AUTO_INCREMENT for table `project_folders`
 --
 ALTER TABLE `project_folders`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT for table `project_groups`
