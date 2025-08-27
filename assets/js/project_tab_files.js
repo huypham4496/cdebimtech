@@ -12,7 +12,12 @@
     uploads: [],
     searching: false,
   };
-
+function pushSelect(type, id, on){
+  id = Number(id);
+  const i = state.selectedItems.findIndex(x=>x.type===type && x.id===id);
+  if(on && i<0) state.selectedItems.push({type, id});
+  if(!on && i>=0) state.selectedItems.splice(i,1);
+}
   const ajaxUrl = window.CDE_FILES.ajaxUrl;
   const projectId = window.CDE_FILES.projectId;
 
@@ -134,18 +139,31 @@
       tr.dataset.id = f.id;
       tr.dataset.type = 'folder';
       tr.innerHTML = `
-        <td class="center">—</td>
-        <td class="center">—</td>
-        <td class="ft-name"><div class="filetype"><i class="fas fa-folder"></i><span>${f.name}</span></div></td>
-        <td><span class="badge">—</span></td>
-        <td class="center">—</td>
-        <td class="right">—</td>
-        <td>${timeago(f.created_at)}</td>
-        <td>—</td>
-        <td class="actions">
-          <button class="icon-btn open-btn" title="Open"><i class="fas fa-level-down-alt"></i></button>
-          <button class="icon-btn" title="Delete"><i class="fas fa-trash-alt"></i></button>
-        </td>`;
+  <td class="center"><input type="checkbox" class="ft-row-sel"></td>
+  <td class="center">—</td>
+  <td class="ft-name"><div class="filetype"><i class="fas fa-folder"></i><span>${f.name}</span></div></td>
+  <td><span class="badge">—</span></td>
+  <td class="center">—</td>
+  <td class="right">—</td>
+  <td>${timeago(f.created_at)}</td>
+  <td>—</td>
+  <td class="actions">
+    <button class="icon-btn open-btn" title="Open"><i class="fas fa-level-down-alt"></i></button>
+    <button class="icon-btn" title="Delete"><i class="fas fa-trash-alt"></i></button>
+  </td>`;
+// (A) Checkbox chọn folder
+const cbFolder = tr.querySelector('.ft-row-sel');
+cbFolder.addEventListener('change', (e)=>{
+  const on = e.target.checked;
+  pushSelect('folder', f.id, on);
+});
+
+// (B) Click vào row/tên folder để mở (bỏ qua khi click vào checkbox/nút)
+tr.addEventListener('click', (e)=>{
+  if (e.target.closest('.actions, button, input[type="checkbox"], a[href]')) return;
+  state.currentFolderId = f.id;
+  loadItems(f.id);
+});
 
       // 1) Open button
       tr.querySelector('.open-btn').addEventListener('click', ()=>{
@@ -185,10 +203,9 @@
         </td>`;
 
       const cb = tr.querySelector('.ft-row-sel');
-      cb.addEventListener('change', (e)=>{
-        const id = Number(file.id);
-        if(e.target.checked) state.selected.add(id); else state.selected.delete(id);
-      });
+cb.addEventListener('change', (e)=>{
+  pushSelect('file', file.id, e.target.checked);
+});
 
       tr.querySelector('.more').addEventListener('click', (e)=>showRowMenu(e.currentTarget, file));
       tb.appendChild(tr);
@@ -391,23 +408,43 @@
     setTimeout(()=>form.remove(), 2000);
   }
 
-  $('#ft-download-btn').addEventListener('click', ()=>{
-    const ids = Array.from(state.selected);
-    if(ids.length===0){ alert('Chọn ít nhất 1 tệp'); return; }
-    if(ids.length===1){ window.open(ajaxUrl + '&action=download_one&file_id=' + ids[0], '_blank'); return; }
-    // Multi-file download requires ZipArchive on server
-    downloadFiles(ids);
-  });
+$('#ft-download-btn').addEventListener('click', ()=>{
+  const items = state.selectedItems.slice(); // [{type:'file'|'folder', id}]
+  if(items.length===0){ alert('Chọn ít nhất 1 mục'); return; }
+
+  // Nếu chỉ có 1 mục và đó là "file" -> tận dụng download_one
+  if(items.length===1 && items[0].type === 'file'){
+    window.open(ajaxUrl + '&action=download_one&file_id=' + items[0].id, '_blank');
+    return;
+  }
+
+  // Ngược lại (nhiều file hoặc có folder) -> POST 'items' JSON để server zip
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = ajaxUrl + '&action=download';
+  form.style.display = 'none';
+  const input = document.createElement('input');
+  input.type = 'hidden';
+  input.name = 'items';
+  input.value = JSON.stringify(items);
+  form.appendChild(input);
+  document.body.appendChild(form);
+  form.submit();
+  setTimeout(()=>form.remove(), 2000);
+});
 
   // ---------------- Select all ----------------
-  $('#ft-select-all').addEventListener('change', (e)=>{
-    const on = e.target.checked;
-    $$('#ft-table tbody .ft-row-sel').forEach(cb=>{
-      cb.checked = on;
-      const id = parseInt(cb.closest('tr').dataset.id, 10);
-      if(on) state.selected.add(id); else state.selected.delete(id);
-    });
+$('#ft-select-all').addEventListener('change', (e)=>{
+  const on = e.target.checked;
+  state.selectedItems = []; // reset
+  $$('#ft-table tbody .ft-row-sel').forEach(cb=>{
+    cb.checked = on;
+    const tr = cb.closest('tr');
+    const id = Number(tr.dataset.id);
+    const type = tr.dataset.type; // 'file' | 'folder'
+    if(on) state.selectedItems.push({type, id});
   });
+});
 
   // ---------------- Versions modal ----------------
   function openVersionsModal(file){
