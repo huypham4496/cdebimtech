@@ -64,3 +64,15 @@
 
 /* Highlight Action head when user can manage permissions */
 .files-tab.can-admin .ft-table thead th.act{color:#fca415}
+
+/* Action dropdown */
+.popup-menu{position:absolute; z-index:9999; min-width:200px; background:#fff; border:1px solid #e5e7eb; border-radius:12px; box-shadow:0 12px 32px rgba(0,0,0,.12); overflow:hidden}
+.popup-menu .mi{display:flex; align-items:center; gap:8px; padding:10px 12px; cursor:pointer; font-size:14px}
+.popup-menu .mi:hover{background:#f8fafc}
+.popup-menu .mi.danger{color:#b91c1c}
+.vers-wrap{display:flex; flex-direction:column; gap:6px}
+.vers-row{display:grid; grid-template-columns:18px 1fr auto auto; align-items:center; gap:8px; padding:6px 4px; border-bottom:1px dashed #e5e7eb}
+.vers-row:last-child{border-bottom:none}
+.vers-v{font-weight:600}
+.vers-size{font-variant-numeric: tabular-nums; text-align:right}
+.vers-time{opacity:.7; font-size:12px}
