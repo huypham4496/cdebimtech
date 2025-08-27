@@ -32,6 +32,16 @@ if (!isset($pdo) || !($pdo instanceof PDO)) {
 
 date_default_timezone_set('Asia/Bangkok');
 
+function ensure_current_version_column($pdo){
+    try {
+        $st = $pdo->query("SHOW COLUMNS FROM project_files LIKE 'current_version'");
+        if(!$st->fetch()){
+            $pdo->exec("ALTER TABLE project_files ADD COLUMN current_version INT NULL DEFAULT NULL");
+        }
+    } catch (Throwable $e) { /* ignore if not permitted */ }
+}
+
+
 function base_root(){ return realpath(__DIR__ . '/../../'); }
 function to_abs($rel){
     $root = rtrim(base_root(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
@@ -489,7 +499,8 @@ if(isset($_GET['ajax'])){
             if(!is_file($from)) json_resp(false, ['error'=>'Không thể khôi phục tệp (thiếu file nguồn)'], 404);
         }
         if(!@copy($from, $dest)) json_resp(false, ['error'=>'Không thể khôi phục tệp'], 500);
-        $pdo->prepare("UPDATE project_files SET updated_at=NOW() WHERE id=?")->execute([$file_id]);
+        // set current version pointer
+        try { $pdo->prepare("UPDATE project_files SET current_version=? WHERE id=?")->execute([$version, $file_id]); } catch (Throwable $e) {}
         json_resp(true, ['restored'=>basename($dest)]);
     }
 if($action==='get_versions'){
@@ -571,7 +582,8 @@ if($action==='toggle_important'){
             $rel = to_rel($toArchive);
             $pdo->prepare("INSERT INTO file_versions (file_id, version, storage_path, size_bytes, uploaded_by) VALUES (?,?,?,?,?)")
                 ->execute([$file_id, $next, $rel, @filesize($toArchive) ?: $size, $user_id]);
-            $pdo->prepare("UPDATE project_files SET updated_at=NOW() WHERE id=?")->execute([$file_id]);
+            // set current version pointer
+            try { $pdo->prepare("UPDATE project_files SET current_version=? WHERE id=?")->execute([$next, $file_id]); } catch (Throwable $e) {}
 
             $uploaded[] = ['file_id'=>$file_id, 'version'=>$next, 'name'=>$origName];
         }
