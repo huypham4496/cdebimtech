@@ -372,7 +372,7 @@
     if(ids.length===0){ alert('Chọn ít nhất 1 tệp'); return; }
     if(ids.length===1){ window.open(ajaxUrl + '&action=download_one&file_id=' + ids[0], '_blank'); return; }
     // Multi-file download requires ZipArchive on server
-    if(ids.length===1){ window.open(ajaxUrl + '&action=download_one&file_id=' + ids[0], '_blank'); } else { downloadFiles(ids); }
+    downloadFiles(ids);
   });
 
   // ---------------- Select all ----------------
