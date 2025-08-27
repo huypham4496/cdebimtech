@@ -70,30 +70,34 @@
     const roots = rows.filter(r=>!r.parent_id).map(r=>byId.get(r.id));
     return roots;
   }
+
   function renderTree(){
-    const c = $('#ft-tree'); c.innerHTML = '';
-    function nodeHtml(node){
-      const el = document.createElement('div');
-      el.className = 'node' + (state.currentFolderId===node.id?' active':'');
-      el.innerHTML = `<i class="fas fa-folder"></i><span>${node.name}</span>`;
-      el.addEventListener('click', ()=>{
+    const container = $('#ft-tree');
+    container.innerHTML = '';
+
+    function nodeHtml(node, parentEl){
+      const row = document.createElement('div');
+      row.className = 'node' + (state.currentFolderId===node.id ? ' active' : '');
+      row.innerHTML = `<i class="fas fa-folder"></i><span>${node.name}</span>`;
+      row.addEventListener('click', ()=>{
         state.currentFolderId = node.id;
         loadItems(node.id);
         renderTree();
       });
-      c.appendChild(el);
+      parentEl.appendChild(row);
+
       if(node.children && node.children.length){
         const wrap = document.createElement('div');
         wrap.className = 'children';
-        c.appendChild(wrap);
-        node.children.sort((a,b)=>a.name.localeCompare(b.name)).forEach(ch=>{
-          // render within
-          const saveC = c; c = wrap; nodeHtml(ch); c = saveC;
-        });
+        parentEl.appendChild(wrap);
+        node.children
+          .slice()
+          .sort((a,b)=>a.name.localeCompare(b.name))
+          .forEach(ch=>nodeHtml(ch, wrap));
       }
     }
-    let cSave = c;
-    state.tree.forEach(n=>{ c = cSave; nodeHtml(n); });
+
+    state.tree.forEach(n=>nodeHtml(n, container));
   }
 
   // Table
@@ -172,6 +176,7 @@
     menu.style.boxShadow = '0 12px 32px rgba(0,0,0,.12)';
     menu.innerHTML = `
       <div class="mi" data-act="download"><i class="fas fa-download"></i> Download</div>
+      <div class="mi" data-act="versions"><i class="fas fa-history"></i> Versions & Restore</div>
       <div class="mi" data-act="toggle-important"><i class="fas fa-star"></i> Toggle important</div>
       <div class="mi" data-act="set-tag" data-tag="WIP">Set tag: WIP</div>
       <div class="mi" data-act="set-tag" data-tag="Shared">Set tag: Shared</div>
@@ -189,6 +194,8 @@
         const act = mi.dataset.act;
         if(act==='download'){
           downloadFiles([file.id]);
+        } else if(act==='versions'){
+          openVersionsModal(file);
         } else if(act==='toggle-important'){
           const r = await api('toggle_important', {file_id:file.id}, 'POST');
           if(r.ok) loadItems(state.currentFolderId);
@@ -224,9 +231,30 @@
   async function doSearch(){
     const q = $('#ft-search-input').value.trim();
     const tag = $('#ft-filter-tag').value || '';
-    const imp = $('#ft-important-only').checked ? 1 : '';
-    const r = await api('search', {q, tag, important: imp}, 'GET');
-    if(!r.ok){ alert(r.error || 'Search failed'); return; }
+    const params = { q, tag };
+    if($('#ft-important-only').checked){ params.important = 1; }
+    const r = await api('search', params, 'GET');
+    if(!r || r.ok===false){ alert(r && r.error || 'Search failed'); console.debug('search detail:', r&&r.detail, r&&r.html); return; }
+    const tb = $('#ft-table tbody'); tb.innerHTML='';
+    (r.results||[]).forEach(file=>{
+      const tr = document.createElement('tr');
+      tr.dataset.id = file.id;
+      tr.innerHTML = `
+        <td class="center"><input type="checkbox" class="ft-row-sel"></td>
+        <td class="center">${file.is_important ? '⭐' : ''}</td>
+        <td><div class="filetype">${extIcon(file.filename)}<span>${file.filename}</span></div></td>
+        <td><span class="badge ${file.tag}">${file.tag}</span></td>
+        <td class="center">${file.version || 1}</td>
+        <td class="right">${fmtSize(file.size_bytes)}</td>
+        <td>${timeago(file.updated_at)}</td>
+        <td>${file.created_by || ''}</td>
+        <td class="actions">
+          <button class="icon-btn more"><i class="fas fa-ellipsis-v"></i></button>
+        </td>`;
+      tr.querySelector('.more').addEventListener('click', (e)=>showRowMenu(e.currentTarget, file));
+      tb.appendChild(tr);
+    });
+  }
     const tb = $('#ft-table tbody'); tb.innerHTML='';
     (r.results||[]).forEach(file=>{
       const tr = document.createElement('tr');
@@ -377,3 +405,62 @@
     await loadItems(state.currentFolderId);
   })();
 })();
+
+  // Versions modal
+  function openVersionsModal(file){
+    const modal = document.createElement('div');
+    modal.className = 'ft-modal';
+    modal.innerHTML = `
+      <div class="ft-modal-dialog">
+        <div class="ft-modal-header">
+          <h3>Versions – ${file.filename}</h3>
+          <button class="icon close" data-close>&times;</button>
+        </div>
+        <div class="ft-modal-body">
+          <div id="ft-vers-list">Loading…</div>
+        </div>
+        <div class="ft-modal-footer">
+          <button class="btn" data-close>Close</button>
+          <button class="btn primary" id="ft-restore-btn" disabled>Restore selected</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    modal.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click', ()=>modal.remove()));
+
+    api('get_versions', {file_id: file.id}, 'GET').then(r=>{
+      const host = modal.querySelector('#ft-vers-list');
+      if(!r || r.ok===false){ host.textContent = (r&&r.error)||'Failed to load versions'; return; }
+      if(!r.versions || r.versions.length===0){ host.textContent = 'No versions'; return; }
+      const wrap = document.createElement('div');
+      wrap.className = 'vers-wrap';
+      r.versions.forEach(v=>{
+        const row = document.createElement('label');
+        row.className = 'vers-row';
+        row.innerHTML = `
+          <input type="radio" name="pick-version" value="${v.version}">
+          <span class="vers-v">v${v.version}</span>
+          <span class="vers-size">${fmtSize(v.size_bytes)}</span>
+          <span class="vers-time">${timeago(v.created_at)}</span>
+        `;
+        wrap.appendChild(row);
+      });
+      host.innerHTML = '';
+      host.appendChild(wrap);
+      const restoreBtn = modal.querySelector('#ft-restore-btn');
+      host.addEventListener('change', e=>{
+        if(e.target && e.target.name==='pick-version'){ restoreBtn.disabled = false; }
+      });
+      restoreBtn.addEventListener('click', async ()=>{
+        const picked = $('input[name="pick-version"]:checked', host);
+        if(!picked) return;
+        const form = new URLSearchParams();
+        form.set('file_id', file.id);
+        form.set('version', picked.value);
+        const r2 = await api('restore_version', form, 'POST');
+        if(!r2 || r2.ok===false){ alert((r2&&r2.error)||'Failed to restore'); return; }
+        modal.remove();
+        loadItems(state.currentFolderId);
+      });
+    });
+  }
