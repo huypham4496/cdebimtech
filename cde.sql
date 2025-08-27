@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Aug 27, 2025 at 11:52 AM
+-- Generation Time: Aug 27, 2025 at 12:02 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -61,7 +61,8 @@ INSERT INTO `file_versions` (`id`, `file_id`, `version`, `storage_path`, `size_b
 (31, 18, 1, 'uploads/PRJ00006/files/old_version/license_v1.txt', 19347, 1, '2025-08-27 11:37:36'),
 (32, 19, 1, 'uploads/PRJ00006/files/old_version/deny-ip-list_v1.txt', 823270, 1, '2025-08-27 15:59:59'),
 (33, 20, 1, 'uploads/PRJ00006/files/old_version/Screenshot 2025-06-06 184815_v1.png', 34404, 1, '2025-08-27 16:48:22'),
-(34, 21, 1, 'uploads/PRJ00006/files/old_version/DS IP Phòng cầu 2_v1.xlsx', 12025, 1, '2025-08-27 16:49:07');
+(34, 21, 1, 'uploads/PRJ00006/files/old_version/DS IP Phòng cầu 2_v1.xlsx', 12025, 1, '2025-08-27 16:49:07'),
+(35, 21, 2, 'uploads/PRJ00006/files/old_version/DS IP Phòng cầu 2_v2.xlsx', 12395, 1, '2025-08-27 16:56:28');
 
 -- --------------------------------------------------------
 
@@ -485,7 +486,7 @@ INSERT INTO `project_files` (`id`, `project_id`, `folder_id`, `filename`, `tag`,
 (18, 6, 10, 'license.txt', 'WIP', 0, 0, 1, '2025-08-27 11:37:36', '2025-08-27 11:37:36', 1, NULL),
 (19, 6, 11, 'deny-ip-list.txt', 'WIP', 0, 0, 1, '2025-08-27 15:59:59', '2025-08-27 15:59:59', 1, NULL),
 (20, 6, 9, 'Screenshot 2025-06-06 184815.png', 'WIP', 0, 0, 1, '2025-08-27 16:48:22', '2025-08-27 16:48:22', 1, NULL),
-(21, 6, 9, 'DS IP Phòng cầu 2.xlsx', 'WIP', 0, 0, 1, '2025-08-27 16:49:07', '2025-08-27 16:49:07', 1, NULL);
+(21, 6, 9, 'DS IP Phòng cầu 2.xlsx', 'WIP', 0, 0, 1, '2025-08-27 16:49:07', '2025-08-27 16:56:28', 2, NULL);
 
 -- --------------------------------------------------------
 
@@ -2292,7 +2293,7 @@ ALTER TABLE `companies`
 -- AUTO_INCREMENT for table `file_versions`
 --
 ALTER TABLE `file_versions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=35;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=36;
 
 --
 -- AUTO_INCREMENT for table `notifications`
