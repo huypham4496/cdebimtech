@@ -1,5 +1,5 @@
 <?php
-// partials/file_preview.php  — robust, works in localhost/private; with offline preview for DOCX/XLSX if PhpOffice is installed.
+// partials/file_preview.php — supports offline Excel preview with a standalone "phpspreadsheet/autoload.php"
 declare(strict_types=1);
 if (session_status() === PHP_SESSION_NONE) session_start();
 
@@ -20,11 +20,17 @@ if (!$__config) {
 }
 require_once $__config;
 
-// Include vendor autoload if exists (for PhpWord/PhpSpreadsheet)
-$__autoload1 = $__root . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'autoload.php';
-$__autoload2 = $__root . DIRECTORY_SEPARATOR . 'includes' . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'autoload.php';
-if (is_file($__autoload1)) require_once $__autoload1;
-if (is_file($__autoload2)) require_once $__autoload2;
+// ---- Autoloaders ----
+// Composer-style locations
+$__autoloads = [
+    $__root . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'autoload.php',
+    $__root . DIRECTORY_SEPARATOR . 'includes' . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'autoload.php',
+    // Standalone PhpSpreadsheet (as user noted): ROOT/phpspreadsheet/autoload.php
+    $__root . DIRECTORY_SEPARATOR . 'phpspreadsheet' . DIRECTORY_SEPARATOR . 'autoload.php',
+    // Optionally support standalone PhpWord if present in the same style
+    $__root . DIRECTORY_SEPARATOR . 'phpword' . DIRECTORY_SEPARATOR . 'autoload.php',
+];
+foreach ($__autoloads as $__auto) { if (is_file($__auto)) { require_once $__auto; } }
 
 // ---- Ensure $pdo ----
 if (!isset($pdo) || !($pdo instanceof PDO)) {
@@ -96,12 +102,12 @@ function is_project_member_safe(PDO $pdo, $user_id, $file_id): bool {
     if ($pid <= 0) return false;
     if (function_exists('is_project_member')) return (bool)is_project_member($pdo, $pid, (int)$user_id);
     if (function_exists('can_view_project')) return (bool)can_view_project($pid, (int)$user_id);
-    return true; // fallback allow to avoid false "Forbidden" in dev/local
+    return true; // fallback allow in dev/local
 }
 
 // ---- Inputs ----
 $mode = $_GET['mode'] ?? 'view';
-$force = $_GET['force'] ?? ''; // 'web' or 'local' to override behavior
+$force = $_GET['force'] ?? ''; // 'web' or 'local'
 $file_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 if ($file_id <= 0) json_resp(false, ['error'=>'Missing id'], 400);
 
@@ -139,15 +145,15 @@ if ($mode === 'raw') {
     exit;
 }
 
-// ---- Build base URLs ----
+// ---- URLs ----
 $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
 $host   = $_SERVER['HTTP_HOST'] ?? 'localhost';
 $scriptDir = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? '/partials/file_preview.php'), '/\\');
 $rawUrl = $scheme . '://' . $host . $scriptDir . '/file_preview.php?mode=raw&id=' . $file_id;
 
-// ---- Try offline conversion if available (preferred on localhost/private) ----
+// ---- Offline converters ----
 function try_word_offline($abs, $file_id, $filename){
-    if (!class_exists('\\PhpOffice\\PhpWord\\IOFactory')) return [false, null];
+    if (!class_exists('\\PhpOffice\\PhpWord\\IOFactory')) return [false, null, 'PhpWord not installed'];
     try {
         $phpWord = \PhpOffice\PhpWord\IOFactory::load($abs);
         $writer = \PhpOffice\PhpWord\IOFactory::createWriter($phpWord, 'HTML');
@@ -157,11 +163,11 @@ function try_word_offline($abs, $file_id, $filename){
         $rel = '/uploads/tmp/preview_word_' . $file_id . '.html';
         $out = $__root . DIRECTORY_SEPARATOR . ltrim($rel, '/\\');
         $writer->save($out);
-        return [true, $rel];
-    } catch (\Throwable $e) { return [false, null]; }
+        return [true, $rel, null];
+    } catch (\Throwable $e) { return [false, null, $e->getMessage()]; }
 }
 function try_excel_offline($abs, $file_id){
-    if (!class_exists('\\PhpOffice\\PhpSpreadsheet\\IOFactory')) return [false, null];
+    if (!class_exists('\\PhpOffice\\PhpSpreadsheet\\IOFactory')) return [false, null, 'PhpSpreadsheet not installed'];
     try {
         $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($abs);
         $writer = new \PhpOffice\PhpSpreadsheet\Writer\Html($spreadsheet);
@@ -171,11 +177,13 @@ function try_excel_offline($abs, $file_id){
         $rel = '/uploads/tmp/preview_excel_' . $file_id . '.html';
         $out = $__root . DIRECTORY_SEPARATOR . ltrim($rel, '/\\');
         $writer->save($out);
-        return [true, $rel];
-    } catch (\Throwable $e) { return [false, null]; }
+        return [true, $rel, null];
+    } catch (\Throwable $e) { return [false, null, $e->getMessage()]; }
 }
 
-$prefer_offline = ($force === 'local') || in_array($host, ['localhost','127.0.0.1','::1']);
+// Prefer offline if libraries exist OR host is localhost OR force=local
+$libs_present = class_exists('\\PhpOffice\\PhpSpreadsheet\\IOFactory') || class_exists('\\PhpOffice\\PhpWord\\IOFactory');
+$prefer_offline = ($force === 'local') || $libs_present || in_array($host, ['localhost','127.0.0.1','::1']);
 
 // ---- HTML Viewer ----
 ?><!DOCTYPE html>
@@ -193,6 +201,7 @@ $prefer_offline = ($force === 'local') || in_array($host, ['localhost','127.0.0.
   iframe, .viewport { width:100%; height:calc(100dvh - 48px); border:0; background:#111827; }
   .empty { padding:40px; text-align:center; color:#9ca3af; }
   .row { display:flex; align-items:center; gap:10px; justify-content:center; margin-top:8px; }
+  .note { text-align:center; color:#9ca3af; font-size:14px; margin:8px 0 0; }
 </style>
 </head>
 <body>
@@ -208,32 +217,34 @@ if ($ext === 'pdf') {
 } elseif (in_array($ext, ['doc','docx'])) {
     $shown = false;
     if ($prefer_offline) {
-        list($ok, $rel) = try_word_offline($abs, $file_id, $filename);
+        list($ok, $rel, $err) = try_word_offline($abs, $file_id, $filename);
         if ($ok) { echo '<iframe class="viewport" src="'.$rel.'"></iframe>'; $shown = true; }
     }
     if (!$shown && $force !== 'local') {
         $office = 'https://view.officeapps.live.com/op/view.aspx?src=' . rawurlencode($rawUrl);
         echo '<iframe class="viewport" src="'.$office.'"></iframe>';
         echo '<div class="row"><a class="btn" href="?mode=view&id='.$file_id.'&force=local">Dùng chế độ offline (nếu đã cài PhpWord)</a></div>';
+        echo '<div class="note">Nếu iframe Office báo lỗi, dùng nút trên để xem offline.</div>';
         $shown = true;
     }
     if (!$shown) {
-        echo '<div class="empty">Không thể xem Word. Vui lòng tải xuống.<br/>Bạn có thể cài offline preview: <code>composer require phpoffice/phpword</code></div>';
+        echo '<div class="empty">Không thể xem Word. Vui lòng tải xuống.<br/>Để offline: <code>phpword/autoload.php</code> hoặc <code>composer require phpoffice/phpword</code></div>';
     }
 } elseif (in_array($ext, ['xls','xlsx'])) {
     $shown = false;
     if ($prefer_offline) {
-        list($ok, $rel) = try_excel_offline($abs, $file_id);
+        list($ok, $rel, $err) = try_excel_offline($abs, $file_id);
         if ($ok) { echo '<iframe class="viewport" src="'.$rel.'"></iframe>'; $shown = true; }
     }
     if (!$shown && $force !== 'local') {
         $office = 'https://view.officeapps.live.com/op/view.aspx?src=' . rawurlencode($rawUrl);
         echo '<iframe class="viewport" src="'.$office.'"></iframe>';
-        echo '<div class="row"><a class="btn" href="?mode=view&id='.$file_id.'&force=local">Dùng chế độ offline (nếu đã cài PhpSpreadsheet)</a></div>';
+        echo '<div class="row"><a class="btn" href="?mode=view&id='.$file_id.'&force=local">Dùng chế độ offline (PhpSpreadsheet đã được cài)</a></div>';
+        echo '<div class="note">Nếu iframe Office báo lỗi, dùng nút trên để xem offline.</div>';
         $shown = true;
     }
     if (!$shown) {
-        echo '<div class="empty">Không thể xem Excel. Vui lòng tải xuống.<br/>Bạn có thể cài offline preview: <code>composer require phpoffice/phpspreadsheet</code></div>';
+        echo '<div class="empty">Không thể xem Excel. Vui lòng tải xuống.<br/>Để offline: đảm bảo có <code>phpspreadsheet/autoload.php</code> hoặc <code>composer require phpoffice/phpspreadsheet</code></div>';
     }
 } elseif (in_array($ext, ['png','jpg','jpeg','gif','bmp','svg'])) {
     $src = '?mode=raw&id='.$file_id;
