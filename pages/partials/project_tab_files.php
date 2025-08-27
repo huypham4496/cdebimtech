@@ -389,7 +389,7 @@ if(isset($_GET['ajax'])){
         $folders = $stmt1->fetchAll(PDO::FETCH_ASSOC);
 
         // Files (not deleted)
-        $stmt2 = $pdo->prepare("SELECT f.id, f.filename, f.tag, f.is_important, f.created_by, f.created_at, f.updated_at
+        $stmt2 = $pdo->prepare("SELECT f.id, f.filename, f.tag, f.is_important, f.created_by, f.created_at, f.updated_at, f.current_version
                                 FROM project_files f
                                 WHERE f.project_id=? AND f.folder_id=? AND f.is_deleted=0
                                 ORDER BY f.updated_at DESC");
@@ -450,6 +450,20 @@ if(isset($_GET['ajax'])){
         foreach($rows as &$r){
             $vi = latest_version_info($pdo, $r['id']);
             $r['version'] = $vi ? intval($vi['version']) : 0;
+            // Attach latest version info
+foreach ($files as &$r) {
+    $vi = latest_version_info($pdo, $r['id']);
+    $r['version']       = $vi ? intval($vi['version']) : 0;   // max version (giữ nguyên)
+    $r['size_bytes']    = $vi ? intval($vi['size_bytes']) : 0;
+    $r['storage_path']  = $vi ? $vi['storage_path'] : null;
+
+    // NEW: tổng số phiên bản
+    $stmtCnt = $pdo->prepare("SELECT COUNT(*) FROM file_versions WHERE file_id=?");
+    $stmtCnt->execute([$r['id']]);
+    $r['total_versions'] = intval($stmtCnt->fetchColumn() ?: 0);
+    // current_version đã có từ SELECT (có thể null nếu data cũ)
+    $r['current_version'] = isset($r['current_version']) ? intval($r['current_version']) : 0;
+}
             $r['size_bytes'] = $vi ? intval($vi['size_bytes']) : 0;
             $r['storage_path'] = $vi ? $vi['storage_path'] : null;
         }
