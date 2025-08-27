@@ -1,4 +1,24 @@
 <?php
+
+// ===== Helpers for aligned Name column (thumb + ext + title) =====
+if (!function_exists('cde_file_name_parts')) {
+    function cde_file_name_parts($filename) {
+        $fn = (string)$filename;
+        $ext = pathinfo($fn, PATHINFO_EXTENSION);
+        $name = pathinfo($fn, PATHINFO_FILENAME);
+        $ext_disp = $ext !== '' ? ('.' . strtoupper($ext)) : '';
+        return [$name, $ext_disp, strtolower($ext)];
+    }
+}
+if (!function_exists('cde_build_name_html')) {
+    function cde_build_name_html($filename) {
+        list($title, $ext_disp, $ext_raw) = cde_file_name_parts($filename);
+        $ext_raw_h = htmlspecialchars($ext_raw, ENT_QUOTES, 'UTF-8');
+        $ext_disp_h = htmlspecialchars($ext_disp, ENT_QUOTES, 'UTF-8');
+        $full_h = htmlspecialchars($filename, ENT_QUOTES, 'UTF-8');
+        return '<div class="ft-wrap"><span class="ft-thumb" data-ext="'.$ext_raw_h.'"></span><span class="ft-ext">'.$ext_disp_h.'</span><span class="ft-title">'.$full_h.'</span></div>';
+    }
+}
 /**
  * Files Tab (project_tab_files.php)
  * - Folder tree (left), file list (right), toolbar with search/filter/upload (top)
@@ -405,6 +425,22 @@ $r['total_versions'] = (int)($st2->fetchColumn() ?: 0);
 $r['current_version'] = isset($r['current_version']) ? (int)$r['current_version'] : 0;
 
             $vi = latest_version_info($pdo, $r['id']);
+
+
+            // ===== Build preview URL + Name HTML (anchor) =====
+            $__open_url = 'partials/file_preview.php?id='.(int)$r['id'];
+            $r['open_url'] = $__open_url;
+            // Only set name_html; DO NOT wrap $r['filename'] to avoid breaking ext parsing on frontend
+            $r['name_html'] = '<a class="ft-open" target="_blank" rel="noopener" href="'.htmlspecialchars($__open_url, ENT_QUOTES, 'UTF-8').'">'.cde_build_name_html($r['filename']).'</a>';
+            // Expose extension in a raw form for clients that want it
+            list($__title, $__ext_disp, $__ext_raw) = cde_file_name_parts($r['filename']);
+            $r['ext_raw'] = $__ext_raw;
+            // Name column fields (do not alter raw filename)
+            list($___title, $___ext_disp, $___ext_raw) = cde_file_name_parts($r['filename']);
+            $r['file_ext']   = $___ext_disp;         // e.g., .PDF
+            $r['file_title'] = $___title;            // filename without extension
+            $r['ext_raw']    = $___ext_raw;          // e.g., pdf
+            $r['name_html'] = '<a class="ft-open" target="_blank" rel="noopener" href="'.htmlspecialchars($__open_url, ENT_QUOTES, 'UTF-8').'">'.cde_build_name_html($r['filename']).'</a>';
             $r['version'] = $vi ? intval($vi['version']) : 0;
             $r['size_bytes'] = $vi ? intval($vi['size_bytes']) : 0;
             $r['storage_path'] = $vi ? $vi['storage_path'] : null;
@@ -456,10 +492,42 @@ $r['current_version'] = isset($r['current_version']) ? (int)$r['current_version'
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         foreach($rows as &$r){
             $vi = latest_version_info($pdo, $r['id']);
+
+
+            // ===== Build preview URL + Name HTML (anchor) =====
+            $__open_url = 'partials/file_preview.php?id='.(int)$r['id'];
+            $r['open_url'] = $__open_url;
+            // Only set name_html; DO NOT wrap $r['filename'] to avoid breaking ext parsing on frontend
+            $r['name_html'] = '<a class="ft-open" target="_blank" rel="noopener" href="'.htmlspecialchars($__open_url, ENT_QUOTES, 'UTF-8').'">'.cde_build_name_html($r['filename']).'</a>';
+            // Expose extension in a raw form for clients that want it
+            list($__title, $__ext_disp, $__ext_raw) = cde_file_name_parts($r['filename']);
+            $r['ext_raw'] = $__ext_raw;
+            // Name column fields (do not alter raw filename)
+            list($___title, $___ext_disp, $___ext_raw) = cde_file_name_parts($r['filename']);
+            $r['file_ext']   = $___ext_disp;         // e.g., .PDF
+            $r['file_title'] = $___title;            // filename without extension
+            $r['ext_raw']    = $___ext_raw;          // e.g., pdf
+            $r['name_html'] = '<a class="ft-open" target="_blank" rel="noopener" href="'.htmlspecialchars($__open_url, ENT_QUOTES, 'UTF-8').'">'.cde_build_name_html($r['filename']).'</a>';
             $r['version'] = $vi ? intval($vi['version']) : 0;
             // Attach latest version info
 foreach ($files as &$r) {
     $vi = latest_version_info($pdo, $r['id']);
+
+
+            // ===== Build preview URL + Name HTML (anchor) =====
+            $__open_url = 'partials/file_preview.php?id='.(int)$r['id'];
+            $r['open_url'] = $__open_url;
+            // Only set name_html; DO NOT wrap $r['filename'] to avoid breaking ext parsing on frontend
+            $r['name_html'] = '<a class="ft-open" target="_blank" rel="noopener" href="'.htmlspecialchars($__open_url, ENT_QUOTES, 'UTF-8').'">'.cde_build_name_html($r['filename']).'</a>';
+            // Expose extension in a raw form for clients that want it
+            list($__title, $__ext_disp, $__ext_raw) = cde_file_name_parts($r['filename']);
+            $r['ext_raw'] = $__ext_raw;
+            // Name column fields (do not alter raw filename)
+            list($___title, $___ext_disp, $___ext_raw) = cde_file_name_parts($r['filename']);
+            $r['file_ext']   = $___ext_disp;         // e.g., .PDF
+            $r['file_title'] = $___title;            // filename without extension
+            $r['ext_raw']    = $___ext_raw;          // e.g., pdf
+            $r['name_html'] = '<a class="ft-open" target="_blank" rel="noopener" href="'.htmlspecialchars($__open_url, ENT_QUOTES, 'UTF-8').'">'.cde_build_name_html($r['filename']).'</a>';
     $r['version']       = $vi ? intval($vi['version']) : 0;   // max version (giữ nguyên)
     $r['size_bytes']    = $vi ? intval($vi['size_bytes']) : 0;
     $r['storage_path']  = $vi ? $vi['storage_path'] : null;
@@ -586,7 +654,10 @@ if($action==='toggle_important'){
             }
             // next version number
             $vi = latest_version_info($pdo, $file_id);
-            $next = ($vi ? intval($vi['version']) : 0) + 1;
+            
+            $__open_url = 'partials/file_preview.php?id='.(int)$r['id'];
+            $r['open_url'] = $__open_url;
+$next = ($vi ? intval($vi['version']) : 0) + 1;
 
             // 1) write MAIN (overwrite same name)
             $toMain = $dest_dir . DIRECTORY_SEPARATOR . $origName;
@@ -705,7 +776,10 @@ if($action==='toggle_important'){
                 } else {
                     // conflict: create new version at dest
                     $vi = latest_version_info($pdo, $dest_file_id);
-                    if($vi){ move_version_to_old($pdo, $project_id, $dest_file_id, $vi); }
+                    
+            $__open_url = 'partials/file_preview.php?id='.(int)$r['id'];
+            $r['open_url'] = $__open_url;
+if($vi){ move_version_to_old($pdo, $project_id, $dest_file_id, $vi); }
                     $nextVersion = ($vi ? intval($vi['version']) : 0) + 1;
                 }
 
@@ -749,7 +823,10 @@ if($action==='toggle_important'){
         }
         // fallback to latest archived version
         $vi = latest_version_info($pdo, $fid);
-        if(!$vi){ json_resp(false, ['error'=>'File not found'], 404); }
+        
+            $__open_url = 'partials/file_preview.php?id='.(int)$r['id'];
+            $r['open_url'] = $__open_url;
+if(!$vi){ json_resp(false, ['error'=>'File not found'], 404); }
         $full = to_abs($vi['storage_path']);
         if(!is_file($full)){ json_resp(false, ['error'=>'File not found'], 404); }
         $name = basename($full);
