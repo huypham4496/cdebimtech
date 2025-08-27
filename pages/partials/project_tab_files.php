@@ -32,6 +32,22 @@ if (!isset($pdo) || !($pdo instanceof PDO)) {
 
 date_default_timezone_set('Asia/Bangkok');
 
+function base_root(){ return realpath(__DIR__ . '/../../'); }
+function to_abs($rel){
+    $root = rtrim(base_root(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+    $rel = ltrim($rel, '/\\');
+    return $root . $rel;
+}
+function to_rel($abs){
+    $root = rtrim(base_root(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+    $abs = str_replace(['\\','//'], ['/', '/'], $abs);
+    $root2 = str_replace(['\\','//'], ['/', '/'], $root);
+    if(strpos($abs, $root2)===0) return substr($abs, strlen($root2));
+    return $abs;
+}
+function ensure_dir($p){ if(!is_dir($p)) @mkdir($p, 0775, true); return $p; }
+
+
 $__CDE_IS_AJAX__ = isset($_GET['ajax']);
 if ($__CDE_IS_AJAX__) {
     // Ensure no HTML leaks into JSON even on fatal
@@ -181,7 +197,7 @@ function folder_dir($pdo, $project_id, $folder_id){
 function old_versions_dir($pdo, $project_id){
     $base = storage_base_path($pdo, $project_id);
     $old = path_join($base, 'old_version');
-    if(!is_dir($old)) @mkdir($old, 0775, true);
+    ensure_dir($old);
     return $old;
 }
 
@@ -196,13 +212,20 @@ function storage_base_path($pdo, $project_id){
 
 function move_version_to_old($pdo, $project_id, $file_id, $vi){
     if(!$vi || empty($vi['storage_path'])) return false;
-    $oldDir = old_versions_dir($pdo, $project_id);
-    $srcFull = path_join(__DIR__, '../../', $vi['storage_path']);
+    $oldDir = old_versions_dir($pdo, $project_id); ensure_dir($oldDir);
+    $srcFull = to_abs($vi['storage_path']);
     if(!is_file($srcFull)) return false;
     $safe = sanitize_filename((string)$file_id).'__v'.intval($vi['version']).'__'.basename($srcFull);
-    $dstFull = path_join($oldDir, $safe);
-    if(@rename($srcFull, $dstFull) || @copy($srcFull, $dstFull)){
-        $rel = str_replace(path_join(__DIR__, '../../'), '', $dstFull);
+    $dstFull = $oldDir . DIRECTORY_SEPARATOR . $safe;
+    $moved = @rename($srcFull, $dstFull);
+    if(!$moved){
+        if(@copy($srcFull, $dstFull)){
+            @unlink($srcFull); // ensure old file removed when copy was used
+            $moved = true;
+        }
+    }
+    if($moved){
+        $rel = to_rel($dstFull);
         $pdo->prepare("UPDATE file_versions SET storage_path=? WHERE file_id=? AND version=?")
             ->execute([$rel, $file_id, intval($vi['version'])]);
         return true;
@@ -595,7 +618,7 @@ if(isset($_GET['ajax'])){
                     $storedName = sanitize_filename($baseNameOnly) . "__v" . $nextVersion . ($ext?(".".$ext):"");
                     $toFull = path_join($dest_dir, $storedName);
                     @copy(path_join(__DIR__, '../../', $src_vi['storage_path']), $toFull);
-                    $relPath = str_replace(path_join(__DIR__, '../../'), '', $toFull);
+                    $relPath = to_rel($toFull);
                     $pdo->prepare("INSERT INTO file_versions (file_id, version, storage_path, size_bytes, uploaded_by) VALUES (?,?,?,?,?)")
                         ->execute([$dest_file_id, $nextVersion, $relPath, intval($src_vi['size_bytes']), $user_id]);
                     $pdo->prepare("UPDATE project_files SET updated_at=NOW() WHERE id=?")->execute([$dest_file_id]);
@@ -607,81 +630,74 @@ if(isset($_GET['ajax'])){
     }
 
     // DOWNLOAD (single or multi as zip)
+    if($action==='download_one'){
+        $fid = isset($_GET['file_id'])?intval($_GET['file_id']):0;
+        if(!$fid){ json_resp(false, ['error'=>'Missing file_id'], 400); }
+        // get main path
+        $frow = $pdo->prepare("SELECT folder_id, filename FROM project_files WHERE id=? AND is_deleted=0");
+        $frow->execute([$fid]);
+        $fr = $frow->fetch(PDO::FETCH_ASSOC);
+        if($fr){
+            $mainFull = folder_dir($pdo, $project_id, intval($fr['folder_id'])) . DIRECTORY_SEPARATOR . $fr['filename'];
+            if(is_file($mainFull)){
+                while(ob_get_level()>0){ @ob_end_clean(); }
+                header('Content-Description: File Transfer');
+                header('Content-Type: application/octet-stream');
+                header('Content-Disposition: attachment; filename="'.$fr['filename'].'"');
+                header('Content-Length: '.filesize($mainFull));
+                readfile($mainFull); exit;
+            }
+        }
+        // fallback to latest archived version
+        $vi = latest_version_info($pdo, $fid);
+        if(!$vi){ json_resp(false, ['error'=>'File not found'], 404); }
+        $full = to_abs($vi['storage_path']);
+        if(!is_file($full)){ json_resp(false, ['error'=>'File not found'], 404); }
+        $name = basename($full);
+        while(ob_get_level()>0){ @ob_end_clean(); }
+        header('Content-Description: File Transfer');
+        header('Content-Type: application/octet-stream');
+        header('Content-Disposition: attachment; filename="'.$name.'"');
+        header('Content-Length: '.filesize($full));
+        readfile($full); exit;
+    }
+
     if($action==='download'){
-        $ids = json_decode($_POST['file_ids'] ?? '[]', true) ?: [];
-        if(empty($ids)) json_resp(false, ['error'=>'Chưa chọn tệp'], 400);
+        $ids = isset($_POST['file_ids']) ? json_decode($_POST['file_ids'], true) : [];
+        if(!$ids || !is_array($ids)) json_resp(false, ['error'=>'No files selected'], 400);
         if(count($ids)===1){
             $fid = intval($ids[0]);
             $vi = latest_version_info($pdo, $fid);
-            if(!$vi) json_resp(false, ['error'=>'Không tìm thấy phiên bản tệp'], 404);
-            $full = path_join(__DIR__, '../../', $vi['storage_path']);
-            safe_send_file($full, null);
+            if(!$vi) json_resp(false, ['error'=>'File not found'], 404);
+            $full = to_abs($vi['storage_path']);
+            if(!is_file($full)) json_resp(false, ['error'=>'File not found'], 404);
+            $name = basename($full);
+            header('Content-Description: File Transfer');
+            header('Content-Type: application/octet-stream');
+            header('Content-Disposition: attachment; filename="'.$name.'"');
+            header('Content-Length: '.filesize($full));
+            readfile($full);
+            exit;
         } else {
-            $tmpZip = sys_get_temp_dir().'/cde_dl_'.uniqid().'.zip';
-            if(!class_exists('ZipArchive')){ json_resp(false, ['error'=>'ZipArchive PHP extension chưa được bật trên server'], 500); }
+            if(!class_exists('ZipArchive')) json_resp(false, ['error'=>'ZipArchive PHP extension chưa bật'], 500);
+            $tmpZip = sys_get_temp_dir() . '/cde_dl_' . uniqid() . '.zip';
             $zip = new ZipArchive();
-            if($zip->open($tmpZip, ZipArchive::CREATE)!==TRUE){
-                json_resp(false, ['error'=>'Không tạo được file zip'], 500);
-            }
+            if($zip->open($tmpZip, ZipArchive::CREATE)!==TRUE){ json_resp(false, ['error'=>'Cannot create zip'], 500); }
             foreach($ids as $fid){
                 $vi = latest_version_info($pdo, intval($fid));
                 if(!$vi) continue;
-                $full = path_join(__DIR__, '../../', $vi['storage_path']);
-                if(is_file($full)){
-                    $zip->addFile($full, basename($full));
-                }
+                $full = to_abs($vi['storage_path']);
+                if(is_file($full)) $zip->addFile($full, basename($full));
             }
             $zip->close();
-            safe_send_file($tmpZip, "download.zip");
+            header('Content-Type: application/zip');
+            header('Content-Disposition: attachment; filename="download.zip"');
+            header('Content-Length: '.filesize($tmpZip));
+            readfile($tmpZip);
             @unlink($tmpZip);
+            exit;
         }
     }
-
-        // GET VERSIONS LIST
-    if($action==='get_versions'){
-        $file_id = intval(require_param('file_id', 'GET'));
-        $stmt = $pdo->prepare("SELECT version, storage_path, size_bytes, uploaded_by, created_at FROM file_versions WHERE file_id=? ORDER BY version DESC");
-        $stmt->execute([$file_id]);
-        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        json_resp(true, ['versions'=>$rows]);
-    }
-
-    // RESTORE VERSION (creates a new top version from selected old one)
-    if($action==='restore_version' && $_SERVER['REQUEST_METHOD']==='POST'){
-        if(!can_write($pdo, $project_id, $user_id)) json_resp(false, ['error'=>'Bạn không có quyền khôi phục phiên bản.'], 403);
-        $file_id = intval(require_param('file_id'));
-        $version = intval(require_param('version'));
-        // find chosen version
-        $stmt = $pdo->prepare("SELECT storage_path, size_bytes FROM file_versions WHERE file_id=? AND version=?");
-        $stmt->execute([$file_id, $version]);
-        $src = $stmt->fetch(PDO::FETCH_ASSOC);
-        if(!$src) json_resp(false, ['error'=>'Không tìm thấy phiên bản cần khôi phục'], 404);
-        // next version
-        $vi = latest_version_info($pdo, $file_id);
-        if($vi){ move_version_to_old($pdo, $project_id, $file_id, $vi); }
-        $next = ($vi ? intval($vi['version']) : 0) + 1;
-        // copy bytes into current folder dir
-        $frow = $pdo->prepare("SELECT folder_id, filename FROM project_files WHERE id=?");
-        $frow->execute([$file_id]);
-        $fr = $frow->fetch(PDO::FETCH_ASSOC);
-        if(!$fr) json_resp(false, ['error'=>'File không tồn tại'], 404);
-        $dest_dir = folder_dir($pdo, $project_id, intval($fr['folder_id']));
-        $ext = pathinfo($fr['filename'], PATHINFO_EXTENSION);
-        $baseNameOnly = pathinfo($fr['filename'], PATHINFO_FILENAME);
-        $storedName = sanitize_filename($baseNameOnly) . "__v" . $next . ($ext?(".".$ext):"");
-        $toFull = path_join($dest_dir, $storedName);
-        $srcFull = path_join(__DIR__, '../../', $src['storage_path']);
-        if(!@copy($srcFull, $toFull)) json_resp(false, ['error'=>'Không thể khôi phục tệp'], 500);
-        $relPath = str_replace(path_join(__DIR__, '../../'), '', $toFull);
-        $pdo->prepare("INSERT INTO file_versions (file_id, version, storage_path, size_bytes, uploaded_by) VALUES (?,?,?,?,?)")
-            ->execute([$file_id, $next, $relPath, intval($src['size_bytes']), $user_id]);
-        $pdo->prepare("UPDATE project_files SET updated_at=NOW() WHERE id=?")->execute([$file_id]);
-        json_resp(true, ['restored_to'=>$next]);
-    }
-
-    // default
-    json_resp(false, ['error'=>'Unknown action'], 400);
-    exit;
     } catch (Throwable $e) {
         json_resp(false, ['error'=>'Server error', 'detail'=>$e->getMessage()], 500);
     }
