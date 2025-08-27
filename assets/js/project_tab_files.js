@@ -189,10 +189,12 @@ tr.addEventListener('click', (e)=>{
       const tr = document.createElement('tr');
       tr.dataset.id = file.id;
       tr.dataset.type = 'file';
+      (function(){ try { const parts = String(file.filename).split('.'); tr.dataset.ext = (parts.length>1?parts.pop():'').toLowerCase(); } catch(e){} })();
+      (function(){ try { const parts = String(file.filename).split('.'); tr.dataset.ext = (parts.length>1?parts.pop():'').toLowerCase(); } catch(e){} })();
       tr.innerHTML = `
         <td class="center"><input type="checkbox" class="ft-row-sel"></td>
         <td class="center">${file.is_important ? '⭐' : ''}</td>
-        <td class="ft-name"><div class="filetype">${extIcon(file.filename)}<span>${file.filename}</span></div></td>
+        <td class="ft-name">${file.name_html || ('<div class="filetype">'+extIcon(file.filename)+'<span>'+file.filename+'</span></div>')}</td>
         <td><span class="badge ${file.tag}">${file.tag}</span></td>
         <td class="center">${ verText(file) }</td>
         <td class="right">${fmtSize(file.size_bytes)}</td>
@@ -288,10 +290,12 @@ cb.addEventListener('change', (e)=>{
       const tr = document.createElement('tr');
       tr.dataset.id = file.id;
       tr.dataset.type = 'file';
+      (function(){ try { const parts = String(file.filename).split('.'); tr.dataset.ext = (parts.length>1?parts.pop():'').toLowerCase(); } catch(e){} })();
+      (function(){ try { const parts = String(file.filename).split('.'); tr.dataset.ext = (parts.length>1?parts.pop():'').toLowerCase(); } catch(e){} })();
       tr.innerHTML = `
         <td class="center"><input type="checkbox" class="ft-row-sel"></td>
         <td class="center">${file.is_important ? '⭐' : ''}</td>
-        <td class="ft-name"><div class="filetype">${extIcon(file.filename)}<span>${file.filename}</span></div></td>
+        <td class="ft-name">${file.name_html || ('<div class="filetype">'+extIcon(file.filename)+'<span>'+file.filename+'</span></div>')}</td>
         <td><span class="badge ${file.tag}">${file.tag}</span></td>
         <td class="center">${ verText(file) }</td>
         <td class="right">${fmtSize(file.size_bytes)}</td>
@@ -523,4 +527,30 @@ $('#ft-select-all').addEventListener('change', (e)=>{
     await loadTree();
     await loadItems(state.currentFolderId);
   })();
+})();
+
+
+// === OPEN PREVIEW on click Name cell (PDF/Word/Excel) ===
+(function(){
+  const table = document.querySelector('#ft-table');
+  if (!table) return;
+  const EXTS = new Set(['pdf','doc','docx','xls','xlsx']);
+  table.addEventListener('click', function(e){
+    const cell = e.target.closest('td');
+    const row  = e.target.closest('tr.ft-row[data-type="file"]');
+    if (!row || !cell) return;
+    if (!cell.classList.contains('ft-name')) return; // only Name column
+    if (e.target.closest('input[type="checkbox"], .ft-actions, button, a[data-skip-preview], a.ft-open')) return;
+    const id  = row.dataset.id;
+    let ext = (row.dataset.ext || '').toLowerCase();
+    if (!ext) {
+      const t = (cell.textContent || '').trim();
+      const m = t.match(/\.([A-Za-z0-9]+)$/);
+      ext = m ? m[1].toLowerCase() : '';
+    }
+    if (id && EXTS.has(ext)) {
+      const url = `pages/partials/file_preview.php?id=${id}`;
+      window.open(url, '_blank', 'noopener');
+    }
+  });
 })();
