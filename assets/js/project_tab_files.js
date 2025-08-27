@@ -1,4 +1,6 @@
-// assets/js/project_tab_files.js (clean rebuild)
+// ==============================
+// project_tab_files.js
+// ==============================
 (function(){
   const $ = (sel, ctx=document)=>ctx.querySelector(sel);
   const $$ = (sel, ctx=document)=>Array.from(ctx.querySelectorAll(sel));
@@ -22,6 +24,7 @@
     const cv = n(f.current_version) || n(f.max_version) || n(f.version) || tv || 1;
     return `${cv||1}/${tv||1}`;
   }
+
   function api(action, params={}, method='GET', isForm=false){
     const url = new URL(ajaxUrl, window.location.origin);
     url.searchParams.set('action', action);
@@ -45,7 +48,7 @@
       } else {
         body = new URLSearchParams(params);
       }
-      return fetch(url, { method, body, credentials: 'same-origin' }).then(async r=>{
+      return fetch(url, { method, body, credentials:'same-origin' }).then(async r=>{
         if(action==='download') return r;
         const ct = r.headers.get('content-type') || '';
         if(ct.includes('application/json')) return r.json();
@@ -84,7 +87,6 @@
   // ---------------- Tree ----------------
   function buildTree(rows){
     const byId = new Map(rows.map(r=>[r.id, {...r, children:[]}]));
-
     rows.forEach(r=>{
       const node = byId.get(r.id);
       if(r.parent_id && byId.has(r.parent_id)){
@@ -129,27 +131,38 @@
     // Folders
     (data.folders||[]).forEach(f=>{
       const tr = document.createElement('tr');
+      tr.dataset.id = f.id;
+      tr.dataset.type = 'folder';
       tr.innerHTML = `
         <td class="center">—</td>
         <td class="center">—</td>
-        <td><div class="filetype"><i class="fas fa-folder"></i><span>${f.name}</span></div></td>
+        <td class="ft-name"><div class="filetype"><i class="fas fa-folder"></i><span>${f.name}</span></div></td>
         <td><span class="badge">—</span></td>
         <td class="center">—</td>
         <td class="right">—</td>
         <td>${timeago(f.created_at)}</td>
         <td>—</td>
         <td class="actions">
-          <button class="icon-btn" title="Open"><i class="fas fa-level-down-alt"></i></button>
+          <button class="icon-btn open-btn" title="Open"><i class="fas fa-level-down-alt"></i></button>
           <button class="icon-btn" title="Delete"><i class="fas fa-trash-alt"></i></button>
         </td>`;
-      // open
-      tr.querySelectorAll('.icon-btn')[0].addEventListener('click', ()=>{
+
+      // 1) Open button
+      tr.querySelector('.open-btn').addEventListener('click', ()=>{
         state.currentFolderId = f.id; loadItems(f.id);
       });
-      // delete folder
+
+      // 2) Row/name click -> open (trừ khi click vào actions/checkbox/link)
+      tr.addEventListener('click', (e)=>{
+        if (e.target.closest('.actions, button, input, a[href]')) return;
+        state.currentFolderId = f.id; loadItems(f.id);
+      });
+
+      // 3) Delete folder
       tr.querySelectorAll('.icon-btn')[1].addEventListener('click', ()=>{
         openDeleteModal([{type:'folder', id:f.id}]);
       });
+
       tb.appendChild(tr);
     });
 
@@ -157,10 +170,11 @@
     (data.files||[]).forEach(file=>{
       const tr = document.createElement('tr');
       tr.dataset.id = file.id;
+      tr.dataset.type = 'file';
       tr.innerHTML = `
         <td class="center"><input type="checkbox" class="ft-row-sel"></td>
         <td class="center">${file.is_important ? '⭐' : ''}</td>
-        <td><div class="filetype">${extIcon(file.filename)}<span>${file.filename}</span></div></td>
+        <td class="ft-name"><div class="filetype">${extIcon(file.filename)}<span>${file.filename}</span></div></td>
         <td><span class="badge ${file.tag}">${file.tag}</span></td>
         <td class="center">${ verText(file) }</td>
         <td class="right">${fmtSize(file.size_bytes)}</td>
@@ -169,11 +183,13 @@
         <td class="actions">
           <button class="icon-btn more"><i class="fas fa-ellipsis-v"></i></button>
         </td>`;
+
       const cb = tr.querySelector('.ft-row-sel');
       cb.addEventListener('change', (e)=>{
         const id = Number(file.id);
         if(e.target.checked) state.selected.add(id); else state.selected.delete(id);
       });
+
       tr.querySelector('.more').addEventListener('click', (e)=>showRowMenu(e.currentTarget, file));
       tb.appendChild(tr);
     });
@@ -254,10 +270,11 @@
     (r.results||[]).forEach(file=>{
       const tr = document.createElement('tr');
       tr.dataset.id = file.id;
+      tr.dataset.type = 'file';
       tr.innerHTML = `
         <td class="center"><input type="checkbox" class="ft-row-sel"></td>
         <td class="center">${file.is_important ? '⭐' : ''}</td>
-        <td><div class="filetype">${extIcon(file.filename)}<span>${file.filename}</span></div></td>
+        <td class="ft-name"><div class="filetype">${extIcon(file.filename)}<span>${file.filename}</span></div></td>
         <td><span class="badge ${file.tag}">${file.tag}</span></td>
         <td class="center">${ verText(file) }</td>
         <td class="right">${fmtSize(file.size_bytes)}</td>
