@@ -81,3 +81,105 @@ tr.ft-row[data-type="folder"] .ft-name,
 tr.ft-row[data-type="folder"] .ft-name * {
   cursor: pointer;
 }
+
+/* ===== Align Name column: thumb | fixed-width ext | flexible filename ===== */
+#ft-table td.ft-name, #ft-table th.ft-name {
+  text-align: left; /* keep left for Name */
+  vertical-align: middle;
+}
+
+.ft-name .ft-wrap {
+  display: grid;
+  grid-template-columns: 28px 64px 1fr; /* thumb 28px | ext 64px | name auto */
+  align-items: center;
+  gap: 8px;
+}
+
+.ft-name .ft-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: inline-block;
+}
+
+.ft-name .ft-ext {
+  width: 64px;             /* fixed width for extension badge */
+  min-width: 64px;
+  text-align: center;
+  font-weight: 600;
+  line-height: 1;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: #f3f4f6;
+  color: #374151;
+  justify-self: start;
+}
+
+.ft-name .ft-title {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Optional: make header for Name aligned with cells */
+#ft-table th.ft-name .ft-wrap {
+  grid-template-columns: 28px 64px 1fr;
+}
+
+/* Keep Uploader left aligned as requested earlier */
+#ft-table td.ft-uploader, #ft-table th.ft-uploader {
+  text-align: left;
+}
+
+
+/* === Name column alignment: support .ft-wrap (preferred) and legacy .filetype === */
+#ft-table td.ft-name, #ft-table th.ft-name { text-align:left; vertical-align:middle; }
+
+/* Preferred structure injected from PHP: .ft-wrap */
+.ft-name .ft-wrap { display:grid; grid-template-columns:28px 64px 1fr; align-items:center; gap:8px; }
+.ft-name .ft-thumb { width:24px; height:24px; border-radius:6px; display:inline-block; }
+.ft-name .ft-ext { width:64px; min-width:64px; text-align:center; font-weight:600; line-height:1; padding:6px 8px; border-radius:6px; background:#f3f4f6; color:#374151; justify-self:start; }
+.ft-name .ft-title { overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+
+/* Legacy fallback: if markup is <span class="filetype"><span class="thumb"></span><span class="ext">.PDF</span></span><span class="name">... */
+.ft-name { display:flex; align-items:center; gap:8px; }
+.ft-name .filetype { display:inline-flex; align-items:center; gap:8px; }
+.ft-name .filetype .ext { display:inline-block; width:35px; min-width:35px; text-align:center; font-weight:600; }
+.ft-name .name { overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+
+/* === Name column grid layout === */
+#ft-table td.ft-name, #ft-table th.ft-name { text-align:left; vertical-align:middle; }
+.ft-name .ft-wrap { display:grid; grid-template-columns:28px 64px 1fr; align-items:center; gap:8px; }
+.ft-name .ft-thumb { width:24px; height:24px; border-radius:6px; display:inline-block; background:#e5e7eb; box-shadow: inset 0 0 0 1px rgba(0,0,0,.06); }
+.ft-name .ft-ext { width:64px; min-width:64px; text-align:center; font-weight:600; line-height:1; padding:6px 8px; border-radius:6px; background:#f3f4f6; color:#374151; justify-self:start; }
+.ft-name .ft-title { overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+
+/* Thumb color by extension */
+.ft-thumb[data-ext="pdf"]   { background:#ef4444; }
+.ft-thumb[data-ext="doc"],
+.ft-thumb[data-ext="docx"]  { background:#2563eb; }
+.ft-thumb[data-ext="rtf"]   { background:#3b82f6; }
+.ft-thumb[data-ext="xls"],
+.ft-thumb[data-ext="xlsx"],
+.ft-thumb[data-ext="csv"]   { background:#059669; }
+.ft-thumb[data-ext="ppt"],
+.ft-thumb[data-ext="pptx"]  { background:#f59e0b; }
+.ft-thumb[data-ext="png"],
+.ft-thumb[data-ext="jpg"],
+.ft-thumb[data-ext="jpeg"],
+.ft-thumb[data-ext="gif"],
+.ft-thumb[data-ext="bmp"],
+.ft-thumb[data-ext="svg"],
+.ft-thumb[data-ext="webp"]  { background:#8b5cf6; }
+.ft-thumb[data-ext="dwg"],
+.ft-thumb[data-ext="dxf"],
+.ft-thumb[data-ext="rvt"],
+.ft-thumb[data-ext="ifc"]   { background:#0ea5e9; }
+.ft-thumb[data-ext="zip"],
+.ft-thumb[data-ext="rar"],
+.ft-thumb[data-ext="7z"],
+.ft-thumb[data-ext="gz"]    { background:#6b7280; }
+.ft-thumb[data-ext="txt"],
+.ft-thumb[data-ext="md"],
+.ft-thumb[data-ext="json"],
+.ft-thumb[data-ext="xml"]   { background:#10b981; }
