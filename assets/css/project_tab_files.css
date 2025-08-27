@@ -76,3 +76,8 @@
 .vers-v{font-weight:600}
 .vers-size{font-variant-numeric: tabular-nums; text-align:right}
 .vers-time{opacity:.7; font-size:12px}
+/* Con trỏ tay khi di chuột lên hàng hoặc tên của folder */
+tr.ft-row[data-type="folder"] .ft-name,
+tr.ft-row[data-type="folder"] .ft-name * {
+  cursor: pointer;
+}
