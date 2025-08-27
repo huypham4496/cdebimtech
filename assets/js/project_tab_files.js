@@ -15,6 +15,13 @@
   const projectId = window.CDE_FILES.projectId;
 
   // ---------------- Helpers ----------------
+
+  function verText(f){
+    const n = (x)=>{ const v = Number(x); return isFinite(v) && v>0 ? v : 0; };
+    const tv = n(f.total_versions) || (Array.isArray(f.versions) ? f.versions.length : n(f.max_version) || n(f.version) || 1);
+    const cv = n(f.current_version) || n(f.max_version) || n(f.version) || tv || 1;
+    return `${cv||1}/${tv||1}`;
+  }
   function api(action, params={}, method='GET', isForm=false){
     const url = new URL(ajaxUrl, window.location.origin);
     url.searchParams.set('action', action);
@@ -155,7 +162,7 @@
         <td class="center">${file.is_important ? '⭐' : ''}</td>
         <td><div class="filetype">${extIcon(file.filename)}<span>${file.filename}</span></div></td>
         <td><span class="badge ${file.tag}">${file.tag}</span></td>
-        <td class=\"center\">${ (file.current_version || file.total_versions || 1) }/${ (file.total_versions || 1) }</td>
+        <td class="center">${ verText(file) }</td>
         <td class="right">${fmtSize(file.size_bytes)}</td>
         <td>${timeago(file.updated_at)}</td>
         <td>${file.created_by || ''}</td>
@@ -252,7 +259,7 @@
         <td class="center">${file.is_important ? '⭐' : ''}</td>
         <td><div class="filetype">${extIcon(file.filename)}<span>${file.filename}</span></div></td>
         <td><span class="badge ${file.tag}">${file.tag}</span></td>
-        <td class=\"center\">${ (file.current_version || file.total_versions || 1) }/${ (file.total_versions || 1) }</td>
+        <td class="center">${ verText(file) }</td>
         <td class="right">${fmtSize(file.size_bytes)}</td>
         <td>${timeago(file.updated_at)}</td>
         <td>${file.created_by || ''}</td>
