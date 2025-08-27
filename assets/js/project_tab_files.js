@@ -305,9 +305,11 @@
     if(!name) return alert('Folder name required');
     const r = await api('create_folder', {parent_id: state.currentFolderId, name}, 'POST');
     if(!r || r.ok===false){ alert(((r&&r.error)||'Failed to create folder') + (r&&r.detail ? ('\nDetail: '+r.detail) : '')); console.debug('create_folder detail:', r&&r.detail, r&&r.html); return; }
-    $('#ft-create-folder-modal').hidden = true;
-    $('#ft-new-folder-name').value = '';
-    loadTree(); loadItems(state.currentFolderId);
+    if(r && r.ok){
+      $('#ft-create-folder-modal').hidden = true;
+      $('#ft-new-folder-name').value = '';
+      await loadTree(); await loadItems(state.currentFolderId);
+    }
   });
 
   // Delete (selected)
