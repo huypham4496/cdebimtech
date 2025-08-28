@@ -17,7 +17,7 @@ $currentPage = basename($_SERVER['SCRIPT_NAME']);
   <!-- Header -->
   <div class="sidebar-header">
     <a href="../home.php" class="sidebar-logo-link">
-      <img src="../../assets/images/logo-login.png" alt="CDE Bimtech Logo" class="sidebar-logo">
+      <img src="../../assets/images/logo-login.png" alt="CDE NextInfra Logo" class="sidebar-logo">
       <div class="sidebar-title">
         <h2>AdminCP</h2>
         <p>Control Panel</p>
