@@ -1,5 +1,5 @@
 <?php
-// partials/file_preview.php — Excel multi-sheet offline preview (PhpSpreadsheet), with fallbacks
+// partials/file_preview.php — Excel multi-sheet FIX v3: use Html::setSheetIndex($i) safely; avoid cross-sheet errors
 declare(strict_types=1);
 if (session_status() === PHP_SESSION_NONE) session_start();
 
@@ -12,12 +12,7 @@ for ($i = 0; $i < 8; $i++) {
     if (is_file($__dir . DIRECTORY_SEPARATOR . 'includes' . DIRECTORY_SEPARATOR . 'config.php')) { $__root = $__dir; $__config = $__dir . DIRECTORY_SEPARATOR . 'includes' . DIRECTORY_SEPARATOR . 'config.php'; break; }
     $__dir = dirname($__dir);
 }
-if (!$__config) {
-    http_response_code(500);
-    header('Content-Type: text/plain; charset=utf-8');
-    echo "Cannot locate config.php from ".__FILE__."\n";
-    exit;
-}
+if (!$__config) { http_response_code(500); header('Content-Type: text/plain'); echo "Cannot locate config.php\n"; exit; }
 require_once $__config;
 
 // ---- Autoloaders ----
@@ -154,23 +149,40 @@ function excel_multi_offline($abs, $file_id){
     if (!class_exists('\\PhpOffice\\PhpSpreadsheet\\IOFactory')) return [false, [], [], 'PhpSpreadsheet not installed'];
     try {
         $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($abs);
+        // Clear caches to avoid stale data
+        if (class_exists('\\PhpOffice\\PhpSpreadsheet\\Calculation\\Calculation')) {
+            \PhpOffice\PhpSpreadsheet\Calculation\Calculation::getInstance($spreadsheet)->clearCalculationCache();
+        }
+        $spreadsheet->garbageCollect();
+
         $sheetCount = $spreadsheet->getSheetCount();
-        $titles = [];
-        $files = [];
+        $titles = []; $files = [];
         global $__root;
-        $tmpDir = $__root . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'tmp';
-        if (!is_dir($tmpDir)) @mkdir($tmpDir, 0775, true);
+
         for ($i = 0; $i < $sheetCount; $i++) {
-            $spreadsheet->setActiveSheetIndex($i);
             $titles[] = $spreadsheet->getSheet($i)->getTitle();
+
             $writer = new \PhpOffice\PhpSpreadsheet\Writer\Html($spreadsheet);
+            if (method_exists($writer, 'setSheetIndex')) {
+                $writer->setSheetIndex($i); // render that sheet only
+            } else {
+                $spreadsheet->setActiveSheetIndex($i);
+            }
             if (method_exists($writer, 'setEmbedImages')) $writer->setEmbedImages(true);
             if (method_exists($writer, 'setPreCalculateFormulas')) $writer->setPreCalculateFormulas(true);
+
             $rel = '/uploads/tmp/preview_excel_' . $file_id . '_sheet' . $i . '.html';
             $out = $__root . DIRECTORY_SEPARATOR . ltrim($rel, '/\\');
+            $dir = dirname($out);
+            if (!is_dir($dir)) @mkdir($dir, 0775, true);
             $writer->save($out);
             $files[] = $rel;
+            unset($writer);
         }
+
+        $spreadsheet->disconnectWorksheets();
+        unset($spreadsheet);
+
         return [true, $files, $titles, null];
     } catch (\Throwable $e) {
         return [false, [], [], $e->getMessage()];
@@ -182,10 +194,10 @@ function try_word_offline($abs, $file_id){
         $phpWord = \PhpOffice\PhpWord\IOFactory::load($abs);
         $writer = \PhpOffice\PhpWord\IOFactory::createWriter($phpWord, 'HTML');
         global $__root;
-        $tmpDir = $__root . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'tmp';
-        if (!is_dir($tmpDir)) @mkdir($tmpDir, 0775, true);
         $rel = '/uploads/tmp/preview_word_' . $file_id . '.html';
         $out = $__root . DIRECTORY_SEPARATOR . ltrim($rel, '/\\');
+        $dir = dirname($out);
+        if (!is_dir($dir)) @mkdir($dir, 0775, true);
         $writer->save($out);
         return [true, $rel, null];
     } catch (\Throwable $e) { return [false, null, $e->getMessage()]; }
@@ -217,7 +229,7 @@ $prefer_offline = ($force === 'local') || $libs_present || in_array($host, ['loc
 <script>
   function switchSheet(src, index){
     const iframe = document.getElementById('sheet-frame');
-    if (iframe) iframe.src = src;
+    if (iframe) iframe.src = src + '?t=' + Date.now(); // bust cache per switch
     document.querySelectorAll('.tab').forEach((el, i)=>{
       el.classList.toggle('active', i===index);
     });
@@ -239,7 +251,6 @@ if ($ext === 'pdf') {
     if ($prefer_offline && class_exists('\\PhpOffice\\PhpSpreadsheet\\IOFactory')) {
         list($ok, $files, $titles, $err) = excel_multi_offline($abs, $file_id);
         if ($ok && count($files) > 0) {
-            // Tabs + iframe
             $defaultIndex = ($sheetParam >=0 && $sheetParam < count($files)) ? $sheetParam : 0;
             echo '<div class="tabs">';
             foreach ($files as $i => $rel) {
@@ -250,8 +261,10 @@ if ($ext === 'pdf') {
             }
             echo '</div>';
             $first = $files[$defaultIndex];
-            echo '<iframe id="sheet-frame" class="viewport" src="'.$first.'"></iframe>';
+            echo '<iframe id="sheet-frame" class="viewport" src="'.$first.'?t='.time().'"></iframe>';
             $shown = true;
+        } else if (!$ok) {
+            echo '<div class="empty">Excel offline lỗi: '.htmlspecialchars((string)$err, ENT_QUOTES, 'UTF-8').'</div>';
         }
     }
     if (!$shown && $force !== 'local') {
