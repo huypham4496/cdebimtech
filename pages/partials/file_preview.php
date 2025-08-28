@@ -1,5 +1,5 @@
 <?php
-// partials/file_preview.php — Excel multi-sheet FIX v3: use Html::setSheetIndex($i) safely; avoid cross-sheet errors
+// partials/file_preview.php — OFFLINE-ONLY viewer (PhpSpreadsheet/PhpWord). No online link viewers.
 declare(strict_types=1);
 if (session_status() === PHP_SESSION_NONE) session_start();
 
@@ -15,12 +15,12 @@ for ($i = 0; $i < 8; $i++) {
 if (!$__config) { http_response_code(500); header('Content-Type: text/plain'); echo "Cannot locate config.php\n"; exit; }
 require_once $__config;
 
-// ---- Autoloaders ----
+// ---- Autoloaders (Composer -> includes/vendor -> standalone folders) ----
 $__autoloads = [
     $__root . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'autoload.php',
     $__root . DIRECTORY_SEPARATOR . 'includes' . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'autoload.php',
-    $__root . DIRECTORY_SEPARATOR . 'phpspreadsheet' . DIRECTORY_SEPARATOR . 'autoload.php', // user-provided
-    $__root . DIRECTORY_SEPARATOR . 'phpword' . DIRECTORY_SEPARATOR . 'autoload.php',
+    $__root . DIRECTORY_SEPARATOR . 'phpspreadsheet' . DIRECTORY_SEPARATOR . 'autoload.php', // for Excel
+    $__root . DIRECTORY_SEPARATOR . 'phpword' . DIRECTORY_SEPARATOR . 'autoload.php',        // for Word
 ];
 foreach ($__autoloads as $__auto) { if (is_file($__auto)) { require_once $__auto; } }
 
@@ -97,9 +97,26 @@ function is_project_member_safe(PDO $pdo, $user_id, $file_id): bool {
     return true; // dev/local fallback
 }
 
+// LibreOffice finder (optional for .doc conversion/repair)
+function find_soffice_binary(){
+    $candidates = [
+        'soffice',
+        'C:\\Program Files\\LibreOffice\\program\\soffice.exe',
+        'C:\\Program Files (x86)\\LibreOffice\\program\\soffice.exe',
+        'C:\\Program Files\\OpenOffice 4\\program\\soffice.exe',
+        '/usr/bin/soffice',
+        '/usr/local/bin/soffice',
+        '/Applications/LibreOffice.app/Contents/MacOS/soffice',
+    ];
+    foreach ($candidates as $p) {
+        if ($p === 'soffice') return $p;
+        if (is_file($p)) return $p;
+    }
+    return null;
+}
+
 // ---- Inputs ----
 $mode = $_GET['mode'] ?? 'view';
-$force = $_GET['force'] ?? ''; // 'web' or 'local'
 $file_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 $sheetParam = isset($_GET['sheet']) ? (int)$_GET['sheet'] : 0;
 if ($file_id <= 0) json_resp(false, ['error'=>'Missing id'], 400);
@@ -132,26 +149,21 @@ if ($mode === 'raw') {
     $mime = guess_mime($ext);
     @ob_end_clean();
     header('Content-Type: '.$mime);
-    header('Content-Disposition: inline; filename="'.rawurlencode($filename).'"');
+    $dl = isset($_GET['dl']) ? (int)$_GET['dl'] : 0;
+    $disp = $dl ? 'attachment' : 'inline';
+    header('Content-Disposition: '.$disp.'; filename="'.rawurlencode($filename).'"');
     header('Content-Length: ' . filesize($abs));
     readfile($abs);
     exit;
 }
-
-// ---- URLs ----
-$scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-$host   = $_SERVER['HTTP_HOST'] ?? 'localhost';
-$scriptDir = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? '/partials/file_preview.php'), '/\\');
-$rawUrl = $scheme . '://' . $host . $scriptDir . '/file_preview.php?mode=raw&id=' . $file_id;
 
 // ---- Offline converters ----
 function excel_multi_offline($abs, $file_id){
     if (!class_exists('\\PhpOffice\\PhpSpreadsheet\\IOFactory')) return [false, [], [], 'PhpSpreadsheet not installed'];
     try {
         $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($abs);
-        // Clear caches to avoid stale data
         if (class_exists('\\PhpOffice\\PhpSpreadsheet\\Calculation\\Calculation')) {
-            \PhpOffice\PhpSpreadsheet\Calculation\Calculation::getInstance($spreadsheet)->clearCalculationCache();
+            \PhpOffice\PhpSpreadsheet\\Calculation\\Calculation::getInstance($spreadsheet)->clearCalculationCache();
         }
         $spreadsheet->garbageCollect();
 
@@ -161,10 +173,9 @@ function excel_multi_offline($abs, $file_id){
 
         for ($i = 0; $i < $sheetCount; $i++) {
             $titles[] = $spreadsheet->getSheet($i)->getTitle();
-
             $writer = new \PhpOffice\PhpSpreadsheet\Writer\Html($spreadsheet);
             if (method_exists($writer, 'setSheetIndex')) {
-                $writer->setSheetIndex($i); // render that sheet only
+                $writer->setSheetIndex($i);
             } else {
                 $spreadsheet->setActiveSheetIndex($i);
             }
@@ -182,31 +193,86 @@ function excel_multi_offline($abs, $file_id){
 
         $spreadsheet->disconnectWorksheets();
         unset($spreadsheet);
-
         return [true, $files, $titles, null];
     } catch (\Throwable $e) {
         return [false, [], [], $e->getMessage()];
     }
 }
+
 function try_word_offline($abs, $file_id){
-    if (!class_exists('\\PhpOffice\\PhpWord\\IOFactory')) return [false, null, 'PhpWord not installed'];
+    // Robust Word offline: supports .docx natively; .doc via MsDoc or soffice conversion
+    $ext = strtolower(pathinfo($abs, PATHINFO_EXTENSION));
+    global $__root;
+    $tmpDir = $__root . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'tmp';
+    if (!is_dir($tmpDir)) @mkdir($tmpDir, 0775, true);
+    $targetHtmlRel = '/uploads/tmp/preview_word_' . $file_id . '.html';
+    $targetHtmlAbs = $__root . DIRECTORY_SEPARATOR . ltrim($targetHtmlRel, '/\\');
+
+    if (!class_exists('\\PhpOffice\\PhpWord\\IOFactory')) {
+        return [false, null, 'PhpWord not installed'];
+    }
     try {
-        $phpWord = \PhpOffice\PhpWord\IOFactory::load($abs);
+        $phpWord = null;
+        if ($ext === 'docx') {
+            $phpWord = \PhpOffice\PhpWord\IOFactory::load($abs);
+        } elseif ($ext === 'doc') {
+            if (class_exists('\\PhpOffice\\PhpWord\\Reader\\MsDoc')) {
+                $reader = new \PhpOffice\PhpWord\Reader\MsDoc();
+                $phpWord = $reader->load($abs);
+            } else {
+                $soffice = find_soffice_binary();
+                if ($soffice) {
+                    $outDocxAbs = $tmpDir . DIRECTORY_SEPARATOR . 'converted_' . $file_id . '.docx';
+                    @unlink($outDocxAbs);
+                    $cmd = escapeshellarg($soffice) . ' --headless --convert-to docx --outdir ' . escapeshellarg($tmpDir) . ' ' . escapeshellarg($abs) . ' 2>&1';
+                    $output = shell_exec($cmd);
+                    if (!is_file($outDocxAbs)) {
+                        $outPdfAbs = $tmpDir . DIRECTORY_SEPARATOR . 'converted_' . $file_id . '.pdf';
+                        @unlink($outPdfAbs);
+                        $cmd2 = escapeshellarg($soffice) . ' --headless --convert-to pdf --outdir ' . escapeshellarg($tmpDir) . ' ' . escapeshellarg($abs) . ' 2>&1';
+                        $output2 = shell_exec($cmd2);
+                        if (is_file($outPdfAbs)) {
+                            $rel = '/uploads/tmp/converted_' . $file_id . '.pdf';
+                            return [true, $rel, null, 'pdf'];
+                        }
+                        return [false, null, 'DOC->DOCX/PDF conversion failed via soffice.'];
+                    }
+                    $phpWord = \PhpOffice\PhpWord\IOFactory::load($outDocxAbs);
+                } else {
+                    return [false, null, 'DOC not supported without MsDoc/LibreOffice.'];
+                }
+            }
+        } else {
+            return [false, null, 'Unsupported word extension: ' . $ext];
+        }
         $writer = \PhpOffice\PhpWord\IOFactory::createWriter($phpWord, 'HTML');
-        global $__root;
-        $rel = '/uploads/tmp/preview_word_' . $file_id . '.html';
-        $out = $__root . DIRECTORY_SEPARATOR . ltrim($rel, '/\\');
-        $dir = dirname($out);
-        if (!is_dir($dir)) @mkdir($dir, 0775, true);
-        $writer->save($out);
-        return [true, $rel, null];
-    } catch (\Throwable $e) { return [false, null, $e->getMessage()]; }
+        $writer->save($targetHtmlAbs);
+        return [true, $targetHtmlRel, null];
+    } catch (\Throwable $e) {
+        if ($ext === 'docx' && strpos((string)$e->getMessage(), 'error code: 19') !== false) {
+            $soffice = find_soffice_binary();
+            if ($soffice) {
+                $outDocxAbs = $tmpDir . DIRECTORY_SEPARATOR . 'repair_' . $file_id . '.docx';
+                @unlink($outDocxAbs);
+                $cmd = escapeshellarg($soffice) . ' --headless --convert-to docx --outdir ' . escapeshellarg($tmpDir) . ' ' . escapeshellarg($abs) . ' 2>&1';
+                $output = shell_exec($cmd);
+                if (is_file($outDocxAbs)) {
+                    try {
+                        $phpWord2 = \PhpOffice\PhpWord\IOFactory::load($outDocxAbs);
+                        $writer2 = \PhpOffice\PhpWord\IOFactory::createWriter($phpWord2, 'HTML');
+                        $writer2->save($targetHtmlAbs);
+                        return [true, $targetHtmlRel, null];
+                    } catch (\Throwable $e2) {
+                        return [false, null, 'After repair: ' . $e2->getMessage()];
+                    }
+                }
+            }
+        }
+        return [false, null, $e->getMessage()];
+    }
 }
 
-$libs_present = class_exists('\\PhpOffice\\PhpSpreadsheet\\IOFactory') || class_exists('\\PhpOffice\\PhpWord\\IOFactory');
-$prefer_offline = ($force === 'local') || $libs_present || in_array($host, ['localhost','127.0.0.1','::1']);
-
-// ---- HTML Viewer ----
+// ---- HTML Viewer (offline only) ----
 ?><!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -225,18 +291,26 @@ $prefer_offline = ($force === 'local') || $libs_present || in_array($host, ['loc
   .tabs { display:flex; gap:8px; padding:8px 12px; background:#0f172a; border-bottom:1px solid #1f2937; position:sticky; top:48px; z-index:1; }
   .tab { padding:6px 10px; border-radius:8px; background:#1f2937; cursor:pointer; user-select:none; }
   .tab.active { background:#2563eb; color:white; }
-
-  /* A4 paper container for Word */
+  /* A4 Word container */
   .paper.a4 { width: 210mm; margin: 12px auto; background:#ffffff; border:1px solid #e5e7eb; box-shadow: 0 8px 24px rgba(0,0,0,.06); }
   .paper-frame { width:100%; height:calc(100dvh - 96px); border:0; background:#ffffff; display:block; }
   @media (max-width: 840px){
     .paper.a4 { width: 100%; border:none; box-shadow:none; }
     .paper-frame { height:calc(100dvh - 88px); }
   }
-
 </style>
+<script>
+  function switchSheet(src, index){
+    const iframe = document.getElementById('sheet-frame');
+    if (iframe) iframe.src = src + '?t=' + Date.now();
+    document.querySelectorAll('.tab').forEach((el, i)=>{
+      el.classList.toggle('active', i===index);
+    });
+  }
+</script>
 <?php if (in_array($ext, ['doc','docx'])): ?>
 <style>
+  /* White theme for Word */
   html, body { background:#ffffff !important; color:#111827 !important; }
   .topbar { background:#ffffff !important; border-bottom:1px solid #e5e7eb !important; }
   .btn { background:#f3f4f6 !important; color:#111827 !important; }
@@ -244,16 +318,6 @@ $prefer_offline = ($force === 'local') || $libs_present || in_array($host, ['loc
   .viewport { background:#ffffff !important; }
 </style>
 <?php endif; ?>
-
-<script>
-  function switchSheet(src, index){
-    const iframe = document.getElementById('sheet-frame');
-    if (iframe) iframe.src = src + '?t=' + Date.now(); // bust cache per switch
-    document.querySelectorAll('.tab').forEach((el, i)=>{
-      el.classList.toggle('active', i===index);
-    });
-  }
-</script>
 </head>
 <body>
   <div class="topbar">
@@ -266,8 +330,9 @@ if ($ext === 'pdf') {
     $src = '?mode=raw&id='.$file_id;
     echo '<iframe class="viewport" src="'.$src.'"></iframe>';
 } elseif (in_array($ext, ['xls','xlsx'])) {
-    $shown = false;
-    if ($prefer_offline && class_exists('\\PhpOffice\\PhpSpreadsheet\\IOFactory')) {
+    if (!class_exists('\\PhpOffice\\PhpSpreadsheet\\IOFactory')) {
+        echo '<div class="empty">Thiếu PhpSpreadsheet. Hãy đặt <code>/phpspreadsheet/autoload.php</code> (ngang hàng thư mục pages) hoặc cài composer.</div>';
+    } else {
         list($ok, $files, $titles, $err) = excel_multi_offline($abs, $file_id);
         if ($ok && count($files) > 0) {
             $defaultIndex = ($sheetParam >=0 && $sheetParam < count($files)) ? $sheetParam : 0;
@@ -281,35 +346,27 @@ if ($ext === 'pdf') {
             echo '</div>';
             $first = $files[$defaultIndex];
             echo '<iframe id="sheet-frame" class="viewport" src="'.$first.'?t='.time().'"></iframe>';
-            $shown = true;
-        } else if (!$ok) {
-            echo '<div class="empty">Excel offline lỗi: '.htmlspecialchars((string)$err, ENT_QUOTES, 'UTF-8').'</div>';
-        }
-    }
-    if (!$shown && $force !== 'local') {
-        $office = 'https://view.officeapps.live.com/op/view.aspx?src=' . rawurlencode($rawUrl);
-        echo '<div class="paper a4"><iframe class="paper-frame" src="'.$office.'"></iframe></div>';
-        echo '<div class="row"><a class="btn" href="?mode=view&id='.$file_id.'&force=local">Dùng chế độ offline (PhpSpreadsheet đã cài)</a></div>';
-        $shown = true;
-    }
-    if (!$shown) {
-        echo '<div class="empty">Không thể xem Excel. Vui lòng tải xuống.<br/>Hãy kiểm tra autoload tại <code>phpspreadsheet/autoload.php</code></div>';
-    }
-
-} elseif (in_array($ext, ['doc','docx'])) {
-    // OFFLINE ONLY via PhpWord
-    if (class_exists('\PhpOffice\PhpWord\IOFactory')) {
-        list($ok, $rel, $err) = try_word_offline($abs, $file_id);
-        if ($ok) {
-            echo '<div class="paper a4"><iframe class="paper-frame" src="'.$rel.'"></iframe></div>';
         } else {
-            echo '<div class="empty">Không thể chuyển đổi DOC/DOCX offline: ' . htmlspecialchars((string)$err, ENT_QUOTES, 'UTF-8') . '<br/>Vui lòng cài <code>phpword/autoload.php</code> hoặc <code>composer require phpoffice/phpword</code>.</div>';
+            echo '<div class="empty">Không thể xem Excel offline: '.htmlspecialchars((string)$err, ENT_QUOTES, 'UTF-8').'</div>';
         }
-    } else {
-        echo '<div class="empty">Thiếu thư viện PhpWord. Hãy thêm <code>phpword/autoload.php</code> (ngang hàng thư mục pages) hoặc cài <code>composer require phpoffice/phpword</code>.</div>';
     }
-} elseif
- (in_array($ext, ['png','jpg','jpeg','gif','bmp','svg'])) {
+} elseif (in_array($ext, ['doc','docx'])) {
+    if (!class_exists('\\PhpOffice\\PhpWord\\IOFactory')) {
+        echo '<div class="empty">Thiếu PhpWord. Hãy đặt <code>/phpword/autoload.php</code> (ngang hàng thư mục pages) hoặc cài composer.</div>';
+    } else {
+        $res = try_word_offline($abs, $file_id);
+        if (is_array($res) && !empty($res[0])) {
+            if (isset($res[3]) && $res[3] === 'pdf') {
+                echo '<div class="paper a4"><iframe class="paper-frame" src="'.htmlspecialchars((string)$res[1], ENT_QUOTES, 'UTF-8').'"></iframe></div>';
+            } else {
+                echo '<div class="paper a4"><iframe class="paper-frame" src="'.htmlspecialchars((string)$res[1], ENT_QUOTES, 'UTF-8').'"></iframe></div>';
+            }
+        } else {
+            $errMsg = is_array($res) ? (string)$res[2] : 'Unknown error';
+            echo '<div class="empty">Không thể chuyển đổi DOC/DOCX offline: ' . htmlspecialchars($errMsg, ENT_QUOTES, 'UTF-8') . '<br/>Đảm bảo đã cài PhpWord; với .doc có thể cần LibreOffice (soffice).</div>';
+        }
+    }
+} elseif (in_array($ext, ['png','jpg','jpeg','gif','bmp','svg'])) {
     $src = '?mode=raw&id='.$file_id;
     echo '<div class="viewport" style="display:flex;align-items:center;justify-content:center;background:#0b0d10">';
     echo '<img src="'.$src.'" alt="" style="max-width:96%;max-height:96%;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.35)" />';
