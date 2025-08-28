@@ -1,5 +1,6 @@
 <?php
-// partials/file_preview.php — OFFLINE-ONLY viewer (PhpSpreadsheet/PhpWord). No online link viewers.
+// partials/file_preview.php — OFFLINE-ONLY viewer (PhpSpreadsheet/PhpWord).
+// Update: Word paper size now follows the document's page size & orientation (not fixed A4).
 declare(strict_types=1);
 if (session_status() === PHP_SESSION_NONE) session_start();
 
@@ -245,9 +246,33 @@ function try_word_offline($abs, $file_id){
         } else {
             return [false, null, 'Unsupported word extension: ' . $ext];
         }
+
+        // Detect first section's page size (twip) -> mm
+        $pageWmm = null; $pageHmm = null; $orientation = null;
+        try {
+            $sections = method_exists($phpWord, 'getSections') ? $phpWord->getSections() : [];
+            if ($sections && isset($sections[0])) {
+                $style = $sections[0]->getStyle();
+                if ($style && method_exists($style, 'getPageSizeW')) {
+                    $twW = (float)$style->getPageSizeW();
+                    $twH = (float)$style->getPageSizeH();
+                    $orientation = method_exists($style, 'getOrientation') ? $style->getOrientation() : null;
+                    if (class_exists('\\PhpOffice\\PhpWord\\Shared\\Converter')) {
+                        $pageWmm = \PhpOffice\PhpWord\Shared\Converter::twipToMillimeter($twW);
+                        $pageHmm = \PhpOffice\PhpWord\Shared\Converter::twipToMillimeter($twH);
+                    } else {
+                        // 1 twip = 1/1440 inch; 1 inch = 25.4 mm
+                        $pageWmm = round($twW * 25.4 / 1440, 2);
+                        $pageHmm = round($twH * 25.4 / 1440, 2);
+                    }
+                }
+            }
+        } catch (\Throwable $eMeta) { /* ignore meta errors */ }
+
         $writer = \PhpOffice\PhpWord\IOFactory::createWriter($phpWord, 'HTML');
         $writer->save($targetHtmlAbs);
-        return [true, $targetHtmlRel, null];
+        // return with meta
+        return [true, $targetHtmlRel, null, 'html', ['w_mm'=>$pageWmm, 'h_mm'=>$pageHmm, 'orientation'=>$orientation]];
     } catch (\Throwable $e) {
         if ($ext === 'docx' && strpos((string)$e->getMessage(), 'error code: 19') !== false) {
             $soffice = find_soffice_binary();
@@ -291,11 +316,11 @@ function try_word_offline($abs, $file_id){
   .tabs { display:flex; gap:8px; padding:8px 12px; background:#0f172a; border-bottom:1px solid #1f2937; position:sticky; top:48px; z-index:1; }
   .tab { padding:6px 10px; border-radius:8px; background:#1f2937; cursor:pointer; user-select:none; }
   .tab.active { background:#2563eb; color:white; }
-  /* A4 Word container */
-  .paper.a4 { width: 210mm; margin: 12px auto; background:#ffffff; border:1px solid #e5e7eb; box-shadow: 0 8px 24px rgba(0,0,0,.06); }
+  /* Word container (dynamic paper width via inline style) */
+  .paper { margin: 12px auto; background:#ffffff; border:1px solid #e5e7eb; box-shadow: 0 8px 24px rgba(0,0,0,.06); width: var(--paper-width, 210mm); }
   .paper-frame { width:100%; height:calc(100dvh - 96px); border:0; background:#ffffff; display:block; }
   @media (max-width: 840px){
-    .paper.a4 { width: 100%; border:none; box-shadow:none; }
+    .paper { width: 100%; border:none; box-shadow:none; }
     .paper-frame { height:calc(100dvh - 88px); }
   }
 </style>
@@ -356,10 +381,14 @@ if ($ext === 'pdf') {
     } else {
         $res = try_word_offline($abs, $file_id);
         if (is_array($res) && !empty($res[0])) {
+            $rel = (string)$res[1];
+            $meta = isset($res[4]) && is_array($res[4]) ? $res[4] : null;
+            $wmm = ($meta && isset($meta['w_mm']) && $meta['w_mm']) ? (float)$meta['w_mm'] : null;
+            $paperStyle = $wmm ? ' style="--paper-width: '.htmlspecialchars((string)$wmm, ENT_QUOTES, 'UTF-8').'mm; width: '.htmlspecialchars((string)$wmm, ENT_QUOTES, 'UTF-8').'mm;"' : '';
             if (isset($res[3]) && $res[3] === 'pdf') {
-                echo '<div class="paper a4"><iframe class="paper-frame" src="'.htmlspecialchars((string)$res[1], ENT_QUOTES, 'UTF-8').'"></iframe></div>';
+                echo '<div class="paper"'.$paperStyle.'><iframe class="paper-frame" src="'.htmlspecialchars($rel, ENT_QUOTES, 'UTF-8').'"></iframe></div>';
             } else {
-                echo '<div class="paper a4"><iframe class="paper-frame" src="'.htmlspecialchars((string)$res[1], ENT_QUOTES, 'UTF-8').'"></iframe></div>';
+                echo '<div class="paper"'.$paperStyle.'><iframe class="paper-frame" src="'.htmlspecialchars($rel, ENT_QUOTES, 'UTF-8').'"></iframe></div>';
             }
         } else {
             $errMsg = is_array($res) ? (string)$res[2] : 'Unknown error';
@@ -375,7 +404,8 @@ if ($ext === 'pdf') {
     $src = '?mode=raw&id='.$file_id;
     echo '<iframe class="viewport" src="'.$src.'"></iframe>';
 } else {
-    echo '<div class="empty">Chưa hỗ trợ xem trực tiếp định dạng này. Vui lòng tải xuống để mở.</div>';
+    $src = '?mode=raw&id='.$file_id;
+    echo '<iframe class="viewport" src="'.$src.'"></iframe>';
 }
 ?>
 </body>
