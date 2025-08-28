@@ -226,6 +226,16 @@ $prefer_offline = ($force === 'local') || $libs_present || in_array($host, ['loc
   .tab { padding:6px 10px; border-radius:8px; background:#1f2937; cursor:pointer; user-select:none; }
   .tab.active { background:#2563eb; color:white; }
 </style>
+<?php if (in_array($ext, ['doc','docx'])): ?>
+<style>
+  html, body { background:#ffffff !important; color:#111827 !important; }
+  .topbar { background:#ffffff !important; border-bottom:1px solid #e5e7eb !important; }
+  .btn { background:#f3f4f6 !important; color:#111827 !important; }
+  .btn:hover { background:#e5e7eb !important; }
+  .viewport { background:#ffffff !important; }
+</style>
+<?php endif; ?>
+
 <script>
   function switchSheet(src, index){
     const iframe = document.getElementById('sheet-frame');
