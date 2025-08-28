@@ -376,7 +376,7 @@ if ($ext === 'pdf') {
         }
     }
 } elseif (in_array($ext, ['doc','docx'])) {
-    if (!class_exists('\\PhpOffice\\PhpWord\\IOFactory')) {
+    if (!class_exists('\PhpOffice\PhpWord\IOFactory')) {
         echo '<div class="empty">Thiếu PhpWord. Hãy đặt <code>/phpword/autoload.php</code> (ngang hàng thư mục pages) hoặc cài composer.</div>';
     } else {
         $res = try_word_offline($abs, $file_id);
@@ -384,15 +384,15 @@ if ($ext === 'pdf') {
             $rel = (string)$res[1];
             $meta = isset($res[4]) && is_array($res[4]) ? $res[4] : null;
             $wmm = ($meta && isset($meta['w_mm']) && $meta['w_mm']) ? (float)$meta['w_mm'] : null;
-            $paperStyle = $wmm ? ' style="--paper-width: '.htmlspecialchars((string)$wmm, ENT_QUOTES, 'UTF-8').'mm; width: '.htmlspecialchars((string)$wmm, ENT_QUOTES, 'UTF-8').'mm;"' : '';
-            if (isset($res[3]) && $res[3] === 'pdf') {
-                echo '<div class="paper"'.$paperStyle.'><iframe class="paper-frame" src="'.htmlspecialchars($rel, ENT_QUOTES, 'UTF-8').'"></iframe></div>';
-            } else {
-                echo '<div class="paper"'.$paperStyle.'><iframe class="paper-frame" src="'.htmlspecialchars($rel, ENT_QUOTES, 'UTF-8').'"></iframe></div>';
+            if (!$wmm && $meta && isset($meta['orientation']) && $meta['orientation']) {
+                $ori = strtolower((string)$meta['orientation']);
+                $wmm = ($ori === 'landscape') ? 297.0 : 210.0; // sensible A4 fallback if only orientation known
             }
+            $paperStyle = $wmm ? (' style="--paper-width: ' . htmlspecialchars((string)$wmm, ENT_QUOTES, 'UTF-8') . 'mm;"') : '';
+            echo '<div class="paper"'.$paperStyle.'><iframe class="paper-frame" src="'.htmlspecialchars($rel, ENT_QUOTES, 'UTF-8').'?t='.time().'"></iframe></div>';
         } else {
             $errMsg = is_array($res) ? (string)$res[2] : 'Unknown error';
-            echo '<div class="empty">Không thể chuyển đổi DOC/DOCX offline: ' . htmlspecialchars($errMsg, ENT_QUOTES, 'UTF-8') . '<br/>Đảm bảo đã cài PhpWord; với .doc có thể cần LibreOffice (soffice).</div>';
+            echo '<div class="empty">Không thể chuyển đổi DOC/DOCX offline.<br/><small>'.htmlspecialchars($errMsg, ENT_QUOTES, 'UTF-8').'</small><br/>Đảm bảo đã cài PhpWord; với .doc có thể cần LibreOffice (soffice).</div>';
         }
     }
 } elseif (in_array($ext, ['png','jpg','jpeg','gif','bmp','svg'])) {
