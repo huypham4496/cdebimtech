@@ -82,7 +82,7 @@ $cssVer = file_exists(__DIR__ . '/../assets/css/login.css')
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Register | CDE Bimtech</title>
+  <title>Register | CDE NextInfra</title>
   <link rel="stylesheet" href="../assets/css/login.css?v=<?= $cssVer ?>">
 </head>
 <body>
@@ -90,13 +90,13 @@ $cssVer = file_exists(__DIR__ . '/../assets/css/login.css')
     <div class="login-left">
       <img src="../assets/images/login-bg.jpg" alt="Background">
       <div class="overlay">
-        <h1 class="text-primary">CDE Bimtech</h1>
+        <h1 class="text-primary">CDE NextInfra</h1>
         <p>Empower your workflow with real-time 3D visualization, full data ownership, and powerful BIM data analysis. Secure, immersive, and built for limitless collaboration.</p>
       </div>
     </div>
     <div class="login-right">
-      <img class="logo" src="../assets/images/logo-login.png" alt="CDE Bimtech Logo">
-      <h2>Register for CDE Bimtech</h2>
+      <img class="logo" src="../assets/images/logo-login.png" alt="CDE NextInfra Logo">
+      <h2>Register for CDE NextInfra</h2>
 
       <?php if ($error): ?>
         <div class="alert-banner error"><?= htmlspecialchars($error) ?></div>
@@ -146,7 +146,7 @@ $cssVer = file_exists(__DIR__ . '/../assets/css/login.css')
   </div>
 
   <div class="footer-link-wrapper">
-    &copy; 2025 a product of <a href="https://bimtech.edu.vn" class="footer-link">Bimtech</a>
+    &copy; 2025 a product of <a href="https://nextinfra.vn" class="footer-link">NextInfra</a>
   </div>
 </body>
 </html>
