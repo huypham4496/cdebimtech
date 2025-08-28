@@ -59,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Create Admin | CDE Bimtech</title>
+  <title>Create Admin | CDE NextInfra</title>
   <link rel="stylesheet" href="../assets/css/create_admin.css">
 </head>
 <body>
@@ -67,7 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="login-left">
       <img src="../assets/images/login-bg.jpg" alt="Background">
       <div class="overlay">
-        <h1 class="text-primary">CDE Bimtech Setup</h1>
+        <h1 class="text-primary">CDE NextInfra Setup</h1>
         <p>Create the first administrator account to manage the application.</p>
       </div>
     </div>
@@ -92,7 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
   </div>
   <div class="footer-link-wrapper">
-    &copy; 2025 a product of <a href="https://bimtech.edu.vn" class="footer-link">Bimtech</a>
+    &copy; 2025 a product of <a href="https://nextinfra.vn" class="footer-link">NextInfra</a>
   </div>
 </body>
 </html>
