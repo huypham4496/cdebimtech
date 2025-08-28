@@ -49,9 +49,9 @@ if ($userId) {
    
   <div class="sidebar-header">
     <a href="home.php" class="sidebar-logo-link">
-      <img src="../assets/images/logo-login.png" alt="CDE Bimtech Logo" class="sidebar-logo">
+      <img src="../assets/images/logo-login.png" alt="CDE NextInfra Logo" class="sidebar-logo">
       <div class="sidebar-title">
-        <h2>CDE Bimtech</h2>
+        <h2>CDE NextInfra</h2>
         <p>Transform Your Workflow</p>
       </div>
     </a>
