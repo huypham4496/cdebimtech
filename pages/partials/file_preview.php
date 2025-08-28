@@ -163,7 +163,7 @@ function excel_multi_offline($abs, $file_id){
     try {
         $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($abs);
         if (class_exists('\\PhpOffice\\PhpSpreadsheet\\Calculation\\Calculation')) {
-            \PhpOffice\PhpSpreadsheet\\Calculation\\Calculation::getInstance($spreadsheet)->clearCalculationCache();
+            \PhpOffice\PhpSpreadsheet\Calculation\Calculation::getInstance($spreadsheet)->clearCalculationCache();
         }
         $spreadsheet->garbageCollect();
 
