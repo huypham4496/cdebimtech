@@ -1,24 +1,23 @@
-
 <?php
 /**
  * pages/partials/file_preview.php
- * Preview viewer for CDE Files
+ * DWG preview = self-hosted DXF viewer (auto-generate DXF if missing).
  * - Office (doc/xls/ppt): Microsoft Office Online Viewer
- * - DWG: ShareCAD Viewer
+ * - DWG: try to find DXF; if absent, auto-convert via dwg2dxf (LibreDWG) then view
  * - PDF / Images / Video / Audio / Text: native tags
  *
- * INPUTS:
- *   - Preferred: ?id={file_id}   (maps to latest/current version via DB -> /uploads/... path)
- *   - Also supported: ?file=/uploads/PRJxxxx/path/to/file.ext (direct web path)
- *
- * NOTE:
- *   This file keeps existing logic intact. Only adds DWG support and robust ?id -> web path mapping.
+ * Requirements for auto-convert:
+ *   - Install LibreDWG CLI `dwg2dxf` on your server
+ *   - Set one of:
+ *       putenv('DWG2DXF_BIN=/usr/bin/dwg2dxf');  // Linux
+ *       putenv('DWG2DXF_BIN="C:\\Program Files\\LibreDWG\\dwg2dxf.exe"'); // Windows
+ *     or define('DWG2DXF_BIN', '...') in config.php
  */
 
 @header_remove('X-Powered-By');
 mb_internal_encoding('UTF-8');
+set_time_limit(120);
 
-// ---------------- Env helpers ----------------
 function h($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 function scheme(){
   if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') return 'https';
@@ -27,17 +26,17 @@ function scheme(){
 }
 function host(){ return $_SERVER['HTTP_HOST'] ?? 'localhost'; }
 function baseurl(){ return scheme() . '://' . host(); }
-function norm_web_path($p){
-  $p = '/' . ltrim((string)$p, '/');
-  $p = strtok($p, '?#');
-  return $p;
+function norm_web_path($p){ $p = '/' . ltrim((string)$p, '/'); return strtok($p, '?#'); }
+
+$FS_ROOT = realpath(__DIR__ . '/../../') ?: dirname(__DIR__, 2);
+// Try config.php in both common locations
+if (file_exists($FS_ROOT . '/config.php')) {
+  require_once $FS_ROOT . '/config.php';
+} elseif (file_exists($FS_ROOT . '/includes/config.php')) {
+  require_once $FS_ROOT . '/includes/config.php';
 }
 
-// ---------------- DB bootstrap ----------------
-$FS_ROOT = realpath(__DIR__ . '/../../') ?: dirname(__DIR__, 2);
-require_once $FS_ROOT . '/config.php'; // expects $pdo
-
-// Build $pdo if config.php didn't create it (fallback)
+// Build $pdo if config didn't provide it
 if (!isset($pdo) || !($pdo instanceof PDO)) {
   if (defined('DB_HOST') && defined('DB_NAME') && defined('DB_USER') && defined('DB_PASS')) {
     $dsn = sprintf('mysql:host=%s;dbname=%s;charset=utf8mb4', DB_HOST, DB_NAME);
@@ -47,63 +46,112 @@ if (!isset($pdo) || !($pdo instanceof PDO)) {
   }
 }
 
-// ---------------- Resolve input ----------------
+// ---------------- Resolve file ----------------
 $webPath = null;
-$legacyId = isset($_GET['id']) ? intval($_GET['id']) : 0;
+$fileId  = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
 if (isset($_GET['file']) && $_GET['file'] !== '') {
   $webPath = norm_web_path($_GET['file']);
-} elseif ($legacyId > 0 && $pdo instanceof PDO) {
-  // Map id -> storage_path (prefer current_version; fallback MAX(version))
+} elseif ($fileId > 0 && $pdo instanceof PDO) {
   try {
-    // 1) Get filename + optionally current_version
     $st = $pdo->prepare("SELECT filename, current_version FROM project_files WHERE id=? AND is_deleted=0");
-    $st->execute([$legacyId]);
+    $st->execute([$fileId]);
     $fileRow = $st->fetch(PDO::FETCH_ASSOC);
     if ($fileRow) {
-      $filename = (string)$fileRow['filename'];
-      $cur = isset($fileRow['current_version']) ? (int)$fileRow['current_version'] : 0;
-
-      // 2) Choose version
+      $filename_db = (string)$fileRow['filename'];
+      $cur = (int)($fileRow['current_version'] ?? 0);
       if ($cur <= 0) {
-        $st2 = $pdo->prepare("SELECT MAX(version) AS v FROM file_versions WHERE file_id=?");
-        $st2->execute([$legacyId]);
+        $st2 = $pdo->prepare("SELECT MAX(version) FROM file_versions WHERE file_id=?");
+        $st2->execute([$fileId]);
         $cur = (int)($st2->fetchColumn() ?: 0);
       }
-
-      // 3) Fetch storage_path of chosen version
       if ($cur > 0) {
         $st3 = $pdo->prepare("SELECT storage_path FROM file_versions WHERE file_id=? AND version=?");
-        $st3->execute([$legacyId, $cur]);
+        $st3->execute([$fileId, $cur]);
         $vr = $st3->fetch(PDO::FETCH_ASSOC);
         if ($vr && !empty($vr['storage_path'])) {
-          // storage_path is relative to project root (e.g., uploads/PRJ00001/files/...)
           $webPath = '/' . ltrim($vr['storage_path'], '/\\');
         }
-      } else {
-        // No version found – try to infer main path (non-versioned)
-        // NOTE: This is conservative; most flows should have versions.
-        // If your storage keeps the latest file as plain /uploads/.../{filename}, set it here if known.
-        $webPath = null;
       }
     }
   } catch (Throwable $e) {
-    // leave $webPath = null
+    // ignore
   }
 }
 
-// Filename / extension
-$filename = $webPath ? basename($webPath) : ($legacyId ? ('#' . $legacyId) : 'Unknown');
+$filename = $webPath ? basename($webPath) : ($fileId ? ('#'.$fileId) : 'Unknown');
 $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
-
-// Abs URL for external viewers
 $absUrl = $webPath ? (baseurl() . $webPath) : '';
+$absFs  = $webPath ? ($FS_ROOT . '/' . ltrim($webPath, '/')) : '';
 
-// Group helpers
+// Helpers
 function is_image_ext($e){ return in_array($e, ['png','jpg','jpeg','gif','webp','bmp','svg']); }
 function is_video_ext($e){ return in_array($e, ['mp4','webm','ogv','mov']); }
 function is_audio_ext($e){ return in_array($e, ['mp3','ogg','wav','m4a','aac']); }
 function is_text_ext($e){ return in_array($e, ['txt','log','csv','json','xml','yml','yaml','md','html','css','js','php']); }
+
+// Ensure preview dir
+$PREVIEW_DIR_WEB = '/uploads/_previews';
+$PREVIEW_DIR_FS  = $FS_ROOT . $PREVIEW_DIR_WEB;
+if (!is_dir($PREVIEW_DIR_FS)) {
+  @mkdir($PREVIEW_DIR_FS, 0775, true);
+  @mkdir($PREVIEW_DIR_FS . '/_logs', 0775, true);
+}
+
+// Auto-convert function (dwg -> dxf)
+function auto_convert_dwg_to_dxf($dwgFs, $dxfFs, &$logMsg){
+  $logMsg = '';
+  if (!is_file($dwgFs)) { $logMsg = "DWG not found: $dwgFs"; return false; }
+  $bin = null;
+  if (defined('DWG2DXF_BIN') && DWG2DXF_BIN) $bin = DWG2DXF_BIN;
+  if (!$bin) $bin = getenv('DWG2DXF_BIN') ?: null;
+  if (!$bin) $bin = 'dwg2dxf'; // hope PATH has it
+
+  // Ensure target dir
+  $dir = dirname($dxfFs);
+  if (!is_dir($dir)) @mkdir($dir, 0775, true);
+
+  // Windows: escapeshellarg uses double-quotes; OK.
+  $cmd = $bin . ' ' . escapeshellarg($dwgFs) . ' ' . escapeshellarg($dxfFs);
+  $out = []; $code = 127;
+  if (function_exists('exec')) {
+    @exec($cmd . ' 2>&1', $out, $code);
+  } elseif (function_exists('shell_exec')) {
+    $res = @shell_exec($cmd . ' 2>&1');
+    $out = explode("\n", (string)$res);
+    $code = is_file($dxfFs) ? 0 : 1;
+  } else {
+    $logMsg = "exec/shell_exec disabled in PHP. Can't run dwg2dxf.";
+    return false;
+  }
+  $logMsg = "CMD: $cmd\n" . implode("\n", $out);
+  clearstatcache(true, $dxfFs);
+  return ($code === 0 && is_file($dxfFs) && filesize($dxfFs) > 0);
+}
+
+// DXF preview resolution (and auto-generate if missing)
+$dxfWeb = '';
+$autoLog = '';
+if ($ext === 'dwg' && $webPath && $absFs) {
+  $targetWeb = '';
+  if ($fileId > 0) {
+    $targetWeb = $PREVIEW_DIR_WEB . '/' . $fileId . '.dxf';
+  } else {
+    // same folder, same name .dxf
+    $targetWeb = preg_replace('/\.dwg$/i', '.dxf', $webPath);
+  }
+  $targetFs = $FS_ROOT . $targetWeb;
+
+  // If not exist, try to auto-convert
+  if (!is_file($targetFs)) {
+    $ok = auto_convert_dwg_to_dxf($absFs, $targetFs, $autoLog);
+    // Write log
+    $logFile = $PREVIEW_DIR_FS . '/_logs/' . ($fileId ?: ('manual_' . md5($webPath))) . '.log';
+    @file_put_contents($logFile, '['.date('c')."]\n".$autoLog."\n\n", FILE_APPEND);
+  }
+
+  if (is_file($targetFs)) $dxfWeb = $targetWeb;
+}
 
 ?><!DOCTYPE html>
 <html lang="vi">
@@ -112,6 +160,10 @@ function is_text_ext($e){ return in_array($e, ['txt','log','csv','json','xml','y
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Preview – <?php echo h($filename); ?></title>
   <link rel="stylesheet" href="/assets/css/file_preview.css">
+  <style>
+    #dxf-view { width:100%; height:calc(100vh - 160px); }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace; }
+  </style>
 </head>
 <body>
   <div class="wrap">
@@ -120,8 +172,8 @@ function is_text_ext($e){ return in_array($e, ['txt','log','csv','json','xml','y
       <div class="controls">
         <?php if ($webPath): ?>
           <a class="btn" href="<?php echo h($webPath); ?>" download>Download</a>
-        <?php elseif ($legacyId): ?>
-          <a class="btn" href="<?php echo h('/pages/partials/project_tab_files.php?action=download_one&file_id='.$legacyId); ?>" target="_blank" rel="noopener">Download</a>
+        <?php elseif ($fileId): ?>
+          <a class="btn" href="<?php echo h('/pages/partials/project_tab_files.php?action=download_one&file_id='.$fileId); ?>" target="_blank" rel="noopener">Download</a>
         <?php endif; ?>
       </div>
     </div>
@@ -130,10 +182,8 @@ function is_text_ext($e){ return in_array($e, ['txt','log','csv','json','xml','y
 <?php if (!$webPath): ?>
       <div class="note muted">
         Missing file path.<br>
-        Hãy gọi: <code>file_preview.php?file=/uploads/PRJxxxx/yourfile.ext</code> hoặc mở từ bảng Files (sẽ truyền <code>id</code>) để tự ánh xạ sang đường dẫn web.<br>
-        <?php if ($legacyId): ?>
-          Nhận được <code>id=<?php echo h($legacyId); ?></code> nhưng chưa tìm thấy storage_path (có thể file chưa có phiên bản?).
-        <?php endif; ?>
+        Hãy mở từ bảng Files (truyền <code>id</code>) hoặc gọi: <code>file_preview.php?file=/uploads/PRJxxxx/yourfile.ext</code>.
+        <?php if ($fileId): ?> (Không tìm thấy đường dẫn web cho id=<?php echo h($fileId); ?>)<?php endif; ?>
       </div>
 <?php else: ?>
 
@@ -142,9 +192,28 @@ function is_text_ext($e){ return in_array($e, ['txt','log','csv','json','xml','y
       <div class="note muted">Đang xem qua Microsoft Office Online Viewer.</div>
 
 <?php elseif ($ext === 'dwg'): ?>
-      <iframe src="https://sharecad.org/cadframe/load?url=<?php echo urlencode($absUrl); ?>&lang=en&zoom=1"
-              allowfullscreen loading="lazy"></iframe>
-      <div class="note muted">Đang xem DWG qua ShareCAD Viewer. Nếu không hiển thị, hãy đảm bảo URL tệp truy cập được từ Internet.</div>
+
+  <?php if ($dxfWeb): ?>
+      <div id="dxf-view"></div>
+      <div class="note muted">DXF preview (tự host). Nguồn: <code><?php echo h($dxfWeb); ?></code></div>
+      <script>window.CDE_DXF_SRC = <?php echo json_encode($dxfWeb, JSON_UNESCAPED_SLASHES); ?>;</script>
+      <!-- libs: three.js + OrbitControls + dxf-parser + three-dxf -->
+      <script src="https://unpkg.com/three@0.152.2/build/three.min.js"></script>
+      <script src="https://unpkg.com/three@0.152.2/examples/js/controls/OrbitControls.js"></script>
+      <script src="https://unpkg.com/dxf-parser@1.1.4/dist/dxf-parser.min.js"></script>
+      <script src="https://unpkg.com/three-dxf@1.1.1/build/three-dxf.min.js"></script>
+      <script src="/assets/js/dxf_viewer.js?v=<?php echo time(); ?>"></script>
+
+  <?php else: ?>
+      <div class="note muted">
+        Không tạo được DXF preview tự động cho DWG này.<br>
+        Kiểm tra log: <code><?php echo h($PREVIEW_DIR_WEB . '/_logs/' . ($fileId ?: ('manual_' . md5($webPath))) . '.log'); ?></code><br>
+        Gợi ý: cài LibreDWG và cấu hình biến môi trường/constant <code>DWG2DXF_BIN</code> (ví dụ <code>/usr/bin/dwg2dxf</code> hoặc <code>C:\Program Files\LibreDWG\dwg2dxf.exe</code>).
+      </div>
+      <?php if (!empty($autoLog)): ?>
+      <pre class="code mono"><?php echo h($autoLog); ?></pre>
+      <?php endif; ?>
+  <?php endif; ?>
 
 <?php elseif ($ext === 'pdf'): ?>
       <embed src="<?php echo h($webPath); ?>" type="application/pdf">
@@ -161,14 +230,9 @@ function is_text_ext($e){ return in_array($e, ['txt','log','csv','json','xml','y
 
 <?php elseif (is_text_ext($ext)): ?>
 <?php
-      // Show text files from filesystem if allowed (resolve to absolute path under project root)
-      $absFs = $FS_ROOT . '/' . ltrim($webPath, '/');
-      if (is_file($absFs) && is_readable($absFs)) {
-        $txt = file_get_contents($absFs);
-        echo '<pre class="code">'.h($txt).'</pre>';
-      } else {
-        echo '<div class="note muted">Không đọc được nội dung văn bản.</div>';
-      }
+      $txt = '';
+      if ($absFs && is_file($absFs) && is_readable($absFs)) $txt = file_get_contents($absFs);
+      echo '<pre class="code">'.h($txt ?: 'Không đọc được nội dung văn bản.').'</pre>';
 ?>
 <?php else: ?>
       <div class="note muted">
@@ -177,7 +241,7 @@ function is_text_ext($e){ return in_array($e, ['txt','log','csv','json','xml','y
       </div>
 <?php endif; ?>
 
-<?php endif; // $webPath ?>
+<?php endif; ?>
     </div>
   </div>
 </body>
