@@ -295,22 +295,21 @@ if ($ext === 'pdf') {
     if (!$shown) {
         echo '<div class="empty">Không thể xem Excel. Vui lòng tải xuống.<br/>Hãy kiểm tra autoload tại <code>phpspreadsheet/autoload.php</code></div>';
     }
+
 } elseif (in_array($ext, ['doc','docx'])) {
-    $shown = false;
-    if ($prefer_offline && class_exists('\\PhpOffice\\PhpWord\\IOFactory')) {
+    // OFFLINE ONLY via PhpWord
+    if (class_exists('\PhpOffice\PhpWord\IOFactory')) {
         list($ok, $rel, $err) = try_word_offline($abs, $file_id);
-        if ($ok) { echo '<div class="paper a4"><iframe class="paper-frame" src="'.$rel.'"></iframe></div>'; $shown = true; }
+        if ($ok) {
+            echo '<div class="paper a4"><iframe class="paper-frame" src="'.$rel.'"></iframe></div>';
+        } else {
+            echo '<div class="empty">Không thể chuyển đổi DOC/DOCX offline: ' . htmlspecialchars((string)$err, ENT_QUOTES, 'UTF-8') . '<br/>Vui lòng cài <code>phpword/autoload.php</code> hoặc <code>composer require phpoffice/phpword</code>.</div>';
+        }
+    } else {
+        echo '<div class="empty">Thiếu thư viện PhpWord. Hãy thêm <code>phpword/autoload.php</code> (ngang hàng thư mục pages) hoặc cài <code>composer require phpoffice/phpword</code>.</div>';
     }
-    if (!$shown && $force !== 'local') {
-        $office = 'https://view.officeapps.live.com/op/view.aspx?src=' . rawurlencode($rawUrl);
-        echo '<div class="paper a4"><iframe class="paper-frame" src="'.$office.'"></iframe></div>';
-        echo '<div class="row"><a class="btn" href="?mode=view&id='.$file_id.'&force=local">Dùng chế độ offline (nếu đã cài PhpWord)</a></div>';
-        $shown = true;
-    }
-    if (!$shown) {
-        echo '<div class="empty">Không thể xem Word. Vui lòng tải xuống.<br/>Bạn có thể thêm <code>phpword/autoload.php</code> để xem offline.</div>';
-    }
-} elseif (in_array($ext, ['png','jpg','jpeg','gif','bmp','svg'])) {
+} elseif
+ (in_array($ext, ['png','jpg','jpeg','gif','bmp','svg'])) {
     $src = '?mode=raw&id='.$file_id;
     echo '<div class="viewport" style="display:flex;align-items:center;justify-content:center;background:#0b0d10">';
     echo '<img src="'.$src.'" alt="" style="max-width:96%;max-height:96%;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.35)" />';
