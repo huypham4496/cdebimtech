@@ -14,7 +14,7 @@ if (is_file($composer)) {
 }
 
 // 2) Built-in PHPWord autoloader (manual install)
-$srcAutoloader = $__base . '/src/PhpWord/Autoloader.php';
+$srcAutoloader = $__base . '/src/Autoloader.php';
 if (is_file($srcAutoloader)) {
     require_once $srcAutoloader;
     \PhpOffice\PhpWord\Autoloader::register();
