@@ -1,10 +1,10 @@
 <?php
 /**
- * file_preview.php — Microsoft Office Online Viewer with proper Download
- *
+ * file_preview.php — Preview files in CDE
  * - DOC/DOCX/XLS/XLSX/XLSM/PPT/PPTX: Microsoft Office Online Viewer
  * - PDF/Images/Video/Audio/Text: inline preview
- * - Topbar: Download button forces server-side download
+ * - Topbar: file name + Download button
+ * - Removed "Source: id/path"
  */
 
 declare(strict_types=1);
@@ -87,31 +87,13 @@ $officeUrl="https://view.officeapps.live.com/op/embed.aspx?src=".rawurlencode($a
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Xem file – <?php echo h($displayName); ?></title>
-<style>
-:root{--bg:#f7f8fa;--fg:#111827;--muted:#6b7280;--card:#fff;--border:#e5e7eb;--accent:#2563eb;}
-html,body{margin:0;padding:0;background:var(--bg);color:var(--fg);height:100%;}
-.topbar{position:sticky;top:0;z-index:3;background:var(--card);border-bottom:1px solid var(--border);
-display:flex;gap:12px;align-items:center;padding:10px 18px;}
-.file{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.controls{margin-left:auto;display:flex;gap:8px;align-items:center;}
-.btn{appearance:none;border:1px solid var(--border);background:#fff;color:#111827;
-border-radius:8px;padding:6px 12px;font-size:14px;cursor:pointer;text-decoration:none;}
-.btn:hover{border-color:#cbd5e1;}
-.wrap{width:100%;max-width:1400px;margin:0 auto;padding:0 16px 24px;}
-.viewer{background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:0 10px 24px rgba(0,0,0,.07);
-overflow:hidden;min-height:calc(100vh - 100px);}
-iframe,embed{display:block;width:100%;height:calc(100vh - 140px);border:none;background:#fff;}
-.img-preview{display:block;width:100%;height:auto;background:#fff;}
-pre.code{background:#0b1020;color:#e5e7eb;padding:16px;margin:0;overflow:auto;
-min-height:calc(100vh - 140px);font-family:ui-monospace,monospace;}
-.note{font-size:12px;padding:10px 16px;}
-</style>
+<link rel="stylesheet" href="/assets/css/file_preview.css">
 </head>
 <body>
 <div class="topbar">
   <div class="file"><?php echo h($displayName); ?></div>
   <div class="controls">
-    <a class="btn" href="download.php?path=<?php echo urlencode($relPath); ?>">Download</a>
+    <a class="btn" href="<?php echo h($publicUrl); ?>" download="<?php echo h($displayName); ?>">Download</a>
   </div>
 </div>
 <div class="wrap">
@@ -124,11 +106,11 @@ min-height:calc(100vh - 140px);font-family:ui-monospace,monospace;}
     <?php elseif (in_array($ext,['png','jpg','jpeg','gif','webp','bmp','svg'])): ?>
       <img class="img-preview" src="<?php echo h($publicUrl); ?>" alt="<?php echo h($displayName); ?>"/>
     <?php elseif (in_array($ext,['mp4','webm','ogg'])): ?>
-      <video controls style="width:100%;max-height:calc(100vh - 140px);background:#000;">
+      <video controls>
         <source src="<?php echo h($publicUrl); ?>" type="video/<?php echo h($ext); ?>">
       </video>
     <?php elseif (in_array($ext,['mp3','wav','m4a','oga'])): ?>
-      <audio controls style="width:100%">
+      <audio controls>
         <source src="<?php echo h($publicUrl); ?>">
       </audio>
     <?php elseif (in_array($ext,['txt','csv','md','log','json','xml','yml','yaml','ini'])): ?>
