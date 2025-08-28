@@ -225,6 +225,15 @@ $prefer_offline = ($force === 'local') || $libs_present || in_array($host, ['loc
   .tabs { display:flex; gap:8px; padding:8px 12px; background:#0f172a; border-bottom:1px solid #1f2937; position:sticky; top:48px; z-index:1; }
   .tab { padding:6px 10px; border-radius:8px; background:#1f2937; cursor:pointer; user-select:none; }
   .tab.active { background:#2563eb; color:white; }
+
+  /* A4 paper container for Word */
+  .paper.a4 { width: 210mm; margin: 12px auto; background:#ffffff; border:1px solid #e5e7eb; box-shadow: 0 8px 24px rgba(0,0,0,.06); }
+  .paper-frame { width:100%; height:calc(100dvh - 96px); border:0; background:#ffffff; display:block; }
+  @media (max-width: 840px){
+    .paper.a4 { width: 100%; border:none; box-shadow:none; }
+    .paper-frame { height:calc(100dvh - 88px); }
+  }
+
 </style>
 <?php if (in_array($ext, ['doc','docx'])): ?>
 <style>
@@ -279,7 +288,7 @@ if ($ext === 'pdf') {
     }
     if (!$shown && $force !== 'local') {
         $office = 'https://view.officeapps.live.com/op/view.aspx?src=' . rawurlencode($rawUrl);
-        echo '<iframe class="viewport" src="'.$office.'"></iframe>';
+        echo '<div class="paper a4"><iframe class="paper-frame" src="'.$office.'"></iframe></div>';
         echo '<div class="row"><a class="btn" href="?mode=view&id='.$file_id.'&force=local">Dùng chế độ offline (PhpSpreadsheet đã cài)</a></div>';
         $shown = true;
     }
@@ -290,11 +299,11 @@ if ($ext === 'pdf') {
     $shown = false;
     if ($prefer_offline && class_exists('\\PhpOffice\\PhpWord\\IOFactory')) {
         list($ok, $rel, $err) = try_word_offline($abs, $file_id);
-        if ($ok) { echo '<iframe class="viewport" src="'.$rel.'"></iframe>'; $shown = true; }
+        if ($ok) { echo '<div class="paper a4"><iframe class="paper-frame" src="'.$rel.'"></iframe></div>'; $shown = true; }
     }
     if (!$shown && $force !== 'local') {
         $office = 'https://view.officeapps.live.com/op/view.aspx?src=' . rawurlencode($rawUrl);
-        echo '<iframe class="viewport" src="'.$office.'"></iframe>';
+        echo '<div class="paper a4"><iframe class="paper-frame" src="'.$office.'"></iframe></div>';
         echo '<div class="row"><a class="btn" href="?mode=view&id='.$file_id.'&force=local">Dùng chế độ offline (nếu đã cài PhpWord)</a></div>';
         $shown = true;
     }
