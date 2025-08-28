@@ -534,7 +534,7 @@ $('#ft-select-all').addEventListener('change', (e)=>{
 (function(){
   const table = document.querySelector('#ft-table');
   if (!table) return;
-  const EXTS = new Set(['pdf','doc','docx','xls','xlsx']);
+  const EXTS = new Set(['pdf','doc','docx','xls','xlsx','ppt','pptx','dwg']);
   table.addEventListener('click', function(e){
     const cell = e.target.closest('td');
     const row  = e.target.closest('tr.ft-row[data-type="file"]');
