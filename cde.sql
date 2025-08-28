@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Aug 27, 2025 at 12:02 PM
+-- Generation Time: Aug 28, 2025 at 11:56 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -62,7 +62,10 @@ INSERT INTO `file_versions` (`id`, `file_id`, `version`, `storage_path`, `size_b
 (32, 19, 1, 'uploads/PRJ00006/files/old_version/deny-ip-list_v1.txt', 823270, 1, '2025-08-27 15:59:59'),
 (33, 20, 1, 'uploads/PRJ00006/files/old_version/Screenshot 2025-06-06 184815_v1.png', 34404, 1, '2025-08-27 16:48:22'),
 (34, 21, 1, 'uploads/PRJ00006/files/old_version/DS IP Phòng cầu 2_v1.xlsx', 12025, 1, '2025-08-27 16:49:07'),
-(35, 21, 2, 'uploads/PRJ00006/files/old_version/DS IP Phòng cầu 2_v2.xlsx', 12395, 1, '2025-08-27 16:56:28');
+(35, 21, 2, 'uploads/PRJ00006/files/old_version/DS IP Phòng cầu 2_v2.xlsx', 12395, 1, '2025-08-27 16:56:28'),
+(36, 22, 1, 'uploads/PRJ00006/files/old_version/Thuyet minh-A3_v1.doc', 81408, 1, '2025-08-28 08:37:06'),
+(37, 23, 1, 'uploads/PRJ00006/files/old_version/Bia-A4 - CDKT_v1.doc', 308736, 1, '2025-08-28 08:37:50'),
+(38, 24, 1, 'uploads/PRJ00006/files/old_version/Báo cáo tiến độ hàng ngày Cao tốc Bắc Nam_v1.docx', 29835, 1, '2025-08-28 08:38:48');
 
 -- --------------------------------------------------------
 
@@ -485,8 +488,11 @@ INSERT INTO `project_files` (`id`, `project_id`, `folder_id`, `filename`, `tag`,
 (17, 6, 9, 'Binh Do QC.dwg', 'Published', 0, 0, 1, '2025-08-27 11:21:26', '2025-08-27 11:28:51', 1, NULL),
 (18, 6, 10, 'license.txt', 'WIP', 0, 0, 1, '2025-08-27 11:37:36', '2025-08-27 11:37:36', 1, NULL),
 (19, 6, 11, 'deny-ip-list.txt', 'WIP', 0, 0, 1, '2025-08-27 15:59:59', '2025-08-27 15:59:59', 1, NULL),
-(20, 6, 9, 'Screenshot 2025-06-06 184815.png', 'WIP', 0, 0, 1, '2025-08-27 16:48:22', '2025-08-27 16:48:22', 1, NULL),
-(21, 6, 9, 'DS IP Phòng cầu 2.xlsx', 'WIP', 0, 0, 1, '2025-08-27 16:49:07', '2025-08-27 16:56:28', 2, NULL);
+(20, 6, 9, 'Screenshot 2025-06-06 184815.png', 'WIP', 1, 0, 1, '2025-08-27 16:48:22', '2025-08-28 14:24:48', 1, NULL),
+(21, 6, 9, 'DS IP Phòng cầu 2.xlsx', 'Archived', 0, 0, 1, '2025-08-27 16:49:07', '2025-08-28 14:24:30', 2, NULL),
+(22, 6, 9, 'Thuyet minh-A3.doc', 'Archived', 0, 0, 1, '2025-08-28 08:37:06', '2025-08-28 14:24:40', 1, NULL),
+(23, 6, 9, 'Bia-A4 - CDKT.doc', 'WIP', 0, 0, 1, '2025-08-28 08:37:50', '2025-08-28 08:37:50', 1, NULL),
+(24, 6, 9, 'Báo cáo tiến độ hàng ngày Cao tốc Bắc Nam.docx', 'WIP', 1, 0, 1, '2025-08-28 08:38:48', '2025-08-28 14:24:44', 1, NULL);
 
 -- --------------------------------------------------------
 
@@ -2293,7 +2299,7 @@ ALTER TABLE `companies`
 -- AUTO_INCREMENT for table `file_versions`
 --
 ALTER TABLE `file_versions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=36;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=39;
 
 --
 -- AUTO_INCREMENT for table `notifications`
@@ -2377,7 +2383,7 @@ ALTER TABLE `project_daily_notifications`
 -- AUTO_INCREMENT for table `project_files`
 --
 ALTER TABLE `project_files`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
 
 --
 -- AUTO_INCREMENT for table `project_folders`
