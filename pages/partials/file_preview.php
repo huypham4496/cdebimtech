@@ -1,22 +1,18 @@
 <?php
 /**
  * pages/partials/file_preview.php
- * DWG preview = self-hosted DXF viewer (auto-generate DXF if missing).
+ * Restore DWG viewing via ShareCAD (with clear notice: <50 MB limit & speed depends on ShareCAD).
  * - Office (doc/xls/ppt): Microsoft Office Online Viewer
- * - DWG: try to find DXF; if absent, auto-convert via dwg2dxf (LibreDWG) then view
+ * - DWG: ShareCAD iframe
  * - PDF / Images / Video / Audio / Text: native tags
  *
- * Requirements for auto-convert:
- *   - Install LibreDWG CLI `dwg2dxf` on your server
- *   - Set one of:
- *       putenv('DWG2DXF_BIN=/usr/bin/dwg2dxf');  // Linux
- *       putenv('DWG2DXF_BIN="C:\\Program Files\\LibreDWG\\dwg2dxf.exe"'); // Windows
- *     or define('DWG2DXF_BIN', '...') in config.php
+ * Inputs:
+ *   ?id={file_id}         -> map via DB (project_files + file_versions.storage_path) to /uploads/... path
+ *   ?file=/uploads/...    -> direct web path
  */
 
 @header_remove('X-Powered-By');
 mb_internal_encoding('UTF-8');
-set_time_limit(120);
 
 function h($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 function scheme(){
@@ -90,68 +86,9 @@ function is_video_ext($e){ return in_array($e, ['mp4','webm','ogv','mov']); }
 function is_audio_ext($e){ return in_array($e, ['mp3','ogg','wav','m4a','aac']); }
 function is_text_ext($e){ return in_array($e, ['txt','log','csv','json','xml','yml','yaml','md','html','css','js','php']); }
 
-// Ensure preview dir
-$PREVIEW_DIR_WEB = '/uploads/_previews';
-$PREVIEW_DIR_FS  = $FS_ROOT . $PREVIEW_DIR_WEB;
-if (!is_dir($PREVIEW_DIR_FS)) {
-  @mkdir($PREVIEW_DIR_FS, 0775, true);
-  @mkdir($PREVIEW_DIR_FS . '/_logs', 0775, true);
-}
-
-// Auto-convert function (dwg -> dxf)
-function auto_convert_dwg_to_dxf($dwgFs, $dxfFs, &$logMsg){
-  $logMsg = '';
-  if (!is_file($dwgFs)) { $logMsg = "DWG not found: $dwgFs"; return false; }
-  $bin = null;
-  if (defined('DWG2DXF_BIN') && DWG2DXF_BIN) $bin = DWG2DXF_BIN;
-  if (!$bin) $bin = getenv('DWG2DXF_BIN') ?: null;
-  if (!$bin) $bin = 'dwg2dxf'; // hope PATH has it
-
-  // Ensure target dir
-  $dir = dirname($dxfFs);
-  if (!is_dir($dir)) @mkdir($dir, 0775, true);
-
-  // Windows: escapeshellarg uses double-quotes; OK.
-  $cmd = $bin . ' ' . escapeshellarg($dwgFs) . ' ' . escapeshellarg($dxfFs);
-  $out = []; $code = 127;
-  if (function_exists('exec')) {
-    @exec($cmd . ' 2>&1', $out, $code);
-  } elseif (function_exists('shell_exec')) {
-    $res = @shell_exec($cmd . ' 2>&1');
-    $out = explode("\n", (string)$res);
-    $code = is_file($dxfFs) ? 0 : 1;
-  } else {
-    $logMsg = "exec/shell_exec disabled in PHP. Can't run dwg2dxf.";
-    return false;
-  }
-  $logMsg = "CMD: $cmd\n" . implode("\n", $out);
-  clearstatcache(true, $dxfFs);
-  return ($code === 0 && is_file($dxfFs) && filesize($dxfFs) > 0);
-}
-
-// DXF preview resolution (and auto-generate if missing)
-$dxfWeb = '';
-$autoLog = '';
-if ($ext === 'dwg' && $webPath && $absFs) {
-  $targetWeb = '';
-  if ($fileId > 0) {
-    $targetWeb = $PREVIEW_DIR_WEB . '/' . $fileId . '.dxf';
-  } else {
-    // same folder, same name .dxf
-    $targetWeb = preg_replace('/\.dwg$/i', '.dxf', $webPath);
-  }
-  $targetFs = $FS_ROOT . $targetWeb;
-
-  // If not exist, try to auto-convert
-  if (!is_file($targetFs)) {
-    $ok = auto_convert_dwg_to_dxf($absFs, $targetFs, $autoLog);
-    // Write log
-    $logFile = $PREVIEW_DIR_FS . '/_logs/' . ($fileId ?: ('manual_' . md5($webPath))) . '.log';
-    @file_put_contents($logFile, '['.date('c')."]\n".$autoLog."\n\n", FILE_APPEND);
-  }
-
-  if (is_file($targetFs)) $dxfWeb = $targetWeb;
-}
+// Optional size check for DWG
+$dwgSize = ($ext==='dwg' && $absFs && is_file($absFs)) ? filesize($absFs) : 0;
+$exceedsSharecad = ($dwgSize > 50*1024*1024 && $dwgSize > 0);
 
 ?><!DOCTYPE html>
 <html lang="vi">
@@ -161,8 +98,7 @@ if ($ext === 'dwg' && $webPath && $absFs) {
   <title>Preview – <?php echo h($filename); ?></title>
   <link rel="stylesheet" href="/assets/css/file_preview.css">
   <style>
-    #dxf-view { width:100%; height:calc(100vh - 160px); }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace; }
+    .warn { color:#b91c1c; font-weight:600; }
   </style>
 </head>
 <body>
@@ -192,28 +128,18 @@ if ($ext === 'dwg' && $webPath && $absFs) {
       <div class="note muted">Đang xem qua Microsoft Office Online Viewer.</div>
 
 <?php elseif ($ext === 'dwg'): ?>
-
-  <?php if ($dxfWeb): ?>
-      <div id="dxf-view"></div>
-      <div class="note muted">DXF preview (tự host). Nguồn: <code><?php echo h($dxfWeb); ?></code></div>
-      <script>window.CDE_DXF_SRC = <?php echo json_encode($dxfWeb, JSON_UNESCAPED_SLASHES); ?>;</script>
-      <!-- libs: three.js + OrbitControls + dxf-parser + three-dxf -->
-      <script src="https://unpkg.com/three@0.152.2/build/three.min.js"></script>
-      <script src="https://unpkg.com/three@0.152.2/examples/js/controls/OrbitControls.js"></script>
-      <script src="https://unpkg.com/dxf-parser@1.1.4/dist/dxf-parser.min.js"></script>
-      <script src="https://unpkg.com/three-dxf@1.1.1/build/three-dxf.min.js"></script>
-      <script src="/assets/js/dxf_viewer.js?v=<?php echo time(); ?>"></script>
-
-  <?php else: ?>
-      <div class="note muted">
-        Không tạo được DXF preview tự động cho DWG này.<br>
-        Kiểm tra log: <code><?php echo h($PREVIEW_DIR_WEB . '/_logs/' . ($fileId ?: ('manual_' . md5($webPath))) . '.log'); ?></code><br>
-        Gợi ý: cài LibreDWG và cấu hình biến môi trường/constant <code>DWG2DXF_BIN</code> (ví dụ <code>/usr/bin/dwg2dxf</code> hoặc <code>C:\Program Files\LibreDWG\dwg2dxf.exe</code>).
+      <?php if ($exceedsSharecad): ?>
+      <div class="note warn">
+        Tệp DWG có dung lượng <?php echo number_format($dwgSize/1048576, 1); ?> MB &gt; 50 MB. ShareCAD có thể KHÔNG hiển thị được.
       </div>
-      <?php if (!empty($autoLog)): ?>
-      <pre class="code mono"><?php echo h($autoLog); ?></pre>
       <?php endif; ?>
-  <?php endif; ?>
+      <iframe src="https://sharecad.org/cadframe/load?url=<?php echo urlencode($absUrl); ?>&lang=en&zoom=1"
+              allowfullscreen loading="lazy"></iframe>
+      <div class="note muted">
+        Xem DWG qua <strong>ShareCAD Viewer</strong>.<br>
+        Giới hạn: <strong>&lt; 50 MB</strong>. Tốc độ tải &amp; hiển thị <strong>phụ thuộc vào dịch vụ ShareCAD</strong>.<br>
+        Nếu không hiển thị, hãy đảm bảo URL file truy cập được từ Internet.
+      </div>
 
 <?php elseif ($ext === 'pdf'): ?>
       <embed src="<?php echo h($webPath); ?>" type="application/pdf">
