@@ -49,11 +49,7 @@ if ($userId) {
    
   <div class="sidebar-header">
     <a href="home.php" class="sidebar-logo-link">
-      <img src="../assets/images/logo-login.png" alt="CDE NextInfra Logo" class="sidebar-logo">
-      <div class="sidebar-title">
-        <h2>CDE NextInfra</h2>
-        <p>Transform Your Workflow</p>
-      </div>
+      <img src="../assets/images/logo.png" alt="CDE NextInfra Logo" class="sidebar-logo">
     </a>
   </div>
 
