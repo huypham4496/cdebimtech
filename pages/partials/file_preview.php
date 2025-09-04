@@ -121,137 +121,6 @@ $exceedsSharecad = ($dwgSize > 50*1024*1024 && $dwgSize > 0);
         Hãy mở từ bảng Files (truyền <code>id</code>) hoặc gọi: <code>file_preview.php?file=/uploads/PRJxxxx/yourfile.ext</code>.
         <?php if ($fileId): ?> (Không tìm thấy đường dẫn web cho id=<?php echo h($fileId); ?>)<?php endif; ?>
       </div>
-
-<?php elseif ($ext === 'ifc' || $ext === 'xkt'): ?>
-  <!-- IFC/XKT Viewer via xeokit v2.6.89 - plugins from ../../xeokit/src/plugins/ -->
-  <style>
-    #xeokitCanvas { width: 100%; height: calc(100vh - 64px); display: block; background: #f7f7f9; }
-    .xk-toolbar { position:absolute; top:56px; left:12px; z-index:10; display:flex; gap:8px; }
-    .xk-toolbar button{ padding:8px 10px; border:1px solid #ddd; background:#fff; border-radius:8px; cursor:pointer; }
-  </style>
-  <div class="viewer-host" style="position:relative;">
-    <div class="xk-toolbar">
-      <button id="xkFit">Fit</button>
-      <button id="xkXray">X-Ray</button>
-      <button id="xkEdges">Edges</button>
-      <button id="xkReset">Reset</button>
-    </div>
-    <canvas id="xeokitCanvas"></canvas>
-  </div>
-
-  <script>window.__ABS_URL__ = <?php echo json_encode($absUrl); ?>;</script>
-
-  <!-- Import map to resolve html2canvas bare specifier from xeokit dist -->
-  <script type="importmap">
-    {
-      "imports": {
-        "html2canvas/dist/html2canvas.esm.js": "../../xeokit/vendor/html2canvas/html2canvas.esm.js"
-      }
-    }
-  </script>
-
-  
-  <script type="module">
-    import { Viewer } from "../../xeokit/dist/xeokit-sdk.min.es.js";
-    import { XKTLoaderPlugin } from "../../xeokit/src/plugins/XKTLoaderPlugin/XKTLoaderPlugin.js";
-    import { WebIFCLoaderPlugin } from "../../xeokit/src/plugins/WebIFCLoaderPlugin/WebIFCLoaderPlugin.js";
-    import * as WebIFC from "../../xeokit/dist/web-ifc/web-ifc-api.js";
-
-    const srcURL = window.__ABS_URL__;
-
-    const init = async () => {
-      const viewer = new Viewer({
-        canvasId: "xeokitCanvas",
-        transparent: true
-      });
-
-      if (viewer?.scene?.edgeMaterial) viewer.scene.edgeMaterial.edges = true;
-
-      function flyTo(target){
-        try { viewer.cameraFlight.flyTo(target); } catch(e){}
-      }
-
-      function bindToolbar(){
-        document.getElementById('xkFit')?.addEventListener('click', () => flyTo(viewer.scene));
-        let xrayed = false; document.getElementById('xkXray')?.addEventListener('click', ()=>{
-          xrayed = !xrayed;
-          try { viewer.scene?.setObjectsXRayed?.(viewer.scene?.objectIds||[], xrayed); } catch(e){}
-        });
-        let edged = true; document.getElementById('xkEdges')?.addEventListener('click', ()=>{
-          edged = !edged;
-          if (viewer?.scene?.edgeMaterial) viewer.scene.edgeMaterial.edges = edged;
-        });
-        document.getElementById('xkReset')?.addEventListener('click', ()=>{
-          try {
-            viewer.camera.eye = [8,8,8];
-            viewer.camera.look = [0,0,0];
-            viewer.camera.up = [0,1,0];
-            if (viewer?.cameraControl) viewer.cameraControl.pivotPos = [0,0,0];
-          } catch(e){}
-        });
-      }
-      bindToolbar();
-
-      const isXKT = srcURL.toLowerCase().endsWith(".xkt");
-
-      if (isXKT) {
-        const xkt = new XKTLoaderPlugin(viewer);
-        const xktModel = xkt.load({ src: srcURL });
-        if (xktModel && xktModel.on) {
-          xktModel.on("loaded", () => flyTo(xktModel));
-          xktModel.on("error", (e) => { console.warn("XKT error", e); tryIFC(viewer); });
-        } else {
-          // If loader returned synchronously, just attempt IFC fallback
-          tryIFC(viewer);
-        }
-      } else {
-        tryIFC(viewer);
-      }
-
-      async function tryIFC(viewer){
-        try {
-          const ifcAPI = new WebIFC.IfcAPI();
-          if (ifcAPI.SetWasmPath) { ifcAPI.SetWasmPath("../../xeokit/dist/web-ifc/"); }
-          await ifcAPI.Init();
-          const ifc = new WebIFCLoaderPlugin(viewer, {
-            WebIFC,
-            IfcAPI: ifcAPI,
-            wasmPath: "../../xeokit/dist/web-ifc/"
-          });
-          const ifcModel = ifc.load({ src: srcURL });
-          if (ifcModel && ifcModel.on) {
-            ifcModel.on("loaded", () => flyTo(ifcModel));
-            ifcModel.on("error", (e) => {
-              const msg = document.createElement("div");
-              msg.className = "note warn"; msg.style.padding = "12px";
-              msg.innerHTML = "Không thể nạp IFC (có thể do schema không được hỗ trợ, ví dụ IFC4X3_ADD2). Hãy chuyển sang <code>.xkt</code> hoặc xuất lại IFC (IFC4/IFC2x3).";
-              document.querySelector(".viewer-host").prepend(msg);
-              console.error("IFC load error:", e);
-            });
-          } else {
-            const msg = document.createElement("div");
-            msg.className = "note warn"; msg.style.padding = "12px";
-            msg.innerHTML = "WebIFC loader không trả về model. Vui lòng chuyển đổi IFC sang XKT để xem mượt hơn.";
-            document.querySelector(".viewer-host").prepend(msg);
-          }
-        } catch (e) {
-          const msg = document.createElement("div");
-          msg.className = "note warn"; msg.style.padding = "12px";
-          msg.innerHTML = "Khởi tạo WebIFC thất bại. Vui lòng kiểm tra <code>web-ifc.wasm</code> và đường dẫn.";
-          document.querySelector(".viewer-host").prepend(msg);
-          console.error("IFC init error:", e);
-        }
-      }
-    };
-
-    init();
-  </script>
-
-
-  <div class="note muted">
-    Đang xem mô hình qua <strong>xeokit v2.6.89</strong> (plugins từ <code>src/plugins</code>).
-  </div>
-
 <?php else: ?>
 
 <?php if (in_array($ext, ['doc','docx','xls','xlsx','ppt','pptx'])): ?>
@@ -272,6 +141,202 @@ $exceedsSharecad = ($dwgSize > 50*1024*1024 && $dwgSize > 0);
         Nếu không hiển thị, hãy đảm bảo URL file truy cập được từ Internet.
       </div>
 
+
+<?php elseif ($ext === 'ifc' || $ext === 'xkt'): ?>
+  <!-- IFC/XKT Viewer (xeokit v2.6.89) + Tools: Measure, Probe Elevation, Section Cuts -->
+  <style>
+    #xeokitCanvas { width: 100%; height: calc(100vh - 64px); display:block; background:#f7f7f9; }
+    .xk-toolbar { position:absolute; top:56px; left:12px; z-index:10; display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+    .xk-toolbar button{ padding:8px 10px; border:1px solid #ddd; background:#fff; border-radius:8px; cursor:pointer; }
+    .xk-toolbar button.active{ background:#0ea5e9; color:#fff; border-color:#0284c7; }
+    .xk-toolbar .group{ display:flex; gap:6px; align-items:center; }
+    .xk-progress { padding:6px 10px; border:1px solid #eee; background:#fff; border-radius:8px; font-size:12px; display:none; }
+  </style>
+  <div class="viewer-host" style="position:relative;">
+    <div class="xk-toolbar">
+      <div id="xkProgress" class="xk-progress"><span id="xkProgressLabel">Loading…</span></div>
+      <div class="group">
+        <button id="xkFit" title="Fit to view">Fit</button>
+        <button id="xkReset" title="Reset view">Reset</button>
+      </div>
+      <div class="group">
+        <button id="xkMeasure" title="Measure distance (2 clicks)">Measure</button>
+        <button id="xkProbe" title="Probe elevation (click to drop a marker)">Probe Z</button>
+      </div>
+      <div class="group">
+        <button id="xkCutX" title="Add section plane along +X">Cut X</button>
+        <button id="xkCutY" title="Add section plane along +Y">Cut Y</button>
+        <button id="xkCutZ" title="Add section plane along +Z">Cut Z</button>
+        <button id="xkFaceCut" title="Click a face to create face-aligned cut">Face Cut</button>
+        <button id="xkClearCuts" title="Remove all section planes">Clear</button>
+      </div>
+    </div>
+    <canvas id="xeokitCanvas"></canvas>
+  </div>
+
+  <script>window.__ABS_URL__ = <?php echo json_encode($absUrl); ?>;</script>
+
+  <!-- Import map: resolve html2canvas bare specifier used inside xeokit dist -->
+  <script type="importmap">
+    {
+      "imports": {
+        "html2canvas/dist/html2canvas.esm.js": "../../xeokit/vendor/html2canvas/html2canvas.esm.js"
+      }
+    }
+  </script>
+
+  <script type="module">
+    import { Viewer } from "../../xeokit/dist/xeokit-sdk.min.es.js";
+    import { XKTLoaderPlugin } from "../../xeokit/src/plugins/XKTLoaderPlugin/XKTLoaderPlugin.js";
+    import { WebIFCLoaderPlugin } from "../../xeokit/src/plugins/WebIFCLoaderPlugin/WebIFCLoaderPlugin.js";
+    import { DistanceMeasurementsPlugin } from "../../xeokit/src/plugins/DistanceMeasurementsPlugin/DistanceMeasurementsPlugin.js";
+    import { DistanceMeasurementsMouseControl } from "../../xeokit/src/plugins/DistanceMeasurementsPlugin/DistanceMeasurementsMouseControl.js";
+    import { AnnotationsPlugin } from "../../xeokit/src/plugins/AnnotationsPlugin/AnnotationsPlugin.js";
+    import { SectionPlanesPlugin } from "../../xeokit/src/plugins/SectionPlanesPlugin/SectionPlanesPlugin.js";
+    import { FaceAlignedSectionPlanesPlugin } from "../../xeokit/src/plugins/FaceAlignedSectionPlanesPlugin/FaceAlignedSectionPlanesPlugin.js";
+    import { PointerLens } from "../../xeokit/src/extras/PointerLens/PointerLens.js";
+    import * as WebIFC from "../../xeokit/dist/web-ifc/web-ifc-api.js";
+
+    const srcURL = window.__ABS_URL__;
+    const viewer = new Viewer({ canvasId: "xeokitCanvas", transparent: true });
+    if (viewer?.scene?.edgeMaterial) viewer.scene.edgeMaterial.edges = true;
+
+    // Tools
+    const distanceMeasurements = new DistanceMeasurementsPlugin(viewer, {});
+    const distanceCtrl = new DistanceMeasurementsMouseControl(distanceMeasurements, { snapping: true, pointerLens: new PointerLens(viewer) });
+    distanceCtrl.deactivate();
+
+    const annotations = new AnnotationsPlugin(viewer, {
+      labelShown: true
+    });
+
+    const sectionPlanes = new SectionPlanesPlugin(viewer, {});
+    const faceAligned = new FaceAlignedSectionPlanesPlugin(viewer, {});
+
+    // Units (optional): show meters
+    try { viewer.scene.metrics.units = "meters"; } catch(e){}
+
+    // UI helpers
+    const ui = {
+      bar: document.getElementById('xkProgress'),
+      label: document.getElementById('xkProgressLabel'),
+      btn: (id) => document.getElementById(id),
+      canvas: viewer.scene.canvas.canvas
+    };
+    const setProgress = msg => { if (ui.bar) ui.bar.style.display='block'; if (ui.label) ui.label.textContent=msg; };
+    const hideProgress = () => { if (ui.bar) ui.bar.style.display='none'; };
+    const toggleBtn = (btn, on) => { if(!btn) return; btn.classList.toggle('active', !!on); };
+
+    function flyToSafe(target){ try { viewer.cameraFlight.flyTo(target); } catch(e){} }
+
+    // Modes
+    let mode = "none"; // none | measure | probe | facecut
+    function setMode(m){
+      mode = m;
+      toggleBtn(ui.btn('xkMeasure'), mode==='measure');
+      toggleBtn(ui.btn('xkProbe'), mode==='probe');
+      toggleBtn(ui.btn('xkFaceCut'), mode==='facecut');
+
+      // Activate the proper tool
+      if (mode === 'measure') {
+        distanceCtrl.activate();
+      } else {
+        distanceCtrl.deactivate();
+      }
+    }
+
+    // Load model (XKT first, else IFC)
+    const isXKT = srcURL.toLowerCase().endsWith(".xkt");
+    if (isXKT) {
+      const xkt = new XKTLoaderPlugin(viewer);
+      const model = xkt.load({ src: srcURL });
+      if (model && model.on) {
+        model.on("loaded", () => { hideProgress(); flyToSafe(model); });
+        model.on("error", (e) => { console.error("XKT load error:", e); setProgress("Không thể nạp XKT."); });
+      }
+    } else {
+      // IFC
+      setProgress("Loading IFC…");
+      const ifcAPI = new WebIFC.IfcAPI();
+      if (ifcAPI.SetWasmPath) ifcAPI.SetWasmPath("../../xeokit/dist/web-ifc/");
+      await ifcAPI.Init();
+      const ifc = new WebIFCLoaderPlugin(viewer, { WebIFC, IfcAPI: ifcAPI, wasmPath: "../../xeokit/dist/web-ifc/" });
+      const model = ifc.load({ src: srcURL });
+      if (model && model.on) {
+        model.on("loaded", () => { hideProgress(); flyToSafe(model); });
+        model.on("error", (e) => { console.error("IFC load error:", e); setProgress("Không thể nạp IFC."); });
+      }
+    }
+
+    // Toolbar events
+    ui.btn('xkFit')?.addEventListener('click', () => flyToSafe(viewer.scene));
+    ui.btn('xkReset')?.addEventListener('click', () => {
+      try { viewer.camera.eye=[8,8,8]; viewer.camera.look=[0,0,0]; viewer.camera.up=[0,1,0]; } catch(e){}
+    });
+
+    ui.btn('xkMeasure')?.addEventListener('click', () => {
+      setMode(mode==='measure' ? 'none' : 'measure');
+    });
+
+    // Probe elevation mode
+    ui.btn('xkProbe')?.addEventListener('click', () => {
+      setMode(mode==='probe' ? 'none' : 'probe');
+    });
+
+    // Section planes (axis-aligned)
+    function addAxisCut(dir){
+      try {
+        sectionPlanes.createSectionPlane({
+          pos: viewer.scene.center.slice ? viewer.scene.center.slice() : [0,0,0],
+          dir: dir
+        });
+      } catch(e){ console.error(e); }
+    }
+    ui.btn('xkCutX')?.addEventListener('click', () => addAxisCut([1,0,0]));
+    ui.btn('xkCutY')?.addEventListener('click', () => addAxisCut([0,1,0]));
+    ui.btn('xkCutZ')?.addEventListener('click', () => addAxisCut([0,0,1]));
+    ui.btn('xkClearCuts')?.addEventListener('click', () => { try { sectionPlanes.clear(); } catch(e){} });
+
+    // Face-aligned cut: click on a face to create plane
+    ui.btn('xkFaceCut')?.addEventListener('click', () => {
+      setMode(mode==='facecut' ? 'none' : 'facecut');
+    });
+
+    // Canvas click handler for probe & facecut
+    ui.canvas.addEventListener('click', (e) => {
+      if (mode!=='probe' && mode!=='facecut') return;
+      const rect = ui.canvas.getBoundingClientRect();
+      const canvasPos = [e.clientX - rect.left, e.clientY - rect.top];
+      let hit = null;
+      try { hit = viewer.scene.pick({ canvasPos, pickSurface: true }); } catch(err){ console.warn(err); }
+      if (!hit || !hit.worldPos) { return; }
+
+      if (mode==='probe') {
+        const p = hit.worldPos;
+        const elev = (p[1]||0);
+        const title = `Cao độ: ${elev.toFixed(3)} m`;
+        annotations.createAnnotation({
+          worldPos: p,
+          markerShown: true,
+          labelShown: true,
+          occludable: true,
+          values: { title, description: `X:${(p[0]||0).toFixed(3)}  Y:${(p[1]||0).toFixed(3)}  Z:${(p[2]||0).toFixed(3)}` }
+        });
+      } else if (mode==='facecut') {
+        const p = hit.worldPos;
+        const n = hit.worldNormal || [1,0,0];
+        try {
+          sectionPlanes.createSectionPlane({ pos: p, dir: n });
+        } catch(err){ console.error(err); }
+      }
+    }, { capture: true });
+
+  </script>
+
+  <div class="note muted">
+    Công cụ đã bật: <strong>Đo chiều dài</strong> (Measure), <strong>Probe cao độ</strong>, <strong>Cắt</strong> (Section planes).
+    Nếu kết quả đo lệch đơn vị, bạn có thể điều chỉnh <code>viewer.scene.metrics.units</code> theo mô hình (m, cm, mm).
+  </div>
 <?php elseif ($ext === 'pdf'): ?>
       <embed src="<?php echo h($webPath); ?>" type="application/pdf">
       <div class="note muted">PDF preview.</div>
@@ -291,110 +356,6 @@ $exceedsSharecad = ($dwgSize > 50*1024*1024 && $dwgSize > 0);
       if ($absFs && is_file($absFs) && is_readable($absFs)) $txt = file_get_contents($absFs);
       echo '<pre class="code">'.h($txt ?: 'Không đọc được nội dung văn bản.').'</pre>';
 ?>
-
-<?php elseif ($ext === 'ifc' || $ext === 'xkt'): ?>
-  <!-- IFC/XKT Viewer via xeokit v2.6.89 - plugins from ../../xeokit/src/plugins/ -->
-  <style>
-    #xeokitCanvas { width: 100%; height: calc(100vh - 64px); display: block; background: #f7f7f9; }
-    .xk-toolbar { position:absolute; top:56px; left:12px; z-index:10; display:flex; gap:8px; }
-    .xk-toolbar button{ padding:8px 10px; border:1px solid #ddd; background:#fff; border-radius:8px; cursor:pointer; }
-  </style>
-  <div class="viewer-host" style="position:relative;">
-    <div class="xk-toolbar">
-      <button id="xkFit">Fit</button>
-      <button id="xkXray">X-Ray</button>
-      <button id="xkEdges">Edges</button>
-      <button id="xkReset">Reset</button>
-    </div>
-    <canvas id="xeokitCanvas"></canvas>
-  </div>
-
-  <script>window.__ABS_URL__ = <?php echo json_encode($absUrl); ?>;</script>
-
-  <!-- Import map to resolve html2canvas bare specifier from xeokit dist -->
-  <script type="importmap">
-    {
-      "imports": {
-        "html2canvas/dist/html2canvas.esm.js": "../../xeokit/vendor/html2canvas/html2canvas.esm.js"
-      }
-    }
-  </script>
-
-  <script type="module">
-    import { Viewer } from "../../xeokit/dist/xeokit-sdk.min.es.js";
-    import { XKTLoaderPlugin } from "../../xeokit/src/plugins/XKTLoaderPlugin/XKTLoaderPlugin.js";
-    import { WebIFCLoaderPlugin } from "../../xeokit/src/plugins/WebIFCLoaderPlugin/WebIFCLoaderPlugin.js";
-    import * as WebIFC from "../../xeokit/dist/web-ifc/web-ifc-api.js";
-
-    const srcURL = window.__ABS_URL__;
-    const viewer = new Viewer({
-      canvasId: "xeokitCanvas",
-      transparent: true
-    });
-
-    if (viewer?.scene?.edgeMaterial) viewer.scene.edgeMaterial.edges = true;
-
-    const isXKT = srcURL.toLowerCase().endsWith(".xkt");
-
-    function flyTo(target){
-      try { viewer.cameraFlight.flyTo(target); } catch(e){}
-    }
-
-    function bindToolbar(){
-      document.getElementById('xkFit')?.addEventListener('click', () => flyTo(viewer.scene));
-      let xrayed = false; document.getElementById('xkXray')?.addEventListener('click', ()=>{
-        xrayed = !xrayed;
-        try { viewer.scene?.setObjectsXRayed?.(viewer.scene?.objectIds||[], xrayed); } catch(e){}
-      });
-      let edged = true; document.getElementById('xkEdges')?.addEventListener('click', ()=>{
-        edged = !edged;
-        if (viewer?.scene?.edgeMaterial) viewer.scene.edgeMaterial.edges = edged;
-      });
-      document.getElementById('xkReset')?.addEventListener('click', ()=>{
-        try {
-          viewer.camera.eye = [8,8,8];
-          viewer.camera.look = [0,0,0];
-          viewer.camera.up = [0,1,0];
-          if (viewer?.cameraControl) viewer.cameraControl.pivotPos = [0,0,0];
-        } catch(e){}
-      });
-    }
-    bindToolbar();
-
-    if (isXKT) {
-      const xkt = new XKTLoaderPlugin(viewer);
-      xkt.load({ src: srcURL }).then(model => {
-        flyTo(model);
-      }).catch(err => {
-        console.warn("XKT load failed, trying IFC...", err);
-        tryIFC();
-      });
-    } else {
-      tryIFC();
-    }
-
-    function tryIFC(){
-      const ifc = new WebIFCLoaderPlugin(viewer, {
-        WebIFC,
-        wasmPath: "../../xeokit/dist/web-ifc/"
-      });
-      ifc.load({ src: srcURL }).then(model => {
-        flyTo(model);
-      }).catch(err => {
-        const msg = document.createElement('div');
-        msg.className = 'note warn';
-        msg.style.padding = '12px';
-        msg.innerHTML = 'Không thể nạp IFC. Hãy kiểm tra tệp hoặc chuyển qua <code>.xkt</code> để xem nhanh hơn.';
-        document.querySelector('.viewer-host').prepend(msg);
-        console.error('IFC load error:', err);
-      });
-    }
-  </script>
-
-  <div class="note muted">
-    Đang xem mô hình qua <strong>xeokit v2.6.89</strong> (plugins từ <code>src/plugins</code>).
-  </div>
-
 <?php else: ?>
       <div class="note muted">
         Không có trình xem trực tuyến cho định dạng <strong><?php echo h(strtoupper($ext)); ?></strong>.<br>
