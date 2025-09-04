@@ -3,7 +3,7 @@
 
 :root {
   --primary-color: #fca415;
-  --bg-overlay: rgba(0,0,0,0.6);
+  --bg-overlay: rgba(0,0,0,0.3);
 }
 body {
   overflow-y: hidden; /* Ẩn cuộn dọc */
