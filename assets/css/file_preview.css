@@ -81,7 +81,7 @@ html, body {
 /* Layout wrapper */
 .wrap {
   width: 100%;
-  max-width: 1200px;
+  max-width: 100%;
   margin: 20px auto;
   padding: 0 16px 24px;
 }
