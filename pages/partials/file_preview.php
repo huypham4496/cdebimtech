@@ -184,6 +184,15 @@ $exceedsSharecad = ($dwgSize > 50*1024*1024 && $dwgSize > 0);
       }
     }
   </script>
+<script>
+  // Ngăn sự kiện wheel lan ra ngoài trang khi đang ở trong viewer
+  const viewerEl = document.querySelector('.viewer') || document.getElementById('xeokitCanvas');
+  if (viewerEl) {
+    viewerEl.addEventListener('wheel', (e) => {
+      e.stopPropagation();
+    }, { passive: true });
+  }
+</script>
 
   <script type="module">
     import { Viewer } from "../../xeokit/dist/xeokit-sdk.min.es.js";
